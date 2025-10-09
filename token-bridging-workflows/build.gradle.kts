@@ -1,18 +1,16 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
-}
-
-repositories {
-    mavenCentral()
+    `maven-publish`
+    id("r3-artifactory")
 }
 
 dependencies {
+    implementation(libs.tokens.workflows)
+
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.assertj.core)
 
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-
-//    implementation(libs.guava)
 }
 
 java {
