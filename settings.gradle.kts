@@ -1,8 +1,8 @@
 rootProject.name = "corda-solana-toolkit"
 
 include(
-    "token-bridging-contracts",
-    "token-bridging-workflows",
+    "bridging-token-contracts",
+    "bridging-token-workflows",
 )
 
 dependencyResolutionManagement {
@@ -10,6 +10,14 @@ dependencyResolutionManagement {
     repositories {
         mavenLocal()
         mavenCentral()
+        maven {
+            url = uri("https://software.r3.com/artifactory/corda-dev")
+            credentials { artifactory(this) }
+        }
+        maven {
+            url = uri("https://software.r3.com/artifactory/corda-releases")
+            credentials { artifactory(this) }
+        }
         maven {
             url = uri("https://software.r3.com/artifactory/corda-lib")
             credentials { artifactory(this) }
