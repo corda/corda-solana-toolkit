@@ -1,0 +1,6 @@
+//TODO Add:
+//      stage('Detekt check') {
+//             steps {
+//                 sh './gradlew --no-daemon --parallel --build-cache clean detekt'
+//             }
+//         }
