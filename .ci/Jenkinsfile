@@ -1,0 +1,89 @@
+#!groovy
+/**
+ * Jenkins pipeline to build Corda Solana Toolkit against OS SNAPSHOT publication to Artifactory.
+ */
+
+/**
+ * Kill already started job.
+ * Assume new commit takes precedence and results from previous
+ * unfinished builds are not required.
+ * This feature doesn't play well with disableConcurrentBuilds() option
+ */
+@Library('corda-shared-build-pipeline-steps')
+import static com.r3.build.BuildControl.killAllExistingBuildsForJob
+
+killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
+
+/**
+ * Common Gradle arguments for all Gradle executions
+ */
+String COMMON_GRADLE_PARAMS = [
+        '--no-daemon',
+        '--stacktrace',
+        '-Pcompilation.warningsAsErrors=false',
+].join(' ')
+
+pipeline {
+    agent { label 'standard' }
+
+    /*
+     * List options in alphabetical order
+     */
+    options {
+        ansiColor('xterm')
+        buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
+        overrideIndexTriggers(false) // ignore push events
+        timeout(time: 1, unit: 'HOURS')
+        timestamps()
+    }
+
+    /*
+     * List environment variables in alphabetical order
+     */
+    environment {
+        ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
+        CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
+        CORDA_ARTIFACTORY_PASSWORD = "${env.ARTIFACTORY_CREDENTIALS_PSW}"
+        CORDA_USE_CACHE = "corda-remotes"
+        CORDA_GRADLE_SCAN_KEY = credentials('gradle-build-scans-key')
+    }
+
+    triggers {
+        /**
+         * Start a build around midnight if there was a change in the repo
+         */
+        pollSCM ignorePostCommitHooks: true, scmpoll_spec: '@midnight'
+    }
+
+      stages {
+          stage('Compile') {
+              steps {
+                  bat script: [
+                          './gradlew',
+                          COMMON_GRADLE_PARAMS,
+                          'clean',
+                          'build -x test'
+                  ].join(' ')
+              }
+          }
+          stage('Unit Tests') {
+              steps {
+                  bat script: [
+                          './gradlew',
+                          COMMON_GRADLE_PARAMS,
+                          'test'
+                  ].join(' ')
+              }
+          }
+      }
+    post {
+        always {
+            findBuildScans()
+            archiveArtifacts artifacts: '**/*.log', fingerprint: false
+            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: false
+        }
+        cleanup {
+            deleteDir() /* clean up our workspace */
+        }
+    }
+}
