@@ -1,0 +1,22 @@
+//Copied from corda-enterprise ./ci/JenkinsfileStaticAnalysis
+
+@Library('corda-shared-build-pipeline-steps')
+import com.r3.build.enums.SnykOrganisation
+
+staticCodeAnalysisPipeline(
+    snykCodeEnabled : true,
+    snykOrg: SnykOrganisation.CORDA_4_ENT
+)
+
+
+//TODO
+//add this to normal jenkins file
+//    environment {
+//         SNYK_API_TOKEN = credentials('c4-ent-snyk-api-token-secret')
+//         C4_ENT_SNYK_ORG_ID = credentials('c4-ent-snyk-org-id')
+//    }
+//      stage('Snyk Delta') {
+//            steps {
+//                snykDeltaScan(env.SNYK_API_TOKEN, env.C4_ENT_SNYK_ORG_ID)
+//            }
+//        }
