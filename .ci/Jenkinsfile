@@ -11,8 +11,22 @@
  */
 @Library('corda-shared-build-pipeline-steps@5.3') _
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
+import com.r3.build.agents.KubernetesAgent
+import com.r3.build.enums.KubernetesCluster
+import com.r3.build.enums.BuildEnvironment
+import com.r3.build.enums.BuildOperatingSystem
 
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
+
+KubernetesAgent k8s = new KubernetesAgent(
+    BuildEnvironment.AMD64_LINUX_JAVA17_CORDA4,
+    KubernetesCluster.JenkinsAgents,
+    1
+).withDocker(
+    1,
+    false,
+    true
+)
 
 /**
  * Common Gradle arguments for all Gradle executions
