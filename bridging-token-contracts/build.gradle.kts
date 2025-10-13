@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.kotlin.jvm)
     `maven-publish`
     id("r3-artifactory")
+    alias(libs.plugins.detekt)
 }
 
 dependencies {
