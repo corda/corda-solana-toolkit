@@ -74,12 +74,12 @@ pipeline {
         CORDA_GRADLE_SCAN_KEY = credentials('gradle-build-scans-key')
     }
 
-    triggers {
-        /**
-         * Start a build around midnight if there was a change in the repo
-         */
-        pollSCM ignorePostCommitHooks: true, scmpoll_spec: '@midnight'
-    }
+//     triggers {
+//         /**
+//          * Start a build around midnight if there was a change in the repo
+//          */
+//         pollSCM ignorePostCommitHooks: true, scmpoll_spec: '@midnight'
+//     }
 
       stages {
           stage('Compile') {
