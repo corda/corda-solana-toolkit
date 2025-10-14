@@ -1,22 +1,6 @@
-@Library('corda-shared-build-pipeline-steps@5.3') _
-
+@Library('corda-shared-build-pipeline-steps')
 import static com.r3.build.BuildControl.killAllExistingBuildsForJob
-import com.r3.build.agents.KubernetesAgent
-import com.r3.build.enums.KubernetesCluster
-import com.r3.build.enums.BuildEnvironment
-import com.r3.build.enums.BuildOperatingSystem
-
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
-
-KubernetesAgent k8s = new KubernetesAgent(
-    BuildEnvironment.AMD64_LINUX_JAVA17_CORDA4,
-    KubernetesCluster.JenkinsAgents,
-    1
-).withDocker(
-    1,
-    false,
-    true
-)
 
 String COMMON_GRADLE_PARAMS = [
         '--no-daemon',
@@ -29,23 +13,17 @@ String COMMON_GRADLE_PARAMS = [
 
 
 pipeline {
-        agent {
-            kubernetes {
-                cloud k8s.buildCluster.cloudName
-                yaml k8s.JSON
-                yamlMergeStrategy merge() // important to keep tolerations from the inherited template
-                idleMinutes 15
-                podRetention always()
-                nodeSelector k8s.nodeSelector
-                label k8s.jenkinsLabel
-                showRawYaml true
-                defaultContainer k8s.defaultContainer.name
-            }
-        }
-
-    options { timestamps() }
-
+   agent {
+        label 'standard'
+    }
+    options {
+        ansiColor('xterm')
+        timestamps()
+        timeout(3*60) // 3 hours
+        buildDiscarder(logRotator(daysToKeepStr: '7', artifactDaysToKeepStr: '7'))
+    }
     environment {
+        JAVA_HOME = "/usr/lib/jvm/java-17-amazon-corretto"
         ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
         BUILD_CACHE_CREDENTIALS = credentials('gradle-ent-cache-credentials')
         BUILD_CACHE_PASSWORD = "${env.BUILD_CACHE_CREDENTIALS_PSW}"
