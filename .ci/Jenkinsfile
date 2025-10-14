@@ -37,9 +37,11 @@ pipeline {
            SNYK_ORG_ID = credentials('r3-solana-snyk-org-id')
            SNYK_API_TOKEN = credentials('r3-solana-snyk-api-token-secret')
       }
-      stage('Snyk Delta') {
+      stages {
+        stage('Snyk Delta') {
            steps {
                 snykDeltaScan(env.SNYK_API_TOKEN, env.SNYK_ORG_ID)
            }
+        }
       }
 }
