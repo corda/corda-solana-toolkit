@@ -5,6 +5,8 @@ import groovy.transform.Field
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
 pipeline {
+    agent { label 'standard' }
+
     options { timestamps() }
 
     environment {
