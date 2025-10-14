@@ -1,6 +1,87 @@
-//TODO Add:
-//      stage('Detekt check') {
-//             steps {
-//                 sh './gradlew --no-daemon --parallel --build-cache clean detekt'
-//             }
-//         }
+@Library('corda-shared-build-pipeline-steps@5.3') _
+
+import static com.r3.build.BuildControl.killAllExistingBuildsForJob
+import com.r3.build.agents.KubernetesAgent
+import com.r3.build.enums.KubernetesCluster
+import com.r3.build.enums.BuildEnvironment
+import com.r3.build.enums.BuildOperatingSystem
+
+killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
+
+KubernetesAgent k8s = new KubernetesAgent(
+    BuildEnvironment.AMD64_LINUX_JAVA17,
+    KubernetesCluster.JenkinsAgents,
+    1
+).withDocker(
+    1,
+    false,
+    true
+)
+
+String COMMON_GRADLE_PARAMS = [
+        '--no-daemon',
+        '--stacktrace',
+        '--info',
+        '-Ptests.ignoreFailures=false',
+        '-Pcompilation.warningsAsErrors=false',
+        '-Ptests.failFast=true',
+].join(' ')
+
+
+pipeline {
+        agent {
+            kubernetes {
+                cloud k8s.buildCluster.cloudName
+                yaml k8s.JSON
+                yamlMergeStrategy merge() // important to keep tolerations from the inherited template
+                idleMinutes 15
+                podRetention always()
+                nodeSelector k8s.nodeSelector
+                label k8s.jenkinsLabel
+                showRawYaml true
+                defaultContainer k8s.defaultContainer.name
+            }
+        }
+
+    options { timestamps() }
+
+    environment {
+        ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
+        BUILD_CACHE_CREDENTIALS = credentials('gradle-ent-cache-credentials')
+        BUILD_CACHE_PASSWORD = "${env.BUILD_CACHE_CREDENTIALS_PSW}"
+        BUILD_CACHE_USERNAME = "${env.BUILD_CACHE_CREDENTIALS_USR}"
+        CORDA_ARTIFACTORY_PASSWORD = "${env.ARTIFACTORY_CREDENTIALS_PSW}"
+        CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
+        CORDA_GRADLE_SCAN_KEY = credentials('gradle-build-scans-key')
+        CORDA_USE_CACHE = "corda-remotes"
+        GRADLE_USER_HOME = "/host_tmp/gradle"
+    }
+
+    stages {
+            stage('Detekt check') {
+                steps {
+                    sh './gradlew --no-daemon --parallel --build-cache clean detekt'
+                }
+            }
+            stage('Build') {
+                steps {
+                    authenticateGradleWrapper()
+                    sh script: [
+                            './gradlew',
+                            COMMON_GRADLE_PARAMS,
+                            'build',
+                            '--parallel'
+                    ].join(' ')
+                }
+            }
+    }
+
+    post {
+        always {
+            junit '**/build/test-results/**/*.xml'
+        }
+        cleanup {
+            deleteDir() /* clean up our workspace */
+        }
+    }
+}
