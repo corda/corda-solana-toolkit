@@ -12,10 +12,6 @@ KubernetesAgent k8s = new KubernetesAgent(
     BuildEnvironment.AMD64_LINUX_JAVA17,
     KubernetesCluster.JenkinsAgents,
     1
-).withDocker(
-    1,
-    false,
-    true
 )
 
 String COMMON_GRADLE_PARAMS = [
