@@ -58,9 +58,12 @@ pipeline {
     }
 
     stages {
-            stage('Detekt check') {
+            stage('Static Code Analysis') {
                 steps {
-                    sh './gradlew --no-daemon --parallel --build-cache clean detekt'
+                    sh script: ['./gradlew',
+                                COMMON_GRADLE_PARAMS,
+                                'detekt'
+                                ].join(' ')
                 }
             }
             stage('Build') {
