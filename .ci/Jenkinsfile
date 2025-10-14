@@ -12,19 +12,12 @@ KubernetesAgent k8s = new KubernetesAgent(
     BuildEnvironment.AMD64_LINUX_JAVA17,
     KubernetesCluster.JenkinsAgents,
     1
-).withDocker(
-    1,
-    false,
-    true
 )
 
 String COMMON_GRADLE_PARAMS = [
         '--no-daemon',
         '--stacktrace',
-        '--info',
-        '-Ptests.ignoreFailures=false',
-        '-Pcompilation.warningsAsErrors=false',
-        '-Ptests.failFast=true',
+        '--info'
 ].join(' ')
 
 
@@ -53,7 +46,6 @@ pipeline {
         CORDA_ARTIFACTORY_PASSWORD = "${env.ARTIFACTORY_CREDENTIALS_PSW}"
         CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
         CORDA_GRADLE_SCAN_KEY = credentials('gradle-build-scans-key')
-        CORDA_USE_CACHE = "corda-remotes"
         GRADLE_USER_HOME = "/host_tmp/gradle"
     }
 
@@ -72,8 +64,7 @@ pipeline {
                     sh script: [
                             './gradlew',
                             COMMON_GRADLE_PARAMS,
-                            'build',
-                            '--parallel'
+                            'build'
                     ].join(' ')
                 }
             }
