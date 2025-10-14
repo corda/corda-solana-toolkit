@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test
 class TestBridgingWorkflow {
 
     @Test
-    fun test1() {
+    fun test() {
         assertThat(true).isTrue
     }
 }
