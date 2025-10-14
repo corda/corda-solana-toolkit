@@ -47,25 +47,26 @@ pipeline {
 
     environment {
         ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
-        CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
+        BUILD_CACHE_CREDENTIALS = credentials('gradle-ent-cache-credentials')
+        BUILD_CACHE_PASSWORD = "${env.BUILD_CACHE_CREDENTIALS_PSW}"
+        BUILD_CACHE_USERNAME = "${env.BUILD_CACHE_CREDENTIALS_USR}"
         CORDA_ARTIFACTORY_PASSWORD = "${env.ARTIFACTORY_CREDENTIALS_PSW}"
-        EXECUTOR_NUMBER = "${env.EXECUTOR_NUMBER}"
-        LOOPBACK_ADDRESS = "172.17.0.1"
+        CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
+        CORDA_GRADLE_SCAN_KEY = credentials('gradle-build-scans-key')
+        CORDA_USE_CACHE = "corda-remotes"
+        GRADLE_USER_HOME = "/host_tmp/gradle"
     }
 
     stages {
             stage('Build') {
                 steps {
-                    timeout(10) {
-                    sh './gradlew clean build -x test --parallel'
-                    }
-                }
-            }
-            stage('Unit Tests') {
-                steps {
-                    timeout(10) {
-                        sh "./gradlew test -Si --no-daemon --parallel"
-                     }
+                    authenticateGradleWrapper()
+                    sh script: [
+                            './gradlew',
+                            COMMON_GRADLE_PARAMS,
+                            'build',
+                            '--parallel'
+                    ].join(' ')
                 }
             }
     }
