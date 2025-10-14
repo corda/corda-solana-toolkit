@@ -39,7 +39,10 @@ pipeline {
       }
       stages {
         stage('Snyk Delta') {
-           steps {
+            when {
+                changeRequest()
+            }
+            steps {
                 snykDeltaScan(env.SNYK_API_TOKEN, env.SNYK_ORG_ID)
            }
         }
