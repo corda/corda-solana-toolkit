@@ -4,6 +4,7 @@ tokens-sdk = "1.3.2"
 junit-jupiter = "5.14.0"
 assertj = "3.27.6"
 artifactory = "6.0.2"
+detekt = "2.0.0-alpha.0"
 
 [libraries]
 corda-core = { module = "net.corda:corda-core", version.ref = "corda" }
@@ -12,8 +13,9 @@ tokens-workflows = { module = "com.r3.corda.lib.tokens:tokens-workflows", versio
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
 assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
 artifactory = { module = "com.jfrog.artifactory:com.jfrog.artifactory.gradle.plugin", version.ref = "artifactory" }
+ktlint = { module = "dev.detekt:detekt-rules-ktlint-wrapper", version.ref = "detekt" }
 
 [plugins]
 # Use the same minor version of Kotlin as Corda
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version = "1.9.25" }
-detekt = { id = "dev.detekt", version = "2.0.0-alpha.0" }
+detekt = { id = "dev.detekt", version.ref = "detekt" }
