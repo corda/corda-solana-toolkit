@@ -20,7 +20,6 @@ String COMMON_GRADLE_PARAMS = [
         '--info'
 ].join(' ')
 
-
 pipeline {
         agent {
             kubernetes {
@@ -69,6 +68,21 @@ pipeline {
                    steps {
                        snykDeltaScan(env.SNYK_API_TOKEN, env.SNYK_ORG_ID)
                    }
+            }
+            stage('Snyk Full') {
+//                   when {
+//                      allOf {
+//                        branch 'main'
+//                        not { changeRequest() }
+//                      }
+//                   }
+                  steps {
+                        build job: 'cordaSnykScanPipeline',
+                             parameters: [
+                                string(name: 'JAVA_VERSION', value: '17',
+                                string(name: 'snykTokenId', value: env.SNYK_API_TOKEN)
+                             ]
+                  }
              }
     }
 
