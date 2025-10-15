@@ -93,7 +93,7 @@ pipeline {
                     rtGradleDeployer (
                         id: 'deployer',
                         serverId: 'R3-Artifactory',
-                        repo: 'corda-dev',
+                        repo: isRelease ? 'corda-lib' : 'corda-lib-dev'
                     )
                     withCredentials([
                         usernamePassword(credentialsId: 'artifactory-credentials',
