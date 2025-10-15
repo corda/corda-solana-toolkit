@@ -21,7 +21,7 @@ String COMMON_GRADLE_PARAMS = [
 ].join(' ')
 
 def isRelease = false // TODO differentiate based on branch or tag
-String publishOptions = "--no-daemon -s -PversionFromGit"
+String publishOptions = "--no-daemon -s -PversionFromGit -PtargetRepo=${isRelease ? 'corda-dependencies' : 'corda-lib-dev'}"
 
 pipeline {
     agent {
@@ -93,7 +93,6 @@ pipeline {
                     rtGradleDeployer (
                         id: 'deployer',
                         serverId: 'R3-Artifactory',
-                        repo: isRelease ? 'corda-lib' : 'corda-lib-dev'
                     )
                     withCredentials([
                         usernamePassword(credentialsId: 'artifactory-credentials',
