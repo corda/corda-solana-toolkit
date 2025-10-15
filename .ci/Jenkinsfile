@@ -69,17 +69,6 @@ pipeline {
                        snykDeltaScan(env.SNYK_API_TOKEN, env.SNYK_ORG_ID)
                    }
             }
-            stage('Snyk Full') {
-//                   when {
-//                      allOf {
-//                        branch 'main'
-//                        not { changeRequest() }
-//                      }
-//                   }
-                  steps {
-                    snykScanPipeline(snykTokenId: env.SNYK_API_TOKEN, javaVersion: '17')
-                  }
-             }
     }
 
     post {
