@@ -20,6 +20,9 @@ String COMMON_GRADLE_PARAMS = [
         '--info'
 ].join(' ')
 
+def isRelease = false // TODO differentiate based on branch or tag
+String publishOptions = "--no-daemon -s -PversionFromGit"
+
 pipeline {
     agent {
         kubernetes {
@@ -79,9 +82,7 @@ pipeline {
             stage('Publish to Artifactory') {
                 when {
                     beforeAgent true
-                    allOf {
-                      changeRequest()
-                    }
+                    changeRequest() //TODO enabled for testing only
                 }
                 steps {
                     rtServer (
@@ -101,7 +102,7 @@ pipeline {
                                rtGradleRun (
                                     usesPlugin: true,
                                     useWrapper: true,
-                                    switches: "--no-daemon -s",
+                                    switches: publishOptions,
                                     tasks: 'artifactoryPublish',
                                     deployerId: 'deployer',
                                     buildName: env.ARTIFACTORY_BUILD_NAME
