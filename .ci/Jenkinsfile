@@ -80,8 +80,7 @@ pipeline {
                 when {
                     beforeAgent true
                     allOf {
-                      branch 'main'
-                      not { changeRequest() }
+                      changeRequest()
                     }
                 }
                 steps {
