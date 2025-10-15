@@ -14,7 +14,7 @@ dependencies {
 }
 
 def solanaNotaryKeyFileName = 'Dev7chG99tLCAny3PNYmBdyhaKEVcZnSTp3p1mKVb5m5.json'
-// Change the path if needed
+#The path is ste to follow other provides scripts or Gradle tasks for running nodes locally
 def solanaNotaryKeyPath = "$buildDir/extracted/dev-keys/$solanaNotaryKeyFileName"
 
 tasks.register('extractDevKey', Copy) {
