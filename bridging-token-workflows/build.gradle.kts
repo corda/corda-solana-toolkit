@@ -1,5 +1,5 @@
 plugins {
-    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.cordapp)
     `maven-publish`
     id("r3-artifactory")
     alias(libs.plugins.detekt)
@@ -8,6 +8,7 @@ plugins {
 dependencies {
     implementation(libs.corda.core)
     implementation(libs.tokens.workflows)
+    implementation(libs.tokens.contracts)
 
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.assertj.core)
