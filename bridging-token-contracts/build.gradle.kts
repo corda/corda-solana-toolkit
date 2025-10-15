@@ -13,6 +13,8 @@ dependencies {
     testImplementation(libs.assertj.core)
 
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
+    detektPlugins(libs.detekt.ktlint.wrapper)
 }
 
 java {
