@@ -1,0 +1,106 @@
+#! groovy
+
+// Based on https://github.com/corda/r3-kotlin-template/blob/main/.ci/nightly/JenkinsfileSnyk
+
+@Library('corda-shared-build-pipeline-steps@5.3')
+
+import com.r3.build.agents.KubernetesAgent
+import com.r3.build.enums.BuildEnvironment
+import com.r3.build.enums.KubernetesCluster
+import com.r3.build.utils.GitUtils
+import com.r3.build.utils.SnykUtils
+import com.r3.build.enums.SnykOrganisation
+
+KubernetesAgent k8s = new KubernetesAgent(
+        BuildEnvironment.AMD64_LINUX_JAVA17,
+        KubernetesCluster.JenkinsAgents,
+        1
+)
+
+/**
+ * boolean variable to enable/disable Snyk Jira issue generation
+ */
+boolean generateJiraIssues = false
+
+/**
+ * Jenkins credential id for snyk api token
+ */
+String snykToken = "r3-solana-snyk-api-token-secret"
+
+GitUtils gitUtils = new GitUtils(this)
+SnykUtils snykUtils = new SnykUtils(this)
+
+pipeline {
+
+    agent {
+        kubernetes {
+            cloud k8s.buildCluster.cloudName
+            yaml k8s.JSON
+            yamlMergeStrategy merge() // important to keep tolerations from the inherited template
+            idleMinutes 15
+            podRetention always()
+            nodeSelector k8s.nodeSelector
+            label k8s.jenkinsLabel
+            showRawYaml true
+            defaultContainer k8s.defaultContainer.name
+        }
+    }
+
+    environment {
+        ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
+        ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
+        ARTIFACTORY_PASSWORD = "${env.ARTIFACTORY_CREDENTIALS_PSW}"
+        GRADLE_USER_HOME = "/host_tmp/gradle"
+        SNYK_API_TOKEN = credentials("${snykToken}")
+        SNYK_ARGUMENTS = "--policy-path=./.snyk --all-sub-projects --prune-repeated-subdependencies --configuration-matching='^runtimeClasspath\$' --target-reference='${env.BRANCH_NAME}'"
+    }
+
+    options {
+        buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: "14", numToKeepStr: ''))
+        timestamps()
+    }
+
+    triggers {
+        cron('H 0 * * 1-5')
+    }
+
+    stages {
+
+        // Snyk scan Gradle dependency projects for vulnerabilities and send results to Snyk server
+        stage('Run Snyk Scan - Gradle Dependencies') {
+            steps {
+                script {
+                    snykSecurityScan(env.SNYK_API_TOKEN, env.SNYK_ARGUMENTS, false, true)
+                }
+            }
+        }
+
+        // Snyk code scan for vulnerabilities and archive results to Jenkins build execution
+        stage('Run Snyk Code Scan') {
+            steps {
+                script {
+                   snykUtils.runSnykCode()
+                }
+            }
+        }
+    }
+
+    post {
+
+        always {
+            step([$class: 'ClaimPublisher'])
+            script {
+                if (gitUtils.isMainBranch() && generateJiraIssues) {
+                    // Create Jira issues for the main branch
+                    snykJiraSync(SnykOrganisation.R3_PRODUCT_ENGINEERING)
+                }
+                def gitRepoName = env.GIT_URL.replace('.git', '').split('/').last()
+                def fileName = "_snyk_report_${gitRepoName}_${new Date().format("dd-MM-yyyy")}.html"
+                if (fileExists(fileName)) {
+                    snykSecurityScan.generateHtmlElements(false, true)
+                }
+            }
+        }
+    }
+}
+
