@@ -79,7 +79,7 @@ pipeline {
                   steps {
                         build job: 'cordaSnykScanPipeline',
                              parameters: [
-                                string(name: 'JAVA_VERSION', value: '17',
+                                string(name: 'JAVA_VERSION', value: '17'),
                                 string(name: 'snykTokenId', value: env.SNYK_API_TOKEN)
                              ]
                   }
