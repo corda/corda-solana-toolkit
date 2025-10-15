@@ -81,8 +81,9 @@ pipeline {
             }
             stage('Publish to Artifactory') {
                 when {
-                    beforeAgent true
-                    changeRequest() //TODO enabled for testing only
+                   allOf {
+                      not { changeRequest() }
+                   }
                 }
                 steps {
                     rtServer (
