@@ -22,6 +22,7 @@ corda-solana-sdk = { module = "com.r3.corda:corda-solana-sdk", version.ref = "co
 corda-test-utils = { module = "com.r3.corda:corda-test-utils", version.ref = "corda" }
 corda-core-test-utils = { module = "net.corda:corda-core-test-utils", version.ref = "corda" }
 corda-node-driver = { module = "com.r3.corda:corda-node-driver", version.ref = "corda" }
+
 [plugins]
 # Use the same minor version of Kotlin as Corda
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version = "1.9.25" }

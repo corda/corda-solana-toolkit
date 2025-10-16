@@ -33,7 +33,7 @@ dependencyResolutionManagement {
             url = uri("https://software.r3.com/artifactory/corda-dependencies")
             credentials { artifactory(this) }
         }
-        //for com.r3.libs:r3-libs-obfuscator:1.4.1 required by corda-node-driver
+        // For com.r3.libs:r3-libs-obfuscator:1.4.1 required by corda-node-driver
         maven {
             url = uri("https://software.r3.com/artifactory/r3-corda-releases")
             credentials { artifactory(this) }
@@ -41,6 +41,8 @@ dependencyResolutionManagement {
                 releasesOnly()
             }
         }
+        // For gradle-tooling-api-7.6.4.
+        maven { url = uri("https://repo.gradle.org/gradle/libs-releases") }
     }
 }
 
