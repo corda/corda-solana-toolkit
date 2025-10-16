@@ -1,7 +1,6 @@
-package net.corda.samples.stockpaydividend
+package com.r3.corda.lib.solana.bridging.token.flows
 
 import com.lmax.solana4j.api.PublicKey
-import com.r3.corda.lib.tokens.bridging.states.BridgedAssetState
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.contracts.types.TokenPointer
 import com.r3.corda.lib.tokens.workflows.utilities.tokenBalance
@@ -182,7 +181,7 @@ class FlowTests {
                                 rpcUrl = "${SolanaTestValidator.RPC_URL}"
                                 notaryKeypairFile = "$solanaNotaryKeyFile"
                                 custodiedKeysDir = "${custodiedKeysDir.root.toPath()}"
-                                programWhitelist = ["${Token2022.PROGRAM_ID}"]          
+                                programWhitelist = ["${Token2022.PROGRAM_ID}"]
                             }
                         """.trimIndent()
 

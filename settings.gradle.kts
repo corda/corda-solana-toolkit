@@ -8,7 +8,7 @@ include(
 pluginManagement {
     repositories {
         gradlePluginPortal() // For jetbrains.kotlin.jvm plugin
-        maven { url = uri("https://download.corda.net/maven/corda-releases") } //For Cordapp plugin
+        maven { url = uri("https://download.corda.net/maven/corda-releases") } //For Cordapp and Quasar-Utils plugins
     }
 }
 

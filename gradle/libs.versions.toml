@@ -1,22 +1,30 @@
 [versions]
-corda = "4.14-20251009.000800-15"
+corda = "4.14-20251009.000800-15" # set to "4.14-SNAPSHOT" to compile locally
 tokens-sdk = "1.3.2"
 junit-jupiter = "5.14.0"
+junit = "4.13.2"
 assertj = "3.27.6"
 artifactory = "6.0.2"
 detekt = "2.0.0-alpha.0"
+corda-plugin = "5.1.3"
 
 [libraries]
 corda-core = { module = "net.corda:corda-core", version.ref = "corda" }
 tokens-contracts = { module = "com.r3.corda.lib.tokens:tokens-contracts", version.ref = "tokens-sdk" }
 tokens-workflows = { module = "com.r3.corda.lib.tokens:tokens-workflows", version.ref = "tokens-sdk" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
+junit = { module = "junit:junit", version.ref = "junit" }
 assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
 artifactory = { module = "com.jfrog.artifactory:com.jfrog.artifactory.gradle.plugin", version.ref = "artifactory" }
 detekt-ktlint-wrapper = { module = "dev.detekt:detekt-rules-ktlint-wrapper", version.ref = "detekt" }
-
+corda-solana-common = { module = "com.r3.corda:corda-solana-common", version.ref = "corda" }
+corda-solana-sdk = { module = "com.r3.corda:corda-solana-sdk", version.ref = "corda" }
+corda-test-utils = { module = "com.r3.corda:corda-test-utils", version.ref = "corda" }
+corda-core-test-utils = { module = "net.corda:corda-core-test-utils", version.ref = "corda" }
+corda-node-driver = { module = "com.r3.corda:corda-node-driver", version.ref = "corda" }
 [plugins]
 # Use the same minor version of Kotlin as Corda
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version = "1.9.25" }
 detekt = { id = "dev.detekt", version.ref = "detekt" }
-cordapp = { id = "net.corda.plugins.cordapp", version = "5.1.3" }
+cordapp = { id = "net.corda.plugins.cordapp", version.ref = "corda-plugin" }
+quasar-utils = { id = "net.corda.plugins.quasar-utils", version.ref = "corda-plugin" }

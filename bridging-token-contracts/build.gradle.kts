@@ -8,7 +8,8 @@ plugins {
 
 dependencies {
     cordaProvided(libs.corda.core)
-    cordapp(libs.tokens.contracts)
+    cordaProvided(libs.tokens.contracts)
+    cordaProvided(libs.corda.solana.common)
 
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.assertj.core)

@@ -1,4 +1,4 @@
-package com.r3.corda.lib.tokens.bridging.flows
+package com.r3.corda.lib.solana.bridging.token.flows
 
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.AppServiceHub

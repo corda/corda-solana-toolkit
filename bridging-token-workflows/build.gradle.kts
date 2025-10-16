@@ -1,17 +1,27 @@
 plugins {
     alias(libs.plugins.kotlin.jvm) // Intellij may complain about 'libs' due to using Gradle 7, but it works fine.
     alias(libs.plugins.cordapp)
+    alias(libs.plugins.quasar.utils)
     `maven-publish`
     id("r3-artifactory")
     alias(libs.plugins.detekt)
 }
 
 dependencies {
+    cordapp(project(":bridging-token-contracts"))
+
     cordaProvided(libs.corda.core)
-    cordapp(libs.tokens.workflows)
+    cordaProvided(libs.tokens.contracts)
+    cordaProvided(libs.tokens.workflows)
+    cordaProvided(libs.corda.solana.sdk)
 
     testImplementation(libs.junit.jupiter)
+    testImplementation(libs.junit)
     testImplementation(libs.assertj.core)
+    testImplementation(libs.corda.solana.common)
+    testImplementation(libs.corda.test.utils)
+    testImplementation(libs.corda.core.test.utils)
+    testImplementation(libs.corda.node.driver)
 
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 

@@ -1,6 +1,8 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import com.r3.corda.lib.solana.bridging.token.contracts.BridgingContract
+import com.r3.corda.lib.solana.bridging.token.states.BridgedAssetState
 import com.r3.corda.lib.tokens.contracts.states.AbstractToken
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.contracts.types.IssuedTokenType
