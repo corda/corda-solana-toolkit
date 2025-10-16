@@ -22,6 +22,7 @@ dependencies {
     testImplementation(libs.corda.test.utils)
     testImplementation(libs.corda.core.test.utils)
     testImplementation(libs.corda.node.driver)
+    testImplementation("co.paralleluniverse:quasar-core:0.7.6") //for flow code TODO move to toml
 
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 

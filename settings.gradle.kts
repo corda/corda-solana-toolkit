@@ -33,6 +33,14 @@ dependencyResolutionManagement {
             url = uri("https://software.r3.com/artifactory/corda-dependencies")
             credentials { artifactory(this) }
         }
+        //for com.r3.libs:r3-libs-obfuscator:1.4.1 required by corda-node-driver
+        maven {
+            url = uri("https://software.r3.com/artifactory/r3-corda-releases")
+            credentials { artifactory(this) }
+            mavenContent {
+                releasesOnly()
+            }
+        }
     }
 }
 
