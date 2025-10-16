@@ -55,7 +55,7 @@ class BridgeFungibleTokenFlow(
         val observerSessions = sessionsForParties(observers)
         val participantSessions = sessionsForParties(participants)
 
-        val cordaTokenId = (token.state.data.amount.token.tokenType as TokenPointer<*>).pointer.pointer.id
+        val cordaTokenId = (token.state.data.amount.token.tokenType as TokenPointer<*>).pointer.pointer.id.toString()
 
         val previousOwner = checkNotNull(previousOwnerOf(serviceHub, token)) {
             "Previous owner of the token $token could not be determined"

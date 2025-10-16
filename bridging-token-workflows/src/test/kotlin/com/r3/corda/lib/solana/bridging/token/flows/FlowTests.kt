@@ -106,7 +106,7 @@ class FlowTests {
     @Before
     fun setup() {
         val bridgingContractsCordapp = TestCordapp.findCordapp("com.r3.corda.lib.solana.bridging.token.contracts")
-        //val bridgingFlowsCordapp = TestCordapp.findCordapp("com.r3.corda.lib.solana.bridging.token.flows")
+        val bridgingFlowsCordapp = TestCordapp.findCordapp("com.r3.corda.lib.solana.bridging.token.flows")
         val baConfig = mapOf(
             "participants" to mapOf(COMPANY.name.toString() to tokenAccount.base58()),
             "mints" to mapOf(TOKEN_IDENTIFIER to tokenMint.base58()),
@@ -147,7 +147,7 @@ class FlowTests {
         bridgingAuthority = network!!.createNode(
             MockNodeParameters(
                 legalName = BA.name,
-                additionalCordapps = listOf(/*bridgingFlowsCordapp.withConfig(baConfig),*/ bridgingContractsCordapp)
+                additionalCordapps = listOf(bridgingFlowsCordapp.withConfig(baConfig), bridgingContractsCordapp)
             )
         )
 

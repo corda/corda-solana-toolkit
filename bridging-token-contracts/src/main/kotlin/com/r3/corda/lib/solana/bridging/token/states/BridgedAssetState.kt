@@ -6,13 +6,12 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.identity.AbstractParty
 import net.corda.solana.sdk.instruction.Pubkey
-import java.util.UUID
 
 @BelongsToContract(BridgingContract::class)
 data class BridgedAssetState(
     val originalOwner: AbstractParty,
     val amount: Long,
-    val tokenTypeId: UUID,
+    val tokenTypeId: String,
     val tokenRef: StateRef,
     val minted: Boolean,
     val mintDestination: Pubkey,
