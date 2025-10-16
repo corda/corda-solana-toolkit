@@ -19,4 +19,4 @@ detekt-ktlint-wrapper = { module = "dev.detekt:detekt-rules-ktlint-wrapper", ver
 # Use the same minor version of Kotlin as Corda
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version = "1.9.25" }
 detekt = { id = "dev.detekt", version.ref = "detekt" }
-cordapp = { id = "net.corda.plugins.cordapp", version.ref = "corda" }
+cordapp = { id = "net.corda.plugins.cordapp", version = "5.1.3" }
