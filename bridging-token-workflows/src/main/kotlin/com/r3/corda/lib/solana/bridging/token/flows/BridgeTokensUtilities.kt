@@ -6,11 +6,16 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.identity.AbstractParty
 import net.corda.core.node.ServiceHub
 
+@Suppress("ClassSignature", "FunctionSignature")
 @Suspendable
-fun previousOwnerOf(serviceHub: ServiceHub, output: StateAndRef<FungibleToken>): AbstractParty? {
+fun previousOwnerOf(
+    serviceHub: ServiceHub,
+    output: StateAndRef<FungibleToken>,
+): AbstractParty? {
     val txHash = output.ref.txhash
-    val stx = serviceHub.validatedTransactions.getTransaction(txHash)
-        ?: error("Producing transaction $txHash not found")
+    val stx =
+        serviceHub.validatedTransactions.getTransaction(txHash)
+            ?: error("Producing transaction $txHash not found")
 
     val inputTokens: List<FungibleToken> =
         stx.toLedgerTransaction(serviceHub).inputsOfType<FungibleToken>()

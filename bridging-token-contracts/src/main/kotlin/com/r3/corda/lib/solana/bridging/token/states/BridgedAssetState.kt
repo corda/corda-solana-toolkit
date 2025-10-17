@@ -17,5 +17,5 @@ data class BridgedAssetState(
     val mintDestination: Pubkey,
     val mint: Pubkey,
     val mintAuthority: Pubkey,
-    override val participants: List<AbstractParty>
+    override val participants: List<AbstractParty>,
 ) : ContractState

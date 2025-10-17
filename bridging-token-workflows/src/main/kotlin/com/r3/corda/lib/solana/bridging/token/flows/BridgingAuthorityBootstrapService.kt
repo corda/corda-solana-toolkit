@@ -9,11 +9,14 @@ import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.debug
 import org.slf4j.LoggerFactory
-import java.util.*
+import java.util.UUID
 import java.util.concurrent.Executors
 
 @CordaService
-class BridgingAuthorityBootstrapService(appServiceHub: AppServiceHub) : SingletonSerializeAsToken() {
+@Suppress("ClassSignature")
+class BridgingAuthorityBootstrapService(
+    appServiceHub: AppServiceHub,
+) : SingletonSerializeAsToken() {
     private val holdingIdentity: Party
     private val solanaNotary: Party
     private val bridgeAuthority = appServiceHub.myInfo.legalIdentities.first()
@@ -23,35 +26,50 @@ class BridgingAuthorityBootstrapService(appServiceHub: AppServiceHub) : Singleto
 
     init {
         val cfg = appServiceHub.getAppContext().config
-        val holdingIdentityLabel = try {
-            UUID.fromString(cfg.getString("holdingIdentityLabel"))
-        } catch(_: Exception) {
-            UUID.randomUUID() //TODO hack added to pass MockNetwork test
-        }
-        val holdingIdentityPublicKey = appServiceHub
-            .identityService
-            .publicKeysForExternalId(holdingIdentityLabel)
-            .singleOrNull()
-        holdingIdentity = if (holdingIdentityPublicKey == null) {
-            // Generate a new key pair and self-signed certificate for the holding identity
-            appServiceHub.keyManagementService.freshKeyAndCert(
-                identity = requireNotNull(appServiceHub.identityService.certificateFromKey(bridgeAuthority.owningKey)) {
-                    "Could not find certificate for key ${bridgeAuthority.owningKey}"
-                },
-                revocationEnabled = false,
-                externalId = holdingIdentityLabel
-            ).party
-        } else {
-            // Reuse the existing key pair and certificate for the holding identity
-            checkNotNull(
-                appServiceHub.identityService.certificateFromKey(holdingIdentityPublicKey)?.party
-            ) {
-                "Could not find certificate for key $holdingIdentityPublicKey"
+        val holdingIdentityLabel =
+            try {
+                UUID.fromString(cfg.getString("holdingIdentityLabel"))
+            } catch (_: Exception) {
+                UUID.randomUUID() // TODO hack added to pass MockNetwork test
             }
-        }
-        val solanaNotaryName = try{ CordaX500Name.parse(cfg.getString("solanaNotaryName")) } catch (_: Exception) { "Bob" }
+        val holdingIdentityPublicKey =
+            appServiceHub
+                .identityService
+                .publicKeysForExternalId(holdingIdentityLabel)
+                .singleOrNull()
+        holdingIdentity =
+            if (holdingIdentityPublicKey == null) {
+                // Generate a new key pair and self-signed certificate for the holding identity
+                appServiceHub.keyManagementService
+                    .freshKeyAndCert(
+                        identity =
+                        requireNotNull(
+                            appServiceHub.identityService.certificateFromKey(bridgeAuthority.owningKey),
+                        ) {
+                            "Could not find certificate for key ${bridgeAuthority.owningKey}"
+                        },
+                        revocationEnabled = false,
+                        externalId = holdingIdentityLabel,
+                    ).party
+            } else {
+                // Reuse the existing key pair and certificate for the holding identity
+                checkNotNull(
+                    appServiceHub.identityService.certificateFromKey(holdingIdentityPublicKey)?.party,
+                ) {
+                    "Could not find certificate for key $holdingIdentityPublicKey"
+                }
+            }
+        val solanaNotaryName =
+            try {
+                CordaX500Name.parse(cfg.getString("solanaNotaryName"))
+            } catch (_: Exception) {
+                "Bob"
+            }
         solanaNotary =
-            appServiceHub.networkParameters.notaries.firstOrNull { it.identity.name == solanaNotaryName }?.identity ?: appServiceHub.networkMapCache.notaryIdentities.first() //TODO hack added to pass MockNetwork test
+            appServiceHub.networkParameters.notaries
+                .firstOrNull { it.identity.name == solanaNotaryName }
+                ?.identity
+                ?: appServiceHub.networkMapCache.notaryIdentities.first() // TODO hack added to pass MockNetwork test
         appServiceHub.registerUnloadHandler { onStop() }
         onStartup(appServiceHub)
     }
@@ -61,9 +79,8 @@ class BridgingAuthorityBootstrapService(appServiceHub: AppServiceHub) : Singleto
     }
 
     private fun onStartup(appServiceHub: AppServiceHub) {
-        //Retrieve states from receiver
+        // Retrieve states from receiver
         val receivedStates = appServiceHub.vaultService.queryBy(FungibleToken::class.java).states
-
 
         callFlow(receivedStates, appServiceHub)
         addVaultListener(appServiceHub)
@@ -76,7 +93,11 @@ class BridgingAuthorityBootstrapService(appServiceHub: AppServiceHub) : Singleto
         }
     }
 
-    private fun callFlow(fungibleTokens: Collection<StateAndRef<FungibleToken>>, appServiceHub: AppServiceHub) {
+    @Suppress("FunctionSignature")
+    private fun callFlow(
+        fungibleTokens: Collection<StateAndRef<FungibleToken>>,
+        appServiceHub: AppServiceHub,
+    ) {
         fungibleTokens.forEach { token ->
             val previousOwner = previousOwnerOf(appServiceHub, token) ?: return@forEach
             if (previousOwner !in listOf(bridgeAuthority, holdingIdentity)) {
@@ -89,8 +110,8 @@ class BridgingAuthorityBootstrapService(appServiceHub: AppServiceHub) : Singleto
                             emptyList(),
                             token,
                             bridgeAuthority,
-                            solanaNotary
-                        )
+                            solanaNotary,
+                        ),
                     )
                 }
             }

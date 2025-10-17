@@ -22,7 +22,7 @@ dependencies {
     testImplementation(libs.corda.test.utils)
     testImplementation(libs.corda.core.test.utils)
     testImplementation(libs.corda.node.driver)
-    testImplementation("co.paralleluniverse:quasar-core:0.7.6") //for flow code TODO move to toml
+    testImplementation("co.paralleluniverse:quasar-core:0.7.6") // for flow code TODO move to toml
 
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
@@ -30,8 +30,8 @@ dependencies {
 }
 
 cordapp {
-    targetPlatformVersion.set(140) //TODO externalise
-    minimumPlatformVersion.set(1) //TODO externalise
+    targetPlatformVersion.set(140) // TODO externalise
+    minimumPlatformVersion.set(1) // TODO externalise
 
     workflow {
         name.set("Corda Bridging Tokens Workflows")
@@ -51,6 +51,7 @@ java {
 tasks.named<Test>("test") {
     useJUnitPlatform()
 }
+
 tasks.withType<Test>().configureEach {
     jvmArgs(
         "--add-opens=java.base/java.util=ALL-UNNAMED",
@@ -58,7 +59,7 @@ tasks.withType<Test>().configureEach {
         "--add-opens=java.base/java.lang.reflect=ALL-UNNAMED",
         "--add-opens=java.base/java.lang.invoke=ALL-UNNAMED",
         "--add-opens=java.base/java.time=ALL-UNNAMED",
-        "--add-opens=java.base/java.nio=ALL-UNNAMED"
+        "--add-opens=java.base/java.nio=ALL-UNNAMED",
     )
 }
 publishing {

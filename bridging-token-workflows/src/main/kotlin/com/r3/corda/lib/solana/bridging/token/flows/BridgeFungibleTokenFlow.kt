@@ -46,57 +46,67 @@ class BridgeFungibleTokenFlow(
     val observers: List<Party> = emptyList(),
     val token: StateAndRef<FungibleToken>,
     val bridgeAuthority: Party,
-    val solanaNotary: Party
+    val solanaNotary: Party,
 ) : FlowLogic<SignedTransaction>() {
-
     @Suspendable
+    @Suppress("LongMethod")
     override fun call(): SignedTransaction {
         val participants = listOf(lockingHolder)
         val observerSessions = sessionsForParties(observers)
         val participantSessions = sessionsForParties(participants)
 
-        val cordaTokenId = when (val tokenType = token.state.data.amount.token.tokenType) {
-            is TokenPointer<*> -> tokenType.pointer.pointer.id.toString()
-            else -> tokenType.tokenIdentifier
-        }
+        val cordaTokenId =
+            when (val tokenType = token.state.data.amount.token.tokenType) {
+                is TokenPointer<*> ->
+                    tokenType.pointer.pointer.id
+                        .toString()
 
-        val previousOwner = checkNotNull(previousOwnerOf(serviceHub, token)) {
-            "Previous owner of the token $token could not be determined"
-        }
+                else -> tokenType.tokenIdentifier
+            }
+
+        val previousOwner =
+            checkNotNull(previousOwnerOf(serviceHub, token)) {
+                "Previous owner of the token $token could not be determined"
+            }
         val solanaAccountMapping = serviceHub.cordaService(SolanaAccountsMappingService::class.java)
         val destination =
-            solanaAccountMapping.participants[previousOwner.nameOrNull()]!! //TODO handle null
-        val mint = solanaAccountMapping.mints[cordaTokenId]!! //TODO handle null
-        val mintAuthority = solanaAccountMapping.mintAuthorities[cordaTokenId]!! //TODO handle null
+            solanaAccountMapping.participants[previousOwner.nameOrNull()]!! // TODO handle null
+        val mint = solanaAccountMapping.mints[cordaTokenId]!! // TODO handle null
+        val mintAuthority = solanaAccountMapping.mintAuthorities[cordaTokenId]!! // TODO handle null
 
-        val amount = token.state.data.amount.toDecimal().toLong() //TODO this is quantity for Solana, should it be 1 to 1 what is bridged on Corda?
+        val amount =
+            token.state.data.amount
+                .toDecimal()
+                .toLong() // TODO this is quantity for Solana, should it be 1 to 1 what is bridged on Corda?
 
         val additionalCommand = BridgingContract.BridgingCommand.IssueBridgingAsset(bridgeAuthority, lockingHolder)
-        val additionalOutput: ContractState = BridgedAssetState(
-            amount = amount,
-            originalOwner = originalOwner,
-            tokenTypeId = cordaTokenId,
-            tokenRef = token.ref,
-            minted = false,
-            mint = mint,
-            mintAuthority = mintAuthority,
-            mintDestination = destination,
-            participants = listOf(bridgeAuthority)
-        )
+        val additionalOutput: ContractState =
+            BridgedAssetState(
+                amount = amount,
+                originalOwner = originalOwner,
+                tokenTypeId = cordaTokenId,
+                tokenRef = token.ref,
+                minted = false,
+                mint = mint,
+                mintAuthority = mintAuthority,
+                mintDestination = destination,
+                participants = listOf(bridgeAuthority),
+            )
 
         // We move the token from BridgeAuthority to the lock holder (confidential identity).
         // Also, we create a BridgedAssetState that will be later used to mint the tokens on Solana
-        val moveTx = subFlow(
-            MoveAndLockFungibleToken(
-                participantSessions = participantSessions,
-                observerSessions = observerSessions,
-                token = token,
-                additionalOutput = additionalOutput,
-                additionalCommand = additionalCommand,
-                lockingHolder,
-                token.state.data.amount
+        val moveTx =
+            subFlow(
+                MoveAndLockFungibleToken(
+                    participantSessions = participantSessions,
+                    observerSessions = observerSessions,
+                    token = token,
+                    additionalOutput = additionalOutput,
+                    additionalCommand = additionalCommand,
+                    lockingHolder,
+                    token.state.data.amount,
+                ),
             )
-        )
 
         // Change notary to Solana notary
         val moveBridgingAssetState = moveTx.toLedgerTransaction(serviceHub).outRefsOfType<BridgedAssetState>().single()
@@ -108,12 +118,12 @@ class BridgeFungibleTokenFlow(
         transactionBuilder.addNotaryInstruction(instruction)
         transactionBuilder.addCommand(
             BridgingContract.BridgingCommand.MintToSolana(bridgeAuthority),
-            listOf(ourIdentity.owningKey)
+            listOf(ourIdentity.owningKey),
         )
         transactionBuilder.addInputState(StateAndRef(notaryChangeTx.state, notaryChangeTx.ref))
         transactionBuilder.addOutputState(
             state = notaryChangeTx.state.data.copy(minted = true),
-            contract = BridgingContract::class.qualifiedName!!
+            contract = BridgingContract::class.qualifiedName!!,
         )
 
         // Verify
@@ -126,17 +136,23 @@ class BridgeFungibleTokenFlow(
 /**
  * Responder flow for [BridgeFungibleTokenFlow].
  */
+@Suppress("ClassSignature")
 @InitiatedBy(BridgeFungibleTokenFlow::class)
-class BridgeFungibleTokensHandler(val otherSession: FlowSession) : FlowLogic<Unit>() {
+class BridgeFungibleTokensHandler(
+    val otherSession: FlowSession,
+) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
         subFlow(MoveTokensFlowHandler(otherSession))
 
-        val signedTransaction = subFlow(object : SignTransactionFlow(otherSession) {
-            override fun checkTransaction(stx: SignedTransaction) {
-                // Nothing additional to check
-            }
-        })
+        val signedTransaction =
+            subFlow(
+                object : SignTransactionFlow(otherSession) {
+                    override fun checkTransaction(stx: SignedTransaction) {
+                        // Nothing additional to check
+                    }
+                },
+            )
         subFlow(ReceiveFinalityFlow(otherSession, signedTransaction.id))
     }
 }
@@ -150,22 +166,23 @@ constructor(
     val additionalOutput: ContractState,
     val additionalCommand: BridgingContract.BridgingCommand,
     val lockingHolder: AbstractParty,
-    val amount: Amount<IssuedTokenType>
-) : AbstractMoveTokensFlow() { //TODO move away from this abstract class, it's progress tracker mention only token move
+    val amount: Amount<IssuedTokenType>,
+) : AbstractMoveTokensFlow() { // TODO move away from this abstract class, it's progress tracker for token move
 
     @Suspendable
     override fun addMove(transactionBuilder: TransactionBuilder) {
-
         val output = FungibleToken(amount, lockingHolder)
         addMoveTokens(transactionBuilder = transactionBuilder, inputs = listOf(token), outputs = listOf(output))
 
         val outputGroups: Map<IssuedTokenType, List<AbstractToken>> =
-            transactionBuilder.outputStates()
+            transactionBuilder
+                .outputStates()
                 .map { it.data }
                 .filterIsInstance<AbstractToken>()
                 .groupBy { it.issuedTokenType }
         val inputGroups: Map<IssuedTokenType, List<StateAndRef<AbstractToken>>> =
-            transactionBuilder.inputStates()
+            transactionBuilder
+                .inputStates()
                 .map { serviceHub.toStateAndRef<AbstractToken>(it) }
                 .groupBy { it.state.data.issuedTokenType }
 
@@ -175,8 +192,12 @@ constructor(
 
         transactionBuilder.apply {
             outputGroups.forEach { (issuedTokenType: IssuedTokenType, _: List<AbstractToken>) ->
-                val inputGroup = inputGroups[issuedTokenType]
-                    ?: throw IllegalArgumentException("No corresponding inputs for the outputs issued token type: $issuedTokenType")
+                val inputGroup =
+                    inputGroups[issuedTokenType]
+                        ?: throw IllegalArgumentException(
+                            "No corresponding inputs for the outputs issued token type: " +
+                                "$issuedTokenType",
+                        )
                 val keys = inputGroup.map { it.state.data.holder.owningKey }
                 addOutputState(additionalOutput)
                 addCommand(additionalCommand, keys)

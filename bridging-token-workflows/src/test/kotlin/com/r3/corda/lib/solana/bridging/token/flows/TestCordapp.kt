@@ -25,7 +25,7 @@ import net.corda.core.transactions.SignedTransaction
 class IssueSimpleTokenFlow(
     private val mint: TokenType,
     private val quantity: Long,
-    private val notaryName: CordaX500Name
+    private val notaryName: CordaX500Name,
 ) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
@@ -33,7 +33,7 @@ class IssueSimpleTokenFlow(
             (quantity of mint).issuedBy(ourIdentity).heldBy(ourIdentity)
 
         return subFlow(IssueTokensFlow(token))
-        //TODO make sure to use specific Corda Notary
+        // TODO make sure to use specific Corda Notary
 //        val notary = serviceHub.networkMapCache.notaryIdentities
 //            .first { it.name == notaryName }
 //        val amount = (quantity of SIMPLE).issuedBy(ourIdentity)
@@ -45,36 +45,41 @@ class IssueSimpleTokenFlow(
     }
 }
 
+@Suppress("ClassSignature")
 @InitiatedBy(IssueSimpleTokenFlow::class)
-class IssueSimpleTokenResponder(private val session: FlowSession) : FlowLogic<Unit>() {
+class IssueSimpleTokenResponder(
+    private val session: FlowSession,
+) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
         subFlow(IssueTokensFlowHandler(session))
     }
 }
 
+@Suppress("ClassSignature")
 @StartableByRPC
 class QuerySimpleTokensFlow(
     private val issuer: Party? = null,
-    private val tokenType: TokenType
+    private val tokenType: TokenType,
 ) : FlowLogic<List<StateAndRef<FungibleToken>>>() {
     @Suspendable
     override fun call(): List<StateAndRef<FungibleToken>> {
         val criteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.UNCONSUMED)
         val all = serviceHub.vaultService.queryBy(FungibleToken::class.java, criteria).states
 
-        val result = all.filter { sar ->
-            val ft = sar.state.data
+        val result =
+            all.filter { sar ->
+                val ft = sar.state.data
 
-            val holderWellKnown = serviceHub.identityService.wellKnownPartyFromAnonymous(ft.holder)
-            val issuerWellKnown = serviceHub.identityService.wellKnownPartyFromAnonymous(ft.amount.token.issuer)
+                val holderWellKnown = serviceHub.identityService.wellKnownPartyFromAnonymous(ft.holder)
+                val issuerWellKnown = serviceHub.identityService.wellKnownPartyFromAnonymous(ft.amount.token.issuer)
 
-            val isSimple = ft.amount.token.tokenType == tokenType
-            val holderOk = holderWellKnown == ourIdentity
-            val issuerOk = (issuer == null) || (issuerWellKnown == issuer)
+                val isSimple = ft.amount.token.tokenType == tokenType
+                val holderOk = holderWellKnown == ourIdentity
+                val issuerOk = (issuer == null) || (issuerWellKnown == issuer)
 
-            isSimple && holderOk && issuerOk
-        }
+                isSimple && holderOk && issuerOk
+            }
         return result
     }
 }

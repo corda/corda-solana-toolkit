@@ -13,6 +13,7 @@ import net.corda.solana.sdk.internal.Token2022
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
+@Suppress("MaxLineLength", "ArgumentListWrapping", "FunctionLiteral", "Wrapping", "ClassSignature", "FunctionSignature")
 class BridgingContract : Contract {
     override fun verify(tx: LedgerTransaction) {
         val bridgingCommands = tx.commandsOfType<BridgingCommand>()
@@ -25,7 +26,10 @@ class BridgingContract : Contract {
         }
     }
 
-    private fun verifyIssueBridgingAsset(tx: LedgerTransaction, bridgingCommand: BridgingCommand.IssueBridgingAsset) {
+    private fun verifyIssueBridgingAsset(
+        tx: LedgerTransaction,
+        bridgingCommand: BridgingCommand.IssueBridgingAsset,
+    ) {
         val bridgingAssetState = tx.outputsOfType<BridgedAssetState>().singleOrNull()
         val tokenState = tx.outputsOfType<FungibleToken>().singleOrNull()
 
@@ -37,22 +41,31 @@ class BridgingContract : Contract {
 
         require(moveCommands.size == 1) { "Bridging must have one move command to lock token with the holding identity" }
 
-        val lockedSum = tx.outputsOfType<FungibleToken>()
-            .filter { it.holder != bridgingCommand.bridgeAuthority }
-            // ... currently can't distinguish between locked and a change, both are for same holder
-            .sumOf {
-                it.amount.toDecimal().toLong()
-            }
+        val lockedSum =
+            tx
+                .outputsOfType<FungibleToken>()
+                .filter { it.holder != bridgingCommand.bridgeAuthority }
+                // ... currently can't distinguish between locked and a change, both are for same holder
+                .sumOf {
+                    it.amount.toDecimal().toLong()
+                }
 
-        require(lockedSum == bridgingAssetState.amount) { "Locked amount of $lockedSum must match requested lock amount ${bridgingAssetState.amount}." }
+        require(lockedSum == bridgingAssetState.amount) {
+            "Locked amount of $lockedSum must match requested lock amount ${bridgingAssetState.amount}."
+        }
         require(bridgingAssetState.minted.not()) { "Bridging asset must not be marked as minted when issuing." }
     }
 
-    private fun verifyMintToSolana(tx: LedgerTransaction, bridgingCommand: BridgingCommand.MintToSolana) {
+    private fun verifyMintToSolana(
+        tx: LedgerTransaction,
+        bridgingCommand: BridgingCommand.MintToSolana,
+    ) {
         val bridgingAssetState = tx.outputsOfType<BridgedAssetState>().singleOrNull()
 
         require(bridgingAssetState != null) { "Bridging transaction must have exactly one BridgedAssetState as output" }
-        require(bridgingCommand.bridgeAuthority in bridgingAssetState.participants) { "BridgedAssetState must have holding identity as participant" }
+        require(bridgingCommand.bridgeAuthority in bridgingAssetState.participants) {
+            "BridgedAssetState must have holding identity as participant"
+        }
 
         val mintCommand = tx.commandsOfType<BridgingCommand.MintToSolana>()
 
@@ -63,7 +76,9 @@ class BridgingContract : Contract {
         require(instruction != null) { "Exactly one Solana mint instruction required" }
 
         require(instruction.programId == Token2022.PROGRAM_ID) { "Solana program id must be Token2022 program" }
-        require(instruction.accounts[1].pubkey == bridgingAssetState.mintDestination) { "Target in instructions does not match mint destination address" }
+        require(instruction.accounts[1].pubkey == bridgingAssetState.mintDestination) {
+            "Target in instructions does not match mint destination address"
+        }
 
         @Suppress("MagicNumber")
         require(instruction.data.size == 9) { "Expecting 9 bytes of instruction data" }
@@ -82,7 +97,13 @@ class BridgingContract : Contract {
     }
 
     sealed interface BridgingCommand : CommandData {
-        data class IssueBridgingAsset(val bridgeAuthority: Party, val holdingIdentity: Party) : BridgingCommand
-        data class MintToSolana(val bridgeAuthority: Party) : BridgingCommand
+        data class IssueBridgingAsset(
+            val bridgeAuthority: Party,
+            val holdingIdentity: Party,
+        ) : BridgingCommand
+
+        data class MintToSolana(
+            val bridgeAuthority: Party,
+        ) : BridgingCommand
     }
 }

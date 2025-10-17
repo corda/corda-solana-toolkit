@@ -20,8 +20,8 @@ dependencies {
 }
 
 cordapp {
-    targetPlatformVersion.set(140) //TODO externalise
-    minimumPlatformVersion.set(1) //TODO externalise
+    targetPlatformVersion.set(140) // TODO externalise
+    minimumPlatformVersion.set(1) // TODO externalise
 
     workflow {
         name.set("Corda Bridging Tokens Contracts")

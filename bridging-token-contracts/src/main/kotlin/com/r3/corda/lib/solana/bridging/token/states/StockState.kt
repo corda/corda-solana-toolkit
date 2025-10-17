@@ -12,11 +12,14 @@ import java.math.BigDecimal
 // * State *
 // *********
 @BelongsToContract(StockContract::class)
-data class StockState(val issuer: Party,
-                      val symbol: String,
-                      val name: String,
-                      val currency: String,
-                      val price: BigDecimal,
-                      override val linearId: UniqueIdentifier,
-                      override val fractionDigits: Int = 0,
-                      override val maintainers: List<Party>  = listOf(issuer)) : EvolvableTokenType(),StatePersistable
+data class StockState(
+    val issuer: Party,
+    val symbol: String,
+    val name: String,
+    val currency: String,
+    val price: BigDecimal,
+    override val linearId: UniqueIdentifier,
+    override val fractionDigits: Int = 0,
+    override val maintainers: List<Party> = listOf(issuer),
+) : EvolvableTokenType(),
+    StatePersistable
