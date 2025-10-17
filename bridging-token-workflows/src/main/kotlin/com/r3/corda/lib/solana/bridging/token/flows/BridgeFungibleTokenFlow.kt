@@ -77,7 +77,7 @@ class BridgeFungibleTokenFlow(
         val amount =
             token.state.data.amount
                 .toDecimal()
-                .toLong() // TODO this is quantity for Solana, should it be 1 to 1 what is bridged on Corda?
+                .toLong()
 
         val additionalCommand = BridgingContract.BridgingCommand.IssueBridgingAsset(bridgeAuthority, lockingHolder)
         val additionalOutput: ContractState =
@@ -167,8 +167,7 @@ constructor(
     val additionalCommand: BridgingContract.BridgingCommand,
     val lockingHolder: AbstractParty,
     val amount: Amount<IssuedTokenType>,
-) : AbstractMoveTokensFlow() { // TODO move away from this abstract class, it's progress tracker for token move
-
+) : AbstractMoveTokensFlow() {
     @Suspendable
     override fun addMove(transactionBuilder: TransactionBuilder) {
         val output = FungibleToken(amount, lockingHolder)
@@ -190,18 +189,16 @@ constructor(
             "Input and output token types must correspond to each other when moving tokensToIssue"
         }
 
-        transactionBuilder.apply {
-            outputGroups.forEach { (issuedTokenType: IssuedTokenType, _: List<AbstractToken>) ->
-                val inputGroup =
-                    inputGroups[issuedTokenType]
-                        ?: throw IllegalArgumentException(
-                            "No corresponding inputs for the outputs issued token type: " +
-                                "$issuedTokenType",
-                        )
-                val keys = inputGroup.map { it.state.data.holder.owningKey }
-                addOutputState(additionalOutput)
-                addCommand(additionalCommand, keys)
-            }
+        outputGroups.forEach { (issuedTokenType: IssuedTokenType, _: List<AbstractToken>) ->
+            val inputGroup =
+                inputGroups[issuedTokenType]
+                    ?: throw IllegalArgumentException(
+                        "No corresponding inputs for the outputs issued token type: " +
+                            "$issuedTokenType",
+                    )
+            val keys = inputGroup.map { it.state.data.holder.owningKey }
+            transactionBuilder.addOutputState(additionalOutput)
+            transactionBuilder.addCommand(additionalCommand, keys)
         }
     }
 }
