@@ -5,6 +5,13 @@ include(
     "bridging-token-workflows",
 )
 
+pluginManagement {
+    repositories {
+        gradlePluginPortal() // For jetbrains.kotlin.jvm plugin used by Cordapp plugin
+        maven { url = uri("https://download.corda.net/maven/corda-releases") } //For Cordapp plugin
+    }
+}
+
 dependencyResolutionManagement {
     @Suppress("UnstableApiUsage")
     repositories {
