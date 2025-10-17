@@ -37,7 +37,6 @@ cordapp {
         name.set("Corda Bridging Tokens Workflows")
         versionId.set(1)
         vendor.set("R3")
-        licence.set("Apache License, Version 2.0")
     }
 }
 
