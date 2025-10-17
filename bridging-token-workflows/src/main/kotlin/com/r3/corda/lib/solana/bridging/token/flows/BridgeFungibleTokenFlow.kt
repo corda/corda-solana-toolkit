@@ -57,6 +57,8 @@ class BridgeFungibleTokenFlow(
 
         val cordaTokenId =
             when (val tokenType = token.state.data.amount.token.tokenType) {
+                // TODO while testing StockCordapp check if generic tokenType.tokenIdentifier
+                // can be used for TokenPointer<*>?
                 is TokenPointer<*> ->
                     tokenType.pointer.pointer.id
                         .toString()
