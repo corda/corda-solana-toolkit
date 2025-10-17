@@ -1,4 +1,4 @@
-package com.r3.corda.lib.solana.bridging.token.flows.cordapp
+package com.r3.corda.lib.solana.bridging.token.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
@@ -14,40 +14,34 @@ import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.transactions.SignedTransaction
 
-object SIMPLE : TokenType("SIMPLE", 0)
-object SIMPLE_2 : TokenType("SIMPLE_2", 0)
-
 @InitiatingFlow
 @StartableByRPC
 class IssueSimpleTokenFlow(
-    private val quantity: Long
+    private val mint: TokenType,
+    private val quantity: Long,
+    private val notaryName: CordaX500Name
 ) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
         val token: FungibleToken =
-            (quantity of SIMPLE).issuedBy(ourIdentity).heldBy(ourIdentity)
+            (quantity of mint).issuedBy(ourIdentity).heldBy(ourIdentity)
 
         return subFlow(IssueTokensFlow(token))
-    }
-}
-
-
-@InitiatingFlow
-@StartableByRPC
-class IssueSimpleToken2Flow(
-    private val quantity: Long
-) : FlowLogic<SignedTransaction>() {
-    @Suspendable
-    override fun call(): SignedTransaction {
-        val token: FungibleToken =
-            (quantity of SIMPLE_2).issuedBy(ourIdentity).heldBy(ourIdentity)
-
-        return subFlow(IssueTokensFlow(token))
+        //TODO make sure to use specific Corda Notary
+//        val notary = serviceHub.networkMapCache.notaryIdentities
+//            .first { it.name == notaryName }
+//        val amount = (quantity of SIMPLE).issuedBy(ourIdentity)
+//        val token: FungibleToken = FungibleToken(amount = amount, holder = ourIdentity, tokenTypeJarHash = null)
+//        val txb = TransactionBuilder(notary)
+//        addIssueTokens(txb, listOf(token))
+//        val ptx = serviceHub.signInitialTransaction(txb)
+//        return subFlow(FinalityFlow(ptx, emptyList()))
     }
 }
 
@@ -62,14 +56,14 @@ class IssueSimpleTokenResponder(private val session: FlowSession) : FlowLogic<Un
 @StartableByRPC
 class QuerySimpleTokensFlow(
     private val issuer: Party? = null,
-    private val tokenType: TokenType = SIMPLE
+    private val tokenType: TokenType
 ) : FlowLogic<List<StateAndRef<FungibleToken>>>() {
     @Suspendable
     override fun call(): List<StateAndRef<FungibleToken>> {
         val criteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.UNCONSUMED)
         val all = serviceHub.vaultService.queryBy(FungibleToken::class.java, criteria).states
 
-        return all.filter { sar ->
+        val result = all.filter { sar ->
             val ft = sar.state.data
 
             val holderWellKnown = serviceHub.identityService.wellKnownPartyFromAnonymous(ft.holder)
@@ -81,5 +75,6 @@ class QuerySimpleTokensFlow(
 
             isSimple && holderOk && issuerOk
         }
+        return result
     }
 }

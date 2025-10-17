@@ -1,13 +1,9 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
 import com.lmax.solana4j.api.PublicKey
-import com.r3.corda.lib.solana.bridging.token.flows.cordapp.IssueSimpleToken2Flow
-import com.r3.corda.lib.solana.bridging.token.flows.cordapp.IssueSimpleTokenFlow
-import com.r3.corda.lib.solana.bridging.token.flows.cordapp.QuerySimpleTokensFlow
-import com.r3.corda.lib.solana.bridging.token.flows.cordapp.SIMPLE
-import com.r3.corda.lib.solana.bridging.token.flows.cordapp.SIMPLE_2
 import com.r3.corda.lib.solana.bridging.token.states.BridgedAssetState
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
+import com.r3.corda.lib.tokens.contracts.types.TokenType
 import com.r3.corda.lib.tokens.workflows.flows.rpc.MoveFungibleTokens
 import com.r3.corda.lib.tokens.workflows.utilities.tokenBalance
 import net.corda.core.contracts.Amount
@@ -117,7 +113,7 @@ class FlowTests {
         network = MockNetwork(
             MockNetworkParameters(
                 cordappsForAllNodes = listOf(
-                    TestCordapp.findCordapp("com.r3.corda.lib.solana.bridging.token.flows.cordapp"),
+                    //TODO verify if true - test cordapp (e.g. IssueSimpleTokenFlow) is in test module so it seems is available by default to all nodes
                     TestCordapp.findCordapp("com.r3.corda.lib.tokens.contracts"),
                     TestCordapp.findCordapp("com.r3.corda.lib.tokens.workflows")
                 ),
@@ -187,16 +183,22 @@ class FlowTests {
     @Throws(ExecutionException::class, InterruptedException::class)
     fun bridgeTest() {
         // Issue 1st Stock on Company node
+        val simple = TokenType("SIMPLE", 0)
         var future = company!!.startFlow<SignedTransaction?>(
             IssueSimpleTokenFlow(
-                ISSUING_STOCK_QUANTITY
+                simple,
+                ISSUING_STOCK_QUANTITY,
+                notaryName
             )
         )
         future.get()
         // Issue 2nd Stock on Bridge Authority node to verify it remains unaffected
+        val simple2 = TokenType("SIMPLE_2", 0)
         future = bridgingAuthority!!.startFlow(
-            IssueSimpleToken2Flow(
-                ISSUING_STOCK_QUANTITY
+            IssueSimpleTokenFlow(
+                simple2,
+                ISSUING_STOCK_QUANTITY,
+                notaryName
             )
         )
         future.get()
@@ -204,7 +206,7 @@ class FlowTests {
         var stockStatePointer = company!!.startFlow(
             QuerySimpleTokensFlow(
                 company!!.info.legalIdentities.first(),
-                SIMPLE
+                simple
             )
         ).get().first().state.data.tokenType
         val (startCordaQuantity) = company!!.services.vaultService.tokenBalance(stockStatePointer)
@@ -219,7 +221,7 @@ class FlowTests {
         var stock2StatePointer = bridgingAuthority!!.startFlow(
             QuerySimpleTokensFlow(
                 bridgingAuthority!!.info.legalIdentities.first(),
-                SIMPLE_2
+                simple2
             )
         ).get().first().state.data.tokenType
         var (start2CordaQuantity) = bridgingAuthority!!.services.vaultService.tokenBalance(stock2StatePointer)
@@ -227,7 +229,7 @@ class FlowTests {
 
         future =
             company!!.startFlow(
-                MoveFungibleTokens( Amount(100, SIMPLE),
+                MoveFungibleTokens(Amount(100, simple),
                     bridgingAuthority!!.info.legalIdentities[0]
                 )
             )
@@ -235,34 +237,34 @@ class FlowTests {
 
         // Company has no longer the amount of stocks
         val (endCordaQuantity) = company!!.services.vaultService.tokenBalance(stockStatePointer)
-        Assert.assertEquals(0L, endCordaQuantity)
+        Assert.assertEquals(1900L, endCordaQuantity)
 
         // Bridging Authority received the amount of stocks
         stockStatePointer = bridgingAuthority!!.startFlow(
             QuerySimpleTokensFlow(
-                bridgingAuthority!!.info.legalIdentities.first(),
-                SIMPLE
+                company!!.info.legalIdentities.first(),
+                simple
             )
         ).get().first().state.data.tokenType
         val (startBridgingAuthorityCordaQuantity) = bridgingAuthority!!.services.vaultService.tokenBalance(
             stockStatePointer
         )
-        Assert.assertEquals(ISSUING_STOCK_QUANTITY, startBridgingAuthorityCordaQuantity)
+        Assert.assertEquals(100L, startBridgingAuthorityCordaQuantity)
 
-        // We need to wait for the vault listener to process the newly received token
-        Thread.sleep(5000)
+         // We need to wait for the vault listener to process the newly received token
+        Thread.sleep(10000)
 
         stockStatePointer = bridgingAuthority!!.startFlow(
             QuerySimpleTokensFlow(
-                bridgingAuthority!!.info.legalIdentities.first(),
-                SIMPLE
+                company!!.info.legalIdentities.first(),
+                simple
             )
         ).get().first().state.data.tokenType
         val (finalCordaQuantity) = bridgingAuthority!!.services.vaultService.tokenBalance(stockStatePointer)
         Assert.assertEquals(
-            ISSUING_STOCK_QUANTITY,
+            100,
             finalCordaQuantity
-        ) // TODO this is Corda move token to self, so it still the same amount as at the beginning
+        )
 
         val token: StateAndRef<FungibleToken>? =
             bridgingAuthority!!.services.vaultService.queryBy(FungibleToken::class.java).states.firstOrNull {
@@ -277,13 +279,13 @@ class FlowTests {
             testValidator.client.getTokenAccountBalance(tokenAccount.base58(), RpcParams())
                 .checkResponse("getTokenAccountBalance")
 
-        Assert.assertEquals(ISSUING_STOCK_QUANTITY.toString(), finalSolanaBalance!!.amount)
+        Assert.assertEquals("100", finalSolanaBalance!!.amount)
 
         // Second stock balance remains unchanged /unaffected
         stock2StatePointer = bridgingAuthority!!.startFlow(
             QuerySimpleTokensFlow(
                 bridgingAuthority!!.info.legalIdentities.first(),
-                SIMPLE_2
+                simple2
             )
         ).get().first().state.data.tokenType
         start2CordaQuantity = bridgingAuthority!!.services.vaultService.tokenBalance(stock2StatePointer).quantity
