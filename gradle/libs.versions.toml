@@ -27,5 +27,5 @@ corda-node-driver = { module = "com.r3.corda:corda-node-driver", version.ref = "
 # Use the same minor version of Kotlin as Corda
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version = "1.9.25" }
 detekt = { id = "dev.detekt", version.ref = "detekt" }
-cordapp = { id = "net.corda.plugins.cordapp", version.ref = "corda-plugin" }
+cordapp = { id = "net.corda.plugins.cordapp", version = "5.1.3" }
 quasar-utils = { id = "net.corda.plugins.quasar-utils", version.ref = "corda-plugin" }

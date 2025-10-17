@@ -12,7 +12,7 @@ dependencies {
 
     cordaProvided(libs.corda.core)
     cordaProvided(libs.tokens.contracts)
-    cordaProvided(libs.tokens.workflows)
+    cordapp(libs.tokens.workflows)
     cordaProvided(libs.corda.solana.sdk)
 
     testImplementation(libs.junit.jupiter)
@@ -30,8 +30,8 @@ dependencies {
 }
 
 cordapp {
-    targetPlatformVersion.set(140) // TODO externalise
-    minimumPlatformVersion.set(1) // TODO externalise
+    targetPlatformVersion.set(140) //TODO externalise
+    minimumPlatformVersion.set(1) //TODO externalise
 
     workflow {
         name.set("Corda Bridging Tokens Workflows")
