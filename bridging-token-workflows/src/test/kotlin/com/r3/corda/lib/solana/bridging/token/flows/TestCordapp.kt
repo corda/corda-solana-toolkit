@@ -59,7 +59,7 @@ class IssueSimpleTokenResponder(
 @Suppress("ClassSignature")
 @StartableByRPC
 class QuerySimpleTokensFlow(
-    private val issuer: Party? = null,
+    private val issuer: Party,
     private val tokenType: TokenType,
 ) : FlowLogic<List<StateAndRef<FungibleToken>>>() {
     @Suspendable
@@ -76,7 +76,7 @@ class QuerySimpleTokensFlow(
 
                 val isSimple = ft.amount.token.tokenType == tokenType
                 val holderOk = holderWellKnown == ourIdentity
-                val issuerOk = (issuer == null) || (issuerWellKnown == issuer)
+                val issuerOk = issuerWellKnown == issuer
 
                 isSimple && holderOk && issuerOk
             }
