@@ -6,7 +6,7 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.identity.AbstractParty
 import net.corda.core.node.ServiceHub
 
-@Suppress("ClassSignature", "FunctionSignature")
+@Suppress("FunctionSignature")
 @Suspendable
 fun previousOwnerOf(
     serviceHub: ServiceHub,
