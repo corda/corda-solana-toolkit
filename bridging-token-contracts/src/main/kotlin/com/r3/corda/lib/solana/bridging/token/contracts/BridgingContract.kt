@@ -1,6 +1,5 @@
 package com.r3.corda.lib.solana.bridging.token.contracts
 
-import com.lmax.solana4j.programs.TokenProgramBase
 import com.r3.corda.lib.solana.bridging.token.states.BridgedAssetState
 import com.r3.corda.lib.tokens.contracts.commands.MoveTokenCommand
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
@@ -15,6 +14,10 @@ import java.nio.ByteOrder
 
 @Suppress("MaxLineLength", "ArgumentListWrapping", "FunctionLiteral", "Wrapping", "FunctionSignature")
 class BridgingContract : Contract {
+    companion object {
+        const val MINT_TO_INSTRUCTION: Int = 7
+    }
+
     override fun verify(tx: LedgerTransaction) {
         val bridgingCommands = tx.commandsOfType<BridgingCommand>()
 
@@ -45,7 +48,6 @@ class BridgingContract : Contract {
             tx
                 .outputsOfType<FungibleToken>()
                 .filter { it.holder != bridgingCommand.bridgeAuthority }
-                // ... currently can't distinguish between locked and a change, both are for same holder
                 .sumOf {
                     it.amount.toDecimal().toLong()
                 }
@@ -76,6 +78,9 @@ class BridgingContract : Contract {
         require(instruction != null) { "Exactly one Solana mint instruction required" }
 
         require(instruction.programId == Token2022.PROGRAM_ID) { "Solana program id must be Token2022 program" }
+        require(instruction.accounts.isNotEmpty()) {
+            "Instructions does not have target address"
+        }
         require(instruction.accounts[1].pubkey == bridgingAssetState.mintDestination) {
             "Target in instructions does not match mint destination address"
         }
@@ -88,7 +93,7 @@ class BridgingContract : Contract {
         val tokenInstruction = instructionBytes.get().toInt()
 
         val amount = instructionBytes.getLong()
-        require(tokenInstruction == TokenProgramBase.MINT_TO_INSTRUCTION) { "Token instruction must be MINT_TO_INSTRUCTION" }
+        require(tokenInstruction == MINT_TO_INSTRUCTION) { "Token instruction must be MINT_TO_INSTRUCTION" }
         require(amount == bridgingAssetState.amount) { "BridgeAssetState amount must match requested mint amount $amount." }
 
         val originalBridgingAssetState = tx.inputsOfType<BridgedAssetState>().singleOrNull()
