@@ -5,10 +5,10 @@ plugins {
 }
 
 dependencies {
-    cordapp(libs.tokens.contracts)
-
     cordaProvided(libs.corda.core)
     cordaProvided(libs.corda.solana.common)
+
+    cordapp(libs.tokens.contracts)
 
     detektPlugins(libs.detekt.ktlint.wrapper)
 }

@@ -5,7 +5,9 @@ import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.solana.sdk.instruction.Pubkey
+import java.lang.IllegalStateException
 
+@Suppress("UNCHECKED_CAST")
 @CordaService
 class SolanaAccountsMappingService(
     appServiceHub: AppServiceHub,
@@ -17,35 +19,19 @@ class SolanaAccountsMappingService(
     init {
         val cfg = appServiceHub.getAppContext().config
         participants =
-            try {
-                @Suppress("UNCHECKED_CAST")
-                (cfg.get("participants") as? Map<String, String>)
-                    ?.map { (k, v) -> CordaX500Name.parse(k) to Pubkey.fromBase58(v) }
-                    ?.toMap()
-                    ?: emptyMap()
-            } catch (_: Exception) {
-                emptyMap() // TODO here and other occurrences, for now ignore misconfiguration ...
-                // ... as the service is used by Notary in the mock network
-            }
+            (cfg.get("participants") as? Map<String, String>)
+                ?.map { (k, v) -> CordaX500Name.parse(k) to Pubkey.fromBase58(v) }
+                ?.toMap() ?: throw IllegalStateException("Missing participants configuration")
+
         mints =
-            try {
-                @Suppress("UNCHECKED_CAST")
-                (cfg.get("mints") as? Map<String, String>)
-                    ?.map { (k, v) -> k to Pubkey.fromBase58(v) }
-                    ?.toMap()
-                    ?: emptyMap()
-            } catch (_: Exception) {
-                emptyMap()
-            }
+            (cfg.get("mints") as? Map<String, String>)
+                ?.map { (k, v) -> k to Pubkey.fromBase58(v) }
+                ?.toMap() ?: throw IllegalStateException("Missing mints configuration")
+
         mintAuthorities =
-            try {
-                @Suppress("UNCHECKED_CAST")
-                (cfg.get("mintAuthorities") as? Map<String, String>)
-                    ?.map { (k, v) -> k to Pubkey.fromBase58(v) }
-                    ?.toMap()
-                    ?: emptyMap()
-            } catch (_: Exception) {
-                emptyMap()
-            }
+            (cfg.get("mintAuthorities") as? Map<String, String>)
+                ?.map { (k, v) -> k to Pubkey.fromBase58(v) }
+                ?.toMap()
+                ?: throw IllegalStateException("Missing mintAuthorities configuration")
     }
 }
