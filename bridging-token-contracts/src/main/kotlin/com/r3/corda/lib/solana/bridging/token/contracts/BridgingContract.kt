@@ -13,7 +13,7 @@ import net.corda.solana.sdk.internal.Token2022
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-@Suppress("MaxLineLength", "ArgumentListWrapping", "FunctionLiteral", "Wrapping", "ClassSignature", "FunctionSignature")
+@Suppress("MaxLineLength", "ArgumentListWrapping", "FunctionLiteral", "Wrapping", "FunctionSignature")
 class BridgingContract : Contract {
     override fun verify(tx: LedgerTransaction) {
         val bridgingCommands = tx.commandsOfType<BridgingCommand>()

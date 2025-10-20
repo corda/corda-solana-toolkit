@@ -6,7 +6,6 @@ import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.solana.sdk.instruction.Pubkey
 
-@Suppress("ClassSignature")
 @CordaService
 class SolanaAccountsMappingService(
     appServiceHub: AppServiceHub,

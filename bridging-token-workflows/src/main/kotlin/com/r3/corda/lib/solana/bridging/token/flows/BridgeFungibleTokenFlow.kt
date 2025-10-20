@@ -138,7 +138,6 @@ class BridgeFungibleTokenFlow(
 /**
  * Responder flow for [BridgeFungibleTokenFlow].
  */
-@Suppress("ClassSignature")
 @InitiatedBy(BridgeFungibleTokenFlow::class)
 class BridgeFungibleTokensHandler(
     val otherSession: FlowSession,

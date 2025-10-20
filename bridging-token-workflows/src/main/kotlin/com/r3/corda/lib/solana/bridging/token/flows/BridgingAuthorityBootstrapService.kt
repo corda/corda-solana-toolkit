@@ -13,7 +13,6 @@ import java.util.UUID
 import java.util.concurrent.Executors
 
 @CordaService
-@Suppress("ClassSignature")
 class BridgingAuthorityBootstrapService(
     appServiceHub: AppServiceHub,
 ) : SingletonSerializeAsToken() {

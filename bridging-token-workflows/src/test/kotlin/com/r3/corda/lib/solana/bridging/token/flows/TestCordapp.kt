@@ -45,7 +45,6 @@ class IssueSimpleTokenFlow(
     }
 }
 
-@Suppress("ClassSignature")
 @InitiatedBy(IssueSimpleTokenFlow::class)
 class IssueSimpleTokenResponder(
     private val session: FlowSession,
@@ -56,7 +55,6 @@ class IssueSimpleTokenResponder(
     }
 }
 
-@Suppress("ClassSignature")
 @StartableByRPC
 class QuerySimpleTokensFlow(
     private val issuer: Party,
