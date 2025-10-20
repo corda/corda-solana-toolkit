@@ -60,7 +60,9 @@ tasks.withType<Test>().configureEach {
         "--add-opens=java.base/java.time=ALL-UNNAMED",
         "--add-opens=java.base/java.nio=ALL-UNNAMED",
     )
-    systemProperty("java.io.tmpdir", buildDir.absolutePath)
+    val tmp = file("$buildDir/test-tmp")
+    doFirst { tmp.mkdirs() }
+    systemProperty("java.io.tmpdir", tmp.absolutePath)
 }
 
 quasar {
