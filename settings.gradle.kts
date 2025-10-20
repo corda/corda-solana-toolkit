@@ -48,9 +48,6 @@ dependencyResolutionManagement {
         maven {
             url = uri("https://software.r3.com/artifactory/r3-corda-dev")
             credentials { artifactory(this) }
-            mavenContent {
-                releasesOnly()
-            }
         }
     }
 }
