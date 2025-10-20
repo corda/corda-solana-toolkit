@@ -7,22 +7,18 @@ plugins {
 
 dependencies {
     cordapp(project(":bridging-token-contracts"))
+    cordapp(libs.tokens.contracts)
     cordapp(libs.tokens.workflows)
 
     cordaProvided(libs.corda.core)
-    cordaProvided(libs.tokens.contracts)
     cordaProvided(libs.corda.solana.sdk)
 
-    testImplementation(libs.junit.jupiter)
     testImplementation(libs.junit)
-    testImplementation(libs.assertj.core)
     testImplementation(libs.corda.solana.common)
     testImplementation(libs.corda.test.utils)
     testImplementation(libs.corda.core.test.utils)
     testImplementation(libs.corda.node.driver)
     testImplementation("co.paralleluniverse:quasar-core:0.7.6") // for flow code TODO move to toml
-
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
     detektPlugins(libs.detekt.ktlint.wrapper)
 }
@@ -87,7 +83,6 @@ quasar {
         "org.junit.**"
     )
 }
-
 
 publishing {
     publications {
