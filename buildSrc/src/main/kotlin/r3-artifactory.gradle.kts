@@ -1,6 +1,7 @@
 import org.jfrog.gradle.plugin.artifactory.dsl.ArtifactoryPluginConvention
 
 plugins {
+    `maven-publish`
     id("com.jfrog.artifactory")
 }
 
