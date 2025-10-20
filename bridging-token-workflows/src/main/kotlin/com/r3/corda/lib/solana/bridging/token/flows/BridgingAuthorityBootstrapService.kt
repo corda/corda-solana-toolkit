@@ -101,7 +101,7 @@ class BridgingAuthorityBootstrapService(
                         BridgeFungibleTokenFlow(
                             holdingIdentity,
                             previousOwner,
-                            emptyList(),
+                            emptyList(), // TODO observers should be copied from TokenDefinition of FungibleToken?
                             token,
                             bridgeAuthority,
                             solanaNotary,

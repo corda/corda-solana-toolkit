@@ -1,13 +1,11 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
-import co.paralleluniverse.fibers.Suspendable
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.identity.AbstractParty
 import net.corda.core.node.ServiceHub
 
 @Suppress("FunctionSignature")
-@Suspendable
 fun previousOwnerOf(
     serviceHub: ServiceHub,
     output: StateAndRef<FungibleToken>,
