@@ -1,31 +1,26 @@
 plugins {
-    alias(libs.plugins.kotlin.jvm) // Intellij may complain about 'libs' due to using Gradle 7, but it works fine.
+    id("default-kotlin")
     alias(libs.plugins.cordapp)
-    `maven-publish`
     id("r3-artifactory")
-    alias(libs.plugins.detekt)
 }
 
 dependencies {
     cordaProvided(libs.corda.core)
+
     cordapp(libs.tokens.contracts)
     cordaProvided(libs.corda.solana.common)
-
-    testImplementation(libs.junit.jupiter)
-    testImplementation(libs.assertj.core)
-
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
     detektPlugins(libs.detekt.ktlint.wrapper)
 }
 
 cordapp {
-    targetPlatformVersion.set(160) //TODO externalise
-    minimumPlatformVersion.set(160) //TODO externalise
+    val platformVersion = properties["cordaPlatformVersion"].toString().toInt()
+    targetPlatformVersion.set(platformVersion)
+    minimumPlatformVersion.set(platformVersion)
 
     workflow {
         name.set("Corda Bridging Tokens Contracts")
-        versionId.set(1)
+        versionId.set(properties["cordaVersionId"].toString().toInt())
         vendor.set("R3")
     }
 }
@@ -35,10 +30,6 @@ java {
         languageVersion.set(JavaLanguageVersion.of(17))
     }
     withSourcesJar()
-}
-
-tasks.named<Test>("test") {
-    useJUnitPlatform()
 }
 
 publishing {
