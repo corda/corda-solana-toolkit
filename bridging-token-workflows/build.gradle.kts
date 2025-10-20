@@ -88,7 +88,8 @@ quasar {
         "org.xml**",
         "org.yaml**",
         "rx**",
-        "kotlin**"
+        "kotlin**",
+        "org.junit.**"
     )
 }
 
