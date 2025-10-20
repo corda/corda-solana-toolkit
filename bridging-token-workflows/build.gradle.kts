@@ -6,8 +6,8 @@ plugins {
 }
 
 dependencies {
-    cordaProvided(libs.corda.core)
-
+    cordapp(project(":bridging-token-contracts"))
+    cordapp(libs.tokens.contracts)
     cordapp(libs.tokens.workflows)
 
     cordaProvided(libs.corda.core)
