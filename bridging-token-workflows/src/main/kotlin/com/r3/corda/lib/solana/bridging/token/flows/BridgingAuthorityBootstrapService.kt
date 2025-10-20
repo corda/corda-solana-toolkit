@@ -26,12 +26,7 @@ class BridgingAuthorityBootstrapService(
 
     init {
         val cfg = appServiceHub.getAppContext().config
-        val holdingIdentityLabel =
-            try {
-                UUID.fromString(cfg.getString("holdingIdentityLabel"))
-            } catch (_: Exception) {
-                UUID.randomUUID() // TODO hack added to pass MockNetwork test
-            }
+        val holdingIdentityLabel = UUID.fromString(cfg.getString("holdingIdentityLabel"))
         val holdingIdentityPublicKey =
             appServiceHub
                 .identityService
