@@ -43,6 +43,15 @@ dependencyResolutionManagement {
         }
         // For gradle-tooling-api-7.6.4.
         maven { url = uri("https://repo.gradle.org/gradle/libs-releases") }
+
+        // For Corda SNAPSHOT version
+        maven {
+            url = uri("https://software.r3.com/artifactory/r3-corda-dev")
+            credentials { artifactory(this) }
+            mavenContent {
+                releasesOnly()
+            }
+        }
     }
 }
 
