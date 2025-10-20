@@ -9,15 +9,9 @@ import net.corda.core.identity.Party
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.solana.sdk.instruction.SolanaInstruction
 import net.corda.solana.sdk.internal.Token2022
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 
 @Suppress("MaxLineLength", "ArgumentListWrapping", "FunctionLiteral", "Wrapping", "FunctionSignature")
 class BridgingContract : Contract {
-    companion object {
-        const val MINT_TO_INSTRUCTION: Int = 7
-    }
-
     override fun verify(tx: LedgerTransaction) {
         val bridgingCommands = tx.commandsOfType<BridgingCommand>()
 
@@ -63,38 +57,24 @@ class BridgingContract : Contract {
         bridgingCommand: BridgingCommand.MintToSolana,
     ) {
         val bridgingAssetState = tx.outputsOfType<BridgedAssetState>().singleOrNull()
-
         require(bridgingAssetState != null) { "Bridging transaction must have exactly one BridgedAssetState as output" }
         require(bridgingCommand.bridgeAuthority in bridgingAssetState.participants) {
             "BridgedAssetState must have holding identity as participant"
         }
 
         val mintCommand = tx.commandsOfType<BridgingCommand.MintToSolana>()
-
         require(mintCommand.size == 1) { "Bridging must have one mint command" }
 
         val instruction = tx.notaryInstructions.singleOrNull() as? SolanaInstruction
-
         require(instruction != null) { "Exactly one Solana mint instruction required" }
 
-        require(instruction.programId == Token2022.PROGRAM_ID) { "Solana program id must be Token2022 program" }
-        require(instruction.accounts.isNotEmpty()) {
-            "Instructions does not have target address"
+        val expectedInstruction = Token2022.mintTo(bridgingAssetState.mint, bridgingAssetState.mintDestination,
+            bridgingAssetState.mintAuthority, bridgingAssetState.amount)
+        require(instruction == expectedInstruction) {
+            "The instruction in the transaction does not match the sum or the bridging config:\n" +
+                "transaction: $instruction\n" +
+                "expected:    $expectedInstruction"
         }
-        require(instruction.accounts[1].pubkey == bridgingAssetState.mintDestination) {
-            "Target in instructions does not match mint destination address"
-        }
-
-        @Suppress("MagicNumber")
-        require(instruction.data.size == 9) { "Expecting 9 bytes of instruction data" }
-
-        val instructionBytes = ByteBuffer.wrap(instruction.data.bytes).order(ByteOrder.LITTLE_ENDIAN)
-
-        val tokenInstruction = instructionBytes.get().toInt()
-
-        val amount = instructionBytes.getLong()
-        require(tokenInstruction == MINT_TO_INSTRUCTION) { "Token instruction must be MINT_TO_INSTRUCTION" }
-        require(amount == bridgingAssetState.amount) { "BridgeAssetState amount must match requested mint amount $amount." }
 
         val originalBridgingAssetState = tx.inputsOfType<BridgedAssetState>().singleOrNull()
         require(originalBridgingAssetState != null) { "Bridging transaction must have exactly one BridgingAssetState as input" }
