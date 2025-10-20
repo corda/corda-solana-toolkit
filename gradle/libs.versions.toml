@@ -1,5 +1,5 @@
 [versions]
-corda = "4.14-20251009.000800-15" # set to "4.14-SNAPSHOT" to compile locally
+corda = "4.14-SNAPSHOT"
 tokens-sdk = "1.3.2"
 junit-jupiter = "5.14.0"
 junit = "4.13.2"
