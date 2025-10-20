@@ -25,14 +25,14 @@ import net.corda.testing.node.StartedMockNode
 import net.corda.testing.node.TestCordapp
 import net.corda.testing.solana.SolanaTestValidator
 import net.corda.testing.solana.randomKeypairFile
-import org.junit.After
-import org.junit.AfterClass
-import org.junit.Assert
-import org.junit.Before
-import org.junit.BeforeClass
-import org.junit.ClassRule
-import org.junit.Test
-import org.junit.rules.TemporaryFolder
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertNotNull
+import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 import java.util.UUID
 import java.util.concurrent.ExecutionException
@@ -57,13 +57,11 @@ class FlowTests {
         private const val ISSUING_QUANTITY = 2000L
         private const val MOVE_QUANTITY = 100L
 
-        @ClassRule
-        @JvmField
-        val generalDir = TemporaryFolder()
+        @TempDir
+        lateinit var generalDir: Path
 
-        @ClassRule
-        @JvmField
-        val custodiedKeysDir = TemporaryFolder()
+        @TempDir
+        lateinit var custodiedKeysDir: Path
 
         private lateinit var solanaNotaryKeyFile: Path
         private lateinit var solanaNotaryKey: Signer
@@ -74,13 +72,13 @@ class FlowTests {
         private lateinit var tokenMint: PublicKey
         private lateinit var tokenAccount: PublicKey
 
-        @BeforeClass
+        @BeforeAll
         @JvmStatic
         fun startTestValidator() {
             testValidator = SolanaTestValidator()
-            solanaNotaryKeyFile = generalDir.randomKeypairFile()
+            solanaNotaryKeyFile = randomKeypairFile(generalDir)
             solanaNotaryKey = Signer.fromFile(solanaNotaryKeyFile)
-            mintAuthority = Signer.fromFile(custodiedKeysDir.randomKeypairFile())
+            mintAuthority = Signer.fromFile(randomKeypairFile(custodiedKeysDir))
             testValidator.start()
             testValidator.defaultNotaryProgramSetup(solanaNotaryKey.account)
             testValidator.fundAccount(10, mintAuthority)
@@ -94,7 +92,7 @@ class FlowTests {
             tokenAccount = testValidator.createTokenAccount(accountOwner, tokenMint)
         }
 
-        @AfterClass
+        @AfterAll
         @JvmStatic
         fun stopTestValidator() {
             if (::testValidator.isInitialized) {
@@ -103,7 +101,7 @@ class FlowTests {
         }
     }
 
-    @Before
+    @BeforeEach
     fun setup() {
         val bridgingContractsCordapp = TestCordapp.findCordapp("com.r3.corda.lib.solana.bridging.token.contracts")
         val bridgingFlowsCordapp = TestCordapp.findCordapp("com.r3.corda.lib.solana.bridging.token.flows")
@@ -136,7 +134,6 @@ class FlowTests {
                             notaryConfig = createSolanaNotaryConfig(),
                         ),
                     ),
-                    // TODO start separately notary to provide specific set of cordapps without bridging ones
                     networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
                     threadPerNode = true,
                 ),
@@ -156,7 +153,7 @@ class FlowTests {
             )
     }
 
-    @After
+    @AfterEach
     fun tearDown() {
         network.stopNodes()
     }
@@ -168,7 +165,7 @@ class FlowTests {
         solana {
             rpcUrl = "${SolanaTestValidator.RPC_URL}"
             notaryKeypairFile = "$solanaNotaryKeyFile"
-            custodiedKeysDir = "${custodiedKeysDir.root.toPath()}"
+            custodiedKeysDir = "$custodiedKeysDir"
             programWhitelist = ["${Token2022.PROGRAM_ID}"]
         }
         """.trimIndent()
@@ -217,13 +214,13 @@ class FlowTests {
                 .first()
                 .state.data.tokenType
         val (startCordaQuantity) = company.services.vaultService.tokenBalance(stock)
-        Assert.assertEquals(ISSUING_QUANTITY, startCordaQuantity)
+        assertEquals(ISSUING_QUANTITY, startCordaQuantity)
 
         val startSolanaBalance =
             testValidator.client
                 .getTokenAccountBalance(tokenAccount.base58(), RpcParams())
                 .checkResponse("getTokenAccountBalance")
-        Assert.assertEquals("0", startSolanaBalance!!.amount)
+        assertEquals("0", startSolanaBalance!!.amount)
 
         // Second stock on Bridging Authority - to verify it remains unaffected
         var otherStock =
@@ -237,7 +234,7 @@ class FlowTests {
                 .first()
                 .state.data.tokenType
         val (otherStockStartCordaQuantity) = bridgingAuthority.services.vaultService.tokenBalance(otherStock)
-        Assert.assertEquals(ISSUING_QUANTITY, otherStockStartCordaQuantity)
+        assertEquals(ISSUING_QUANTITY, otherStockStartCordaQuantity)
 
         company
             .startFlow(
@@ -249,7 +246,7 @@ class FlowTests {
 
         // Company has no longer the amount of stocks
         val (endCordaQuantity) = company.services.vaultService.tokenBalance(stock)
-        Assert.assertEquals(ISSUING_QUANTITY - MOVE_QUANTITY, endCordaQuantity)
+        assertEquals(ISSUING_QUANTITY - MOVE_QUANTITY, endCordaQuantity)
 
         // Bridging Authority received the amount of stocks
         stock =
@@ -266,7 +263,7 @@ class FlowTests {
             bridgingAuthority.services.vaultService.tokenBalance(
                 stock,
             )
-        Assert.assertEquals(MOVE_QUANTITY, startBridgingAuthorityCordaQuantity)
+        assertEquals(MOVE_QUANTITY, startBridgingAuthorityCordaQuantity)
 
         // We need to wait for the vault listener to process the newly received token
         Thread.sleep(5000)
@@ -282,7 +279,7 @@ class FlowTests {
                 .first()
                 .state.data.tokenType
         val (finalCordaQuantity) = bridgingAuthority.services.vaultService.tokenBalance(stock)
-        Assert.assertEquals(
+        assertEquals(
             MOVE_QUANTITY,
             finalCordaQuantity,
         )
@@ -291,22 +288,22 @@ class FlowTests {
             bridgingAuthority.services.vaultService.queryBy(FungibleToken::class.java).states.firstOrNull {
                 it.state.data.amount.token.tokenType == stock
             }
-        Assert.assertNotNull(token)
+        assertNotNull(token)
         val bridgingState: StateAndRef<BridgedAssetState>? =
             bridgingAuthority
                 .services.vaultService
                 .queryBy(BridgedAssetState::class.java)
                 .states
                 .firstOrNull()
-        Assert.assertNotNull(bridgingState)
+        assertNotNull(bridgingState)
 
         val finalSolanaBalance =
             testValidator.client
                 .getTokenAccountBalance(tokenAccount.base58(), RpcParams())
                 .checkResponse("getTokenAccountBalance")
 
-        Assert.assertNotNull(finalSolanaBalance)
-        Assert.assertEquals(MOVE_QUANTITY.toString(), finalSolanaBalance!!.amount)
+        assertNotNull(finalSolanaBalance)
+        assertEquals(MOVE_QUANTITY.toString(), finalSolanaBalance.amount)
 
         // Second stock balance remains unchanged /unaffected
         otherStock =
@@ -324,6 +321,6 @@ class FlowTests {
                 .services.vaultService
                 .tokenBalance(otherStock)
                 .quantity
-        Assert.assertEquals(otherStockStartCordaQuantity, otherStockEndCordaQuantity)
+        assertEquals(otherStockStartCordaQuantity, otherStockEndCordaQuantity)
     }
 }

@@ -13,7 +13,6 @@ dependencies {
     cordapp(libs.tokens.contracts)
     cordapp(libs.tokens.workflows)
 
-    testImplementation(libs.junit)
     testImplementation(libs.corda.solana.common)
     testImplementation(libs.corda.test.utils)
     testImplementation(libs.corda.core.test.utils)
