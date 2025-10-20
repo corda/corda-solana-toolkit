@@ -57,8 +57,7 @@ class BridgeFungibleTokenFlow(
 
         val cordaTokenId =
             when (val tokenType = token.state.data.amount.token.tokenType) {
-                // TODO while testing StockCordapp check if generic tokenType.tokenIdentifier
-                // can be used for TokenPointer<*>?
+                // TODO while testing StockCordapp check if tokenType.tokenIdentifier can replace TokenPointer<*>
                 is TokenPointer<*> ->
                     tokenType.pointer.pointer.id
                         .toString()
@@ -71,10 +70,15 @@ class BridgeFungibleTokenFlow(
                 "Previous owner of the token $token could not be determined"
             }
         val solanaAccountMapping = serviceHub.cordaService(SolanaAccountsMappingService::class.java)
-        val destination =
-            solanaAccountMapping.participants[previousOwner.nameOrNull()]!! // TODO handle null
-        val mint = solanaAccountMapping.mints[cordaTokenId]!! // TODO handle null
-        val mintAuthority = solanaAccountMapping.mintAuthorities[cordaTokenId]!! // TODO handle null
+        val destination = checkNotNull(solanaAccountMapping.participants[previousOwner.nameOrNull()]) {
+            "No Solana account mapping found for previous owner ${previousOwner.nameOrNull()}"
+        }
+        val mint = checkNotNull(solanaAccountMapping.mints[cordaTokenId]) {
+            "No mint mapping found for token type id $cordaTokenId"
+        }
+        val mintAuthority = checkNotNull(solanaAccountMapping.mintAuthorities[cordaTokenId]) {
+            "No mint authority mapping found for token type id $cordaTokenId"
+        }
 
         val amount =
             token.state.data.amount
