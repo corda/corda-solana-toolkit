@@ -54,30 +54,15 @@ tasks.withType<Test>().configureEach {
 }
 quasar {
     excludePackages.addAll(
-        "antlr**",
-        "com.codahale**",
-        "com.fasterxml.**",
-        "com.github.benmanes.caffeine.**",
-        "com.google.**",
-        "com.lmax.**",
-        "com.zaxxer.**",
-        "net.bytebuddy**",
-        "io.github.classgraph**",
-        "io.netty*",
-        "liquibase**",
-        "net.i2p.crypto.**",
-        "nonapi.io.github.classgraph.**",
         "org.apiguardian.**",
         "org.bouncycastle**",
         "org.codehaus.**",
-        "org.h2**",
-        "org.hibernate**",
-        "org.jboss.**",
         "org.objenesis**",
         "org.w3c.**",
         "org.xml**",
         "org.yaml**",
         "rx**",
+        "org.locationtech.jts.geom.**",
         "kotlin**",
         "org.junit.**"
     )
