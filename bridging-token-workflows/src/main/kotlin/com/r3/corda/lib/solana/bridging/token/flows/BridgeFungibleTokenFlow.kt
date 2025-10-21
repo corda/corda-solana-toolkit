@@ -56,7 +56,7 @@ class BridgeFungibleTokenFlow(
         val participantSessions = sessionsForParties(participants)
 
         // Move the token from ourIdentity (implied BridgeAuthority) to the lock holder (confidential identity).
-        // Also, we create a BridgedAssetState that will be later used to mint the tokens on Solana
+        // Also, create a BridgedAssetState that will be later used to mint the tokens on Solana
         val moveTx =
             subFlow(
                 MoveAndLockFungibleToken(
