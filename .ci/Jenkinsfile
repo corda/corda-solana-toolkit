@@ -20,7 +20,6 @@ String COMMON_GRADLE_PARAMS = [
         '--info'
 ].join(' ')
 
-
 pipeline {
         agent {
             kubernetes {
@@ -47,6 +46,8 @@ pipeline {
         CORDA_ARTIFACTORY_USERNAME = "${env.ARTIFACTORY_CREDENTIALS_USR}"
         CORDA_GRADLE_SCAN_KEY = credentials('gradle-build-scans-key')
         GRADLE_USER_HOME = "/host_tmp/gradle"
+        SNYK_ORG_ID = credentials('r3-solana-snyk-org-id')
+        SNYK_API_TOKEN = credentials('r3-solana-snyk-api-token-secret')
     }
 
     stages {
@@ -59,6 +60,14 @@ pipeline {
                             'build'
                     ].join(' ')
                 }
+            }
+            stage('Snyk Delta') {
+                  when {
+                       changeRequest()
+                  }
+                   steps {
+                       snykDeltaScan(env.SNYK_API_TOKEN, env.SNYK_ORG_ID)
+                   }
             }
     }
 
