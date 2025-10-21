@@ -45,7 +45,6 @@ class BridgeFungibleTokenFlow(
     val originalOwner: AbstractParty,
     val observers: List<Party> = emptyList(),
     val token: StateAndRef<FungibleToken>,
-    val bridgeAuthority: Party,
     val solanaNotary: Party,
 ) : FlowLogic<SignedTransaction>() {
     @Suspendable
@@ -119,7 +118,7 @@ class BridgeFungibleTokenFlow(
         val instruction = Token2022.mintTo(mint, destination, mintAuthority, amount)
         transactionBuilder.addNotaryInstruction(instruction)
         transactionBuilder.addCommand(
-            BridgingContract.BridgingCommand.MintToSolana(bridgeAuthority),
+            BridgingContract.BridgingCommand.MintToSolana(ourIdentity),
             listOf(ourIdentity.owningKey),
         )
         transactionBuilder.addInputState(StateAndRef(notaryChangeTx.state, notaryChangeTx.ref))

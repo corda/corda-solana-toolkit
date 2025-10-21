@@ -103,7 +103,6 @@ class BridgingAuthorityBootstrapService(
                             previousOwner,
                             emptyList(), // TODO observers should be copied from TokenDefinition of FungibleToken?
                             token,
-                            bridgeAuthority,
                             solanaNotary,
                         ),
                     )
