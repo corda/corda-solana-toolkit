@@ -2,6 +2,7 @@ package com.r3.corda.lib.solana.bridging.token.flows
 
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import net.corda.core.contracts.StateAndRef
+import net.corda.core.cordapp.CordappConfigException
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.AppServiceHub
@@ -53,17 +54,17 @@ class BridgingAuthorityBootstrapService(
                     "Could not find certificate for key $holdingIdentityPublicKey"
                 }
             }
-        val solanaNotaryName =
-            try {
-                CordaX500Name.parse(cfg.getString("solanaNotaryName"))
-            } catch (_: Exception) {
-                "Bob" // TODO remove the hack added to pass a MockNetwork test
-            }
+        val solanaNotaryName = try {
+            CordaX500Name.parse(cfg.getString("solanaNotaryName"))
+        } catch (_: CordappConfigException) {
+            error("Could not find configuration entry 'solanaNotaryName'")
+        }
+
         solanaNotary =
             appServiceHub.networkParameters.notaries
                 .firstOrNull { it.identity.name == solanaNotaryName }
                 ?.identity
-                ?: appServiceHub.networkMapCache.notaryIdentities.first() // TODO remove the hack added to pass a test
+                ?: error("Cound not find Solana Notary '$solanaNotaryName' in the network parameters")
         appServiceHub.registerUnloadHandler { onStop() }
         onStartup(appServiceHub)
     }

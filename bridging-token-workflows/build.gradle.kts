@@ -61,7 +61,7 @@ quasar {
         "org.xml**",
         "org.yaml**",
         "rx**",
-        "org.locationtech.jts.geom.**",
+        "org.locationtech.**",
         "kotlin**",
         "org.junit.**"
     )
