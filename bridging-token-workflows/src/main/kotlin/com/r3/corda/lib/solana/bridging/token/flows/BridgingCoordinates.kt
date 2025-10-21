@@ -21,7 +21,8 @@ data class BridgingCoordinates(
      * Creates an unminted [BridgedAssetState] from the given [FungibleToken].
      * Converts the Fungible Token amount to Solana token amount in 1:1 ration.
      * @param token the fungible token to be bridged
-     * @param participants the list of participants for the [BridgedAssetState], should at least contain the bridging authority
+     * @param participants the list of participants for the [BridgedAssetState], should at least contain
+     * the bridging authority
      */
     fun toUnmintedBridgedAssetState(token: StateAndRef<FungibleToken>, participants: List<Party>) = BridgedAssetState(
         amount = token.state.data.amount

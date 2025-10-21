@@ -5,7 +5,7 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.identity.AbstractParty
 import net.corda.core.node.ServiceHub
 
-//TODO this potentially could go to BridgingAuthorityBootstrapService
+// TODO this potentially could go to BridgingAuthorityBootstrapService
 @Suppress("FunctionSignature")
 fun previousOwnerOf(
     serviceHub: ServiceHub,
