@@ -23,23 +23,27 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.solana.sdk.internal.Token2022
 
 /**
- * Initiating flow used to bridge token of the same party.
+ * Flows bridges a fungible token to Solana token.
  *
+ * @param lockingHolder the identity (Confidential Identity) under which the token is locked for the bridging duration
+ * @param originalHolder the owner of the token before it was moved to Bridging Authority
+ * @param token fungible token to be bridge to Solana
+ * @param solanaNotary notary to perform bridging
  * @param observers optional observing parties to which the transaction will be broadcast
  */
 @StartableByService
 @InitiatingFlow
 class BridgeFungibleTokenFlow(
     val lockingHolder: Party,
-    val originalOwner: AbstractParty,
-    val observers: List<Party>,
+    val originalHolder: AbstractParty,
     val token: StateAndRef<FungibleToken>,
     val solanaNotary: Party,
+    val observers: List<Party>,
 ) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
         val solanaMapping = serviceHub.cordaService(SolanaAccountsMappingService::class.java)
-        val bridgingCoordinates = solanaMapping.getBridgingCoordinates(token, originalOwner)
+        val bridgingCoordinates = solanaMapping.getBridgingCoordinates(token, originalHolder)
 
         val participants = listOf(lockingHolder)
         val observerSessions = sessionsForParties(observers)
@@ -50,11 +54,11 @@ class BridgeFungibleTokenFlow(
         val moveTx =
             subFlow(
                 MoveAndLockFungibleTokenFlow(
-                    participantSessions,
-                    observerSessions,
                     token,
                     bridgingCoordinates,
                     lockingHolder,
+                    participantSessions,
+                    observerSessions,
                 ),
             )
 
@@ -92,7 +96,7 @@ class BridgeFungibleTokenFlow(
  * Responder flow for [BridgeFungibleTokenFlow].
  */
 @InitiatedBy(BridgeFungibleTokenFlow::class)
-class BridgeFungibleTokensHandler(
+class BridgeFungibleTokenHandler(
     val otherSession: FlowSession,
 ) : FlowLogic<Unit>() {
     @Suspendable

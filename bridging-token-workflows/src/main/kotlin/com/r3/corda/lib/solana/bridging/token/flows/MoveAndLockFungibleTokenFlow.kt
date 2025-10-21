@@ -14,14 +14,18 @@ import net.corda.core.flows.FlowSession
 import net.corda.core.identity.Party
 import net.corda.core.transactions.TransactionBuilder
 
+/**
+ * Flow moves a token to new holder to lock it and creates a token equivalent for bridging purposes.
+ * Token equivalent contains data for Solana to perform minting and redemption.
+ **/
 class MoveAndLockFungibleTokenFlow
 @JvmOverloads
 constructor(
-    override val participantSessions: List<FlowSession>,
-    override val observerSessions: List<FlowSession> = emptyList(),
     val token: StateAndRef<FungibleToken>,
     val bridgingCoordinates: BridgingCoordinates,
     val lockingHolder: Party,
+    override val participantSessions: List<FlowSession>,
+    override val observerSessions: List<FlowSession> = emptyList(),
 ) : AbstractMoveTokensFlow() {
     @Suspendable
     override fun addMove(transactionBuilder: TransactionBuilder) {

@@ -11,7 +11,7 @@ import net.corda.solana.sdk.instruction.Pubkey
  * Holds the necessary information to bridge a Corda token to Solana and then redeem it back.
  */
 data class BridgingCoordinates(
-    val originalOwner: AbstractParty,
+    val originalHolder: AbstractParty,
     val cordaTokenId: String,
     val mint: Pubkey,
     val mintAuthority: Pubkey,
@@ -28,7 +28,7 @@ data class BridgingCoordinates(
         amount = token.state.data.amount
             .toDecimal()
             .toLong(),
-        originalOwner = originalOwner,
+        originalOwner = originalHolder,
         tokenTypeId = cordaTokenId,
         tokenRef = token.ref,
         minted = false,

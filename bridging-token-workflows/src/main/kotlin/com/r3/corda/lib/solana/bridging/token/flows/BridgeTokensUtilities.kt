@@ -7,19 +7,21 @@ import net.corda.core.node.ServiceHub
 
 // TODO this potentially could go to BridgingAuthorityBootstrapService
 @Suppress("FunctionSignature")
-fun previousOwnerOf(
+fun findPreviousHolderOfToken(
     serviceHub: ServiceHub,
     output: StateAndRef<FungibleToken>,
-): AbstractParty? {
+): AbstractParty {
     val txHash = output.ref.txhash
     val stx =
         serviceHub.validatedTransactions.getTransaction(txHash)
-            ?: error("Producing transaction $txHash not found")
+            ?: error("Transaction $txHash not found")
 
     val inputTokens: List<FungibleToken> =
         stx.toLedgerTransaction(serviceHub).inputsOfType<FungibleToken>()
+    require(inputTokens.isNotEmpty()) { "Transaction doesn't contains inputs of fungible token" }
 
-    // We can assume here that there will be only a single owner of the input tokens as
-    // the transaction is a move transaction.
-    return inputTokens.map { it.holder }.toSet().singleOrNull()
+    val holders = inputTokens.map { it.holder }.toSet()
+    require(holders.size == 1) { "Transaction contains tokens of multiple holders" } // This should not happen
+
+    return holders.single()
 }

@@ -94,17 +94,22 @@ class BridgingAuthorityBootstrapService(
         appServiceHub: AppServiceHub,
     ) {
         fungibleTokens.forEach { token ->
-            val previousOwner = previousOwnerOf(appServiceHub, token) ?: return@forEach
-            if (previousOwner !in listOf(bridgeAuthority, holdingIdentity)) {
+            val previousHolder = try {
+                findPreviousHolderOfToken(appServiceHub, token)
+            } catch (e: Exception) {
+                logger.warn("Could not start flow to bridge for ${token.state.data.amount} due to ${e.message}")
+                return@forEach
+            }
+            if (previousHolder !in listOf(bridgeAuthority, holdingIdentity)) {
                 logger.debug { "Starting flow to bridge ${token.state.data.amount} to Solana" }
                 executor.submit {
                     appServiceHub.startFlow(
                         BridgeFungibleTokenFlow(
                             holdingIdentity,
-                            previousOwner,
-                            emptyList(), // TODO observers should be copied from TokenDefinition of FungibleToken?
+                            previousHolder,
                             token,
                             solanaNotary,
+                            emptyList(), // TODO an observer is not a generic concept in tokens
                         ),
                     )
                 }
