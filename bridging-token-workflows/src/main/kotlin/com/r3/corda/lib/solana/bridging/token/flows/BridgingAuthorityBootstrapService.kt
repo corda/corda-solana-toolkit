@@ -57,13 +57,13 @@ class BridgingAuthorityBootstrapService(
             try {
                 CordaX500Name.parse(cfg.getString("solanaNotaryName"))
             } catch (_: Exception) {
-                "Bob"
+                "Bob" // TODO remove the hack added to pass a MockNetwork test
             }
         solanaNotary =
             appServiceHub.networkParameters.notaries
                 .firstOrNull { it.identity.name == solanaNotaryName }
                 ?.identity
-                ?: appServiceHub.networkMapCache.notaryIdentities.first() // TODO hack added to pass MockNetwork test
+                ?: appServiceHub.networkMapCache.notaryIdentities.first() // TODO remove the hack added to pass a test
         appServiceHub.registerUnloadHandler { onStop() }
         onStartup(appServiceHub)
     }
