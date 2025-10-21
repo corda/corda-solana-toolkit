@@ -9,7 +9,7 @@ import com.r3.build.enums.BuildOperatingSystem
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
 KubernetesAgent k8s = new KubernetesAgent(
-    BuildEnvironment.AMD64_LINUX_JAVA17,
+    BuildEnvironment.AMD64_LINUX_JAVA17_CORDA4,
     KubernetesCluster.JenkinsAgents,
     1
 )
