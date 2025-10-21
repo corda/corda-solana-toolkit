@@ -85,8 +85,8 @@ class BridgeFungibleTokenFlow(
                 .toDecimal()
                 .toLong()
 
-        val additionalCommand = BridgingContract.BridgingCommand.IssueBridgingAsset(bridgeAuthority, lockingHolder)
-        val additionalOutput: ContractState =
+        val bridgingCommand = BridgingContract.BridgingCommand.IssueBridgingAsset(ourIdentity, lockingHolder)
+        val bridgingState: ContractState =
             BridgedAssetState(
                 amount = amount,
                 originalOwner = originalOwner,
@@ -96,7 +96,7 @@ class BridgeFungibleTokenFlow(
                 mint = mint,
                 mintAuthority = mintAuthority,
                 mintDestination = destination,
-                participants = listOf(bridgeAuthority),
+                participants = listOf(ourIdentity),
             )
 
         // We move the token from BridgeAuthority to the lock holder (confidential identity).
@@ -104,11 +104,11 @@ class BridgeFungibleTokenFlow(
         val moveTx =
             subFlow(
                 MoveAndLockFungibleToken(
-                    participantSessions = participantSessions,
-                    observerSessions = observerSessions,
-                    token = token,
-                    additionalOutput = additionalOutput,
-                    additionalCommand = additionalCommand,
+                    participantSessions,
+                    observerSessions,
+                    token,
+                    bridgingState,
+                    bridgingCommand,
                     lockingHolder,
                     token.state.data.amount,
                 ),
@@ -168,8 +168,8 @@ constructor(
     override val participantSessions: List<FlowSession>,
     override val observerSessions: List<FlowSession> = emptyList(),
     val token: StateAndRef<FungibleToken>,
-    val additionalOutput: ContractState,
-    val additionalCommand: BridgingContract.BridgingCommand,
+    val bridgingState: ContractState,
+    val bridgingCommand: BridgingContract.BridgingCommand,
     val lockingHolder: AbstractParty,
     val amount: Amount<IssuedTokenType>,
 ) : AbstractMoveTokensFlow() {
@@ -194,6 +194,8 @@ constructor(
             "Input and output token types must correspond to each other when moving tokensToIssue"
         }
 
+        transactionBuilder.addOutputState(bridgingState)
+
         outputGroups.forEach { (issuedTokenType: IssuedTokenType, _: List<AbstractToken>) ->
             val inputGroup =
                 inputGroups[issuedTokenType]
@@ -202,8 +204,7 @@ constructor(
                             "$issuedTokenType",
                     )
             val keys = inputGroup.map { it.state.data.holder.owningKey }
-            transactionBuilder.addOutputState(additionalOutput)
-            transactionBuilder.addCommand(additionalCommand, keys)
+            transactionBuilder.addCommand(bridgingCommand, keys)
         }
     }
 }
