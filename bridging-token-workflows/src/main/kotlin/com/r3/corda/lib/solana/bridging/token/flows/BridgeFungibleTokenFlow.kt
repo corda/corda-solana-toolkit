@@ -6,7 +6,6 @@ import com.r3.corda.lib.solana.bridging.token.states.BridgedAssetState
 import com.r3.corda.lib.tokens.contracts.states.AbstractToken
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.contracts.types.IssuedTokenType
-import com.r3.corda.lib.tokens.contracts.types.TokenPointer
 import com.r3.corda.lib.tokens.workflows.flows.move.AbstractMoveTokensFlow
 import com.r3.corda.lib.tokens.workflows.flows.move.MoveTokensFlowHandler
 import com.r3.corda.lib.tokens.workflows.flows.move.addMoveTokens
@@ -48,52 +47,15 @@ class BridgeFungibleTokenFlow(
     val solanaNotary: Party,
 ) : FlowLogic<SignedTransaction>() {
     @Suspendable
-    @Suppress("LongMethod")
     override fun call(): SignedTransaction {
+        val solanaMapping = serviceHub.cordaService(SolanaAccountsMappingService::class.java)
+        val bridgingCoordinates = solanaMapping.getBridgingCoordinates(token, originalOwner)
+
         val participants = listOf(lockingHolder)
         val observerSessions = sessionsForParties(observers)
         val participantSessions = sessionsForParties(participants)
 
-        val cordaTokenId =
-            when (val tokenType = token.state.data.amount.token.tokenType) {
-                // TODO while testing StockCordapp check if tokenType.tokenIdentifier can replace TokenPointer<*>
-                is TokenPointer<*> ->
-                    tokenType.pointer.pointer.id
-                        .toString()
-
-                else -> tokenType.tokenIdentifier
-            }
-
-        val solanaAccountMapping = serviceHub.cordaService(SolanaAccountsMappingService::class.java)
-        val destination = checkNotNull(solanaAccountMapping.participants[originalOwner.nameOrNull()]) {
-            "No Solana account mapping found for previous owner ${originalOwner.nameOrNull()}"
-        }
-        val mint = checkNotNull(solanaAccountMapping.mints[cordaTokenId]) {
-            "No mint mapping found for token type id $cordaTokenId"
-        }
-        val mintAuthority = checkNotNull(solanaAccountMapping.mintAuthorities[cordaTokenId]) {
-            "No mint authority mapping found for token type id $cordaTokenId"
-        }
-
-        val amount =
-            token.state.data.amount
-                .toDecimal()
-                .toLong()
-
-        val bridgingState: ContractState =
-            BridgedAssetState(
-                amount = amount,
-                originalOwner = originalOwner,
-                tokenTypeId = cordaTokenId,
-                tokenRef = token.ref,
-                minted = false,
-                mint = mint,
-                mintAuthority = mintAuthority,
-                mintDestination = destination,
-                participants = listOf(ourIdentity),
-            )
-
-        // We move the token from BridgeAuthority to the lock holder (confidential identity).
+        // Move the token from ourIdentity (implied BridgeAuthority) to the lock holder (confidential identity).
         // Also, we create a BridgedAssetState that will be later used to mint the tokens on Solana
         val moveTx =
             subFlow(
@@ -101,8 +63,8 @@ class BridgeFungibleTokenFlow(
                     participantSessions,
                     observerSessions,
                     token,
-                    bridgingState,
-                    lockingHolder
+                    bridgingCoordinates,
+                    lockingHolder,
                 ),
             )
 
@@ -112,7 +74,12 @@ class BridgeFungibleTokenFlow(
 
         // Mint on Solana
         val transactionBuilder = TransactionBuilder(solanaNotary)
-        val instruction = Token2022.mintTo(mint, destination, mintAuthority, amount)
+        val instruction = Token2022.mintTo(
+            bridgingCoordinates.mint,
+            bridgingCoordinates.destination,
+            bridgingCoordinates.mintAuthority,
+            moveBridgingAssetState.state.data.amount,
+        )
         transactionBuilder.addNotaryInstruction(instruction)
         transactionBuilder.addCommand(
             BridgingContract.BridgingCommand.MintToSolana(ourIdentity),
@@ -160,7 +127,7 @@ constructor(
     override val participantSessions: List<FlowSession>,
     override val observerSessions: List<FlowSession> = emptyList(),
     val token: StateAndRef<FungibleToken>,
-    val bridgingState: ContractState,
+    val bridgingCoordinates: BridgingCoordinates,
     val lockingHolder: Party,
 ) : AbstractMoveTokensFlow() {
     @Suspendable
@@ -184,6 +151,8 @@ constructor(
         check(outputGroups.keys == inputGroups.keys) {
             "Input and output token types must correspond to each other when moving tokensToIssue"
         }
+
+        val bridgingState: ContractState = bridgingCoordinates.toUnmintedBridgedAssetState(token, listOf(ourIdentity))
 
         transactionBuilder.addOutputState(bridgingState)
 
