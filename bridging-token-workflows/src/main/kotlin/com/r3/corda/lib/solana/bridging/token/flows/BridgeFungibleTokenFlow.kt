@@ -64,12 +64,9 @@ class BridgeFungibleTokenFlow(
                 else -> tokenType.tokenIdentifier
             }
 
-        val previousOwner = checkNotNull(previousOwnerOf(serviceHub, token)) {
-            "Previous owner of the token $token could not be determined"
-        }
         val solanaAccountMapping = serviceHub.cordaService(SolanaAccountsMappingService::class.java)
-        val destination = checkNotNull(solanaAccountMapping.participants[previousOwner.nameOrNull()]) {
-            "No Solana account mapping found for previous owner ${previousOwner.nameOrNull()}"
+        val destination = checkNotNull(solanaAccountMapping.participants[originalOwner.nameOrNull()]) {
+            "No Solana account mapping found for previous owner ${originalOwner.nameOrNull()}"
         }
         val mint = checkNotNull(solanaAccountMapping.mints[cordaTokenId]) {
             "No mint mapping found for token type id $cordaTokenId"
