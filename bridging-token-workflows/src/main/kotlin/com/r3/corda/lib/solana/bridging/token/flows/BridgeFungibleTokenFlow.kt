@@ -3,15 +3,9 @@ package com.r3.corda.lib.solana.bridging.token.flows
 import co.paralleluniverse.fibers.Suspendable
 import com.r3.corda.lib.solana.bridging.token.contracts.BridgingContract
 import com.r3.corda.lib.solana.bridging.token.states.BridgedAssetState
-import com.r3.corda.lib.tokens.contracts.states.AbstractToken
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
-import com.r3.corda.lib.tokens.contracts.types.IssuedTokenType
-import com.r3.corda.lib.tokens.workflows.flows.move.AbstractMoveTokensFlow
 import com.r3.corda.lib.tokens.workflows.flows.move.MoveTokensFlowHandler
-import com.r3.corda.lib.tokens.workflows.flows.move.addMoveTokens
 import com.r3.corda.lib.tokens.workflows.utilities.sessionsForParties
-import net.corda.core.contracts.Amount
-import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
@@ -27,10 +21,6 @@ import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.solana.sdk.internal.Token2022
-import kotlin.collections.component1
-import kotlin.collections.component2
-import kotlin.collections.forEach
-import kotlin.collections.map
 
 /**
  * Initiating flow used to bridge token of the same party.
@@ -59,7 +49,7 @@ class BridgeFungibleTokenFlow(
         // Also, create a BridgedAssetState that will be later used to mint the tokens on Solana
         val moveTx =
             subFlow(
-                MoveAndLockFungibleToken(
+                MoveAndLockFungibleTokenFlow(
                     participantSessions,
                     observerSessions,
                     token,
@@ -118,60 +108,5 @@ class BridgeFungibleTokensHandler(
                 },
             )
         subFlow(ReceiveFinalityFlow(otherSession, signedTransaction.id))
-    }
-}
-
-class MoveAndLockFungibleToken
-@JvmOverloads
-constructor(
-    override val participantSessions: List<FlowSession>,
-    override val observerSessions: List<FlowSession> = emptyList(),
-    val token: StateAndRef<FungibleToken>,
-    val bridgingCoordinates: BridgingCoordinates,
-    val lockingHolder: Party,
-) : AbstractMoveTokensFlow() {
-    @Suspendable
-    override fun addMove(transactionBuilder: TransactionBuilder) {
-        val amount: Amount<IssuedTokenType> = token.state.data.amount
-        val output = FungibleToken(amount, lockingHolder)
-        addMoveTokens(transactionBuilder = transactionBuilder, inputs = listOf(token), outputs = listOf(output))
-
-        val outputGroups: Map<IssuedTokenType, List<AbstractToken>> =
-            transactionBuilder
-                .outputStates()
-                .map { it.data }
-                .filterIsInstance<AbstractToken>()
-                .groupBy { it.issuedTokenType }
-        val inputGroups: Map<IssuedTokenType, List<StateAndRef<AbstractToken>>> =
-            transactionBuilder
-                .inputStates()
-                .map { serviceHub.toStateAndRef<AbstractToken>(it) }
-                .groupBy { it.state.data.issuedTokenType }
-
-        check(outputGroups.keys == inputGroups.keys) {
-            "Input and output token types must correspond to each other when moving tokensToIssue"
-        }
-
-        // Added for clarity, this is implied condition because only a single token is moved at a time
-        check(outputGroups.keys.size == 1) {
-            "When bridging a fungible token, only one token type can be moved at a time."
-        }
-
-        val bridgingState: ContractState = bridgingCoordinates.toUnmintedBridgedAssetState(token, listOf(ourIdentity))
-
-        transactionBuilder.addOutputState(bridgingState)
-
-        val bridgingCommand = BridgingContract.BridgingCommand.IssueBridgingAsset(ourIdentity, lockingHolder)
-
-        outputGroups.forEach { (issuedTokenType: IssuedTokenType, _: List<AbstractToken>) ->
-            val inputGroup =
-                inputGroups[issuedTokenType]
-                    ?: throw IllegalArgumentException(
-                        "No corresponding inputs for the outputs issued token type: " +
-                            "$issuedTokenType",
-                    )
-            val keys = inputGroup.map { it.state.data.holder.owningKey }
-            transactionBuilder.addCommand(bridgingCommand, keys)
-        }
     }
 }
