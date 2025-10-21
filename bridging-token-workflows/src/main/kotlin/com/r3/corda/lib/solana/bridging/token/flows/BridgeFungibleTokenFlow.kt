@@ -152,6 +152,11 @@ constructor(
             "Input and output token types must correspond to each other when moving tokensToIssue"
         }
 
+        // Added for clarity, this is implied condition because only a single token is moved at a time
+        check(outputGroups.keys.size == 1) {
+            "When bridging a fungible token, only one token type can be moved at a time."
+        }
+
         val bridgingState: ContractState = bridgingCoordinates.toUnmintedBridgedAssetState(token, listOf(ourIdentity))
 
         transactionBuilder.addOutputState(bridgingState)
