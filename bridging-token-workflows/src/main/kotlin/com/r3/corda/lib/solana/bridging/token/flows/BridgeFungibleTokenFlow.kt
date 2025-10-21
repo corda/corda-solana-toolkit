@@ -43,7 +43,7 @@ import kotlin.collections.map
 class BridgeFungibleTokenFlow(
     val lockingHolder: Party,
     val originalOwner: AbstractParty,
-    val observers: List<Party> = emptyList(),
+    val observers: List<Party>,
     val token: StateAndRef<FungibleToken>,
     val solanaNotary: Party,
 ) : FlowLogic<SignedTransaction>() {
