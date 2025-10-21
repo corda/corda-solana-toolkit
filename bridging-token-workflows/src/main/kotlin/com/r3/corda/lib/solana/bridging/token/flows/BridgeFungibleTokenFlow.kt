@@ -65,10 +65,9 @@ class BridgeFungibleTokenFlow(
                 else -> tokenType.tokenIdentifier
             }
 
-        val previousOwner =
-            checkNotNull(previousOwnerOf(serviceHub, token)) {
-                "Previous owner of the token $token could not be determined"
-            }
+        val previousOwner = checkNotNull(previousOwnerOf(serviceHub, token)) {
+            "Previous owner of the token $token could not be determined"
+        }
         val solanaAccountMapping = serviceHub.cordaService(SolanaAccountsMappingService::class.java)
         val destination = checkNotNull(solanaAccountMapping.participants[previousOwner.nameOrNull()]) {
             "No Solana account mapping found for previous owner ${previousOwner.nameOrNull()}"
@@ -85,7 +84,6 @@ class BridgeFungibleTokenFlow(
                 .toDecimal()
                 .toLong()
 
-        val bridgingCommand = BridgingContract.BridgingCommand.IssueBridgingAsset(ourIdentity, lockingHolder)
         val bridgingState: ContractState =
             BridgedAssetState(
                 amount = amount,
@@ -108,9 +106,7 @@ class BridgeFungibleTokenFlow(
                     observerSessions,
                     token,
                     bridgingState,
-                    bridgingCommand,
-                    lockingHolder,
-                    token.state.data.amount,
+                    lockingHolder
                 ),
             )
 
@@ -169,12 +165,11 @@ constructor(
     override val observerSessions: List<FlowSession> = emptyList(),
     val token: StateAndRef<FungibleToken>,
     val bridgingState: ContractState,
-    val bridgingCommand: BridgingContract.BridgingCommand,
-    val lockingHolder: AbstractParty,
-    val amount: Amount<IssuedTokenType>,
+    val lockingHolder: Party,
 ) : AbstractMoveTokensFlow() {
     @Suspendable
     override fun addMove(transactionBuilder: TransactionBuilder) {
+        val amount: Amount<IssuedTokenType> = token.state.data.amount
         val output = FungibleToken(amount, lockingHolder)
         addMoveTokens(transactionBuilder = transactionBuilder, inputs = listOf(token), outputs = listOf(output))
 
@@ -195,6 +190,8 @@ constructor(
         }
 
         transactionBuilder.addOutputState(bridgingState)
+
+        val bridgingCommand = BridgingContract.BridgingCommand.IssueBridgingAsset(ourIdentity, lockingHolder)
 
         outputGroups.forEach { (issuedTokenType: IssuedTokenType, _: List<AbstractToken>) ->
             val inputGroup =
