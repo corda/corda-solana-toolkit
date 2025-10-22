@@ -1,12 +1,13 @@
 [versions]
 kotlin = "1.9.25"  # Use the same minor version of Kotlin as Corda
-corda = "4.14-20251009.000800-15"
+corda-os = "4.14-20251020.000800-22"
+corda-ent = "4.14-20251021.004000-3"
 tokens-sdk = "1.3.2"
 artifactory = "6.0.2"
 detekt = "2.0.0-alpha.0"
 
 [libraries]
-corda-core = { module = "net.corda:corda-core", version.ref = "corda" }
+corda-core = { module = "net.corda:corda-core", version.ref = "corda-os" }
 tokens-contracts = { module = "com.r3.corda.lib.tokens:tokens-contracts", version.ref = "tokens-sdk" }
 tokens-workflows = { module = "com.r3.corda.lib.tokens:tokens-workflows", version.ref = "tokens-sdk" }
 detekt-ktlint-wrapper = { module = "dev.detekt:detekt-rules-ktlint-wrapper", version.ref = "detekt" }
