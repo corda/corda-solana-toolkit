@@ -20,6 +20,13 @@ String COMMON_GRADLE_PARAMS = [
         '--info'
 ].join(' ')
 
+String[] SNYK_PROJECTS = ["bridging-token-contracts", "bridging-token-workflows"]
+
+def genSnykArgs(String subproject) {
+    return "--policy-path=./.snyk --sub-project=${subproject} --prune-repeated-subdependencies --configuration-matching='^((?!test).)*\$' --target-reference='${env.BRANCH_NAME}' --project-tags=Branch='${env.BRANCH_NAME.replaceAll("[^0-9|a-z|A-Z]+", "_")}'"
+
+}
+
 pipeline {
         agent {
             kubernetes {
@@ -66,7 +73,11 @@ pipeline {
                        changeRequest()
                   }
                    steps {
-                       snykDeltaScan(env.SNYK_API_TOKEN, env.SNYK_ORG_ID)
+                       script {
+                               for (project in snykProjects) {
+                                   snykDeltaScan(env.SNYK_API_TOKEN, env.SNYK_ORG_ID, genSnykArgs(project))
+                              }
+                       }
                    }
             }
     }
