@@ -74,7 +74,7 @@ pipeline {
                   }
                    steps {
                        script {
-                               for (project in snykProjects) {
+                               for (project in SNYK_PROJECTS) {
                                    snykDeltaScan(env.SNYK_API_TOKEN, env.SNYK_ORG_ID, genSnykArgs(project))
                               }
                        }
