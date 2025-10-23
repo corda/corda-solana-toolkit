@@ -25,12 +25,10 @@ dependencies {
 }
 
 tasks.register<Cordform>("deployNodes") {
-
     dependsOn(
         project(":bridging-token-contracts").tasks.named("jar"),
         project(":bridging-token-workflows").tasks.named("jar")
     )
-
     val commonRpcUser =  listOf(
         mapOf(
             "user" to "user1",
@@ -38,7 +36,6 @@ tasks.register<Cordform>("deployNodes") {
             "permissions" to listOf("ALL")
         )
     )
-
     nodeDefaults {
         projectCordapp {
             deploy = false
