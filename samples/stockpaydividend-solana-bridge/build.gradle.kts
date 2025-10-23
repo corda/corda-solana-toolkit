@@ -24,6 +24,10 @@ dependencies {
     cordapp(libs.samples.kotlin.stockpaydividend.workflows)
 }
 
+val solanaNotaryKeyFileName = "Dev7chG99tLCAny3PNYmBdyhaKEVcZnSTp3p1mKVb5m5.json"
+val solanaNotaryKeyPath = "$buildDir/extracted/dev-keys/$solanaNotaryKeyFileName"
+val custodiedKeysDirectory = "${project.buildDir}/nodes/custodied-keys"
+
 tasks.register<Cordform>("deployNodes") {
     dependsOn(
         project(":bridging-token-contracts").tasks.named("jar"),
@@ -64,8 +68,12 @@ tasks.register<Cordform>("deployNodes") {
         name("O=Solana Notary,L=Ashburn,ST=Virginia,C=US")
         notary = mapOf(
             "validating" to "false",
-            "serviceLegalName" to "O=Solana Notary Service,L=Washington,C=US"
-            // TODO add Solana settings
+            "serviceLegalName" to "O=Solana Notary Service,L=Washington,C=US",
+            "solana" to mapOf(
+                "notaryKeypairFile" to file(solanaNotaryKeyPath).absolutePath,
+                "custodiedKeysDir" to file(custodiedKeysDirectory).absolutePath,
+                "rpcUrl" to "https://api.devnet.solana.com"
+            )
         )
         p2pPort(10019)
         rpcSettings {
