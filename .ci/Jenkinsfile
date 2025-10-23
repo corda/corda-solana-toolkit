@@ -66,7 +66,12 @@ pipeline {
                        changeRequest()
                   }
                    steps {
-                       snykDeltaScan(env.SNYK_API_TOKEN, env.SNYK_ORG_ID)
+                       script {
+                           def modulesToScan = ['bridging-token-contracts', 'bridging-token-workflows']
+                           modulesToScan.each { module ->
+                              snykDeltaScan(env.SNYK_API_TOKEN, env.SNYK_ORG_ID, "--policy-path=./.snyk --sub-project=${module} --configuration-matching='^runtimeClasspath\$' --prune-repeated-subdependencies --target-reference='${env.BRANCH_NAME}' --project-tags=Branch='${env.BRANCH_NAME.replaceAll("[^0-9|a-z|A-Z]+", "_")}'")
+                           }
+                       }
                    }
             }
     }
