@@ -1,4 +1,9 @@
 import net.corda.plugins.Cordform
+import net.corda.plugins.Node
+import org.gradle.api.artifacts.MinimalExternalModuleDependency
+import org.gradle.kotlin.dsl.register
+import org.gradle.api.provider.Provider
+
 
 plugins {
     id("default-kotlin")
@@ -16,11 +21,18 @@ dependencies {
     cordapp(libs.tokens.contracts)
     cordapp(libs.tokens.workflows)
 
-    cordapp(libs.samples.kotlin.contracts)
-    cordapp(libs.samples.kotlin.workflows)
+    cordapp(libs.samples.kotlin.stockpaydividend.contracts)
+    cordapp(libs.samples.kotlin.stockpaydividend.workflows)
+}
+
+// Adds passing TOML references for Cordform.nodeDefaults.cordapp property
+fun Node.cordapp(dep: Provider<MinimalExternalModuleDependency>) {
+    val resolvedDep : MinimalExternalModuleDependency = dep.get()
+    cordapp("${resolvedDep.module.group}:${resolvedDep.module.name}:${resolvedDep.versionConstraint.requiredVersion}")
 }
 
 tasks.register<Cordform>("deployNodes") {
+
     dependsOn(
         project(":bridging-token-contracts").tasks.named("jar"),
         project(":bridging-token-workflows").tasks.named("jar")
@@ -30,15 +42,11 @@ tasks.register<Cordform>("deployNodes") {
         projectCordapp {
             deploy = false
         }
-        cordapp("com.r3.corda.lib.tokens:tokens-contracts:1.3.2")
-        cordapp("com.r3.corda.lib.tokens:tokens-workflows:1.3.2")
-        //cordapp("${libs.tokens.contracts}") //TODO cant resolve toml variables from within deployNodes config
-        //cordapp("${libs.tokens.workflows}")
+        cordapp(libs.tokens.contracts)
+        cordapp(libs.tokens.workflows)
 
-        cordapp("com.github.corda.samples-kotlin:contracts:94f90ceb81cba943f196b9acfba55ade6701f131")
-        cordapp("com.github.corda.samples-kotlin:workflows:94f90ceb81cba943f196b9acfba55ade6701f131")
-        //cordapp("${libs.samples.kotlin.contracts}")
-        //cordapp("${libs.samples.kotlin.workflows}")
+        cordapp(libs.samples.kotlin.stockpaydividend.contracts)
+        cordapp(libs.samples.kotlin.stockpaydividend.workflows)
 
         runSchemaMigration = true
     }

@@ -18,8 +18,9 @@ detekt-ktlint-wrapper = { module = "dev.detekt:detekt-rules-ktlint-wrapper", ver
 # Libraries for a sample Corddap deployment
 corda-node-api = { module = "net.corda:corda-node-api", version.ref = "corda-os" }
 corda-shell = { module = "net.corda:corda-shell", version.ref = "corda-os-shell" }
-samples-kotlin-contracts = { module= "com.github.corda.samples-kotlin:contracts", version.ref = "samples-kotlin" }
-samples-kotlin-workflows = { module= "com.github.corda.samples-kotlin:workflows", version.ref = "samples-kotlin" }
+# Name intentially adds 'stockpaydividend' as JIT publish cordapp as 'samples-kotlin' name only
+samples-kotlin-stockpaydividend-contracts = { module= "com.github.corda.samples-kotlin:contracts", version.ref = "samples-kotlin" }
+samples-kotlin-stockpaydividend-workflows = { module= "com.github.corda.samples-kotlin:workflows", version.ref = "samples-kotlin" }
 
 [plugins]
 cordapp = { id = "net.corda.plugins.cordapp", version = "5.1.3" }
