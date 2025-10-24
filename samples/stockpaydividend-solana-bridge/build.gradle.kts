@@ -3,7 +3,10 @@ import net.corda.plugins.Node
 import org.gradle.api.artifacts.MinimalExternalModuleDependency
 import org.gradle.kotlin.dsl.register
 import org.gradle.api.provider.Provider
-import java.io.ByteArrayOutputStream
+import org.gradle.api.DefaultTask
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.*
 
 plugins {
     id("default-kotlin")
@@ -26,8 +29,10 @@ dependencies {
 }
 
 val solanaNotaryKeyFileName = "Dev7chG99tLCAny3PNYmBdyhaKEVcZnSTp3p1mKVb5m5.json"
-val solanaNotaryKeyPath = "${layout.buildDirectory.get()}/dev-key/$solanaNotaryKeyFileName"
+val solanaNotaryKeyPath = "${layout.buildDirectory.get()}/solana-keys/dev-key/$solanaNotaryKeyFileName"
 val custodiedKeysDirectory = "${layout.buildDirectory.get()}/custodied-keys"
+
+project.setProperty("bigBankIdentity", "O=MyBank,L=SF,C=US")
 
 tasks.register<Cordform>("deployNodes") {
     dependsOn(
@@ -160,7 +165,7 @@ dependencies {
 tasks.register("installSolanaNotaryDevKey") {
     dependsOn(tasks.named("build"))
     doLast {
-        val outputDir = File(projectDir, "build/dev-key")
+        val outputDir = File(projectDir, "build/solana-keys/dev-key")
 
         if (outputDir.exists()) {
             outputDir.setWritable(true, true)
@@ -170,7 +175,7 @@ tasks.register("installSolanaNotaryDevKey") {
 
         cordappResolvable.resolve().forEach { jar ->
             zipTree(jar).matching {
-                include("dev-keys/$solanaNotaryKeyFileName")
+                include("dev-key/$solanaNotaryKeyFileName")
             }.files.forEach { sourceFile ->
                 val destFile = File(outputDir, sourceFile.name)
                 sourceFile.copyTo(destFile, overwrite = true)
@@ -181,43 +186,117 @@ tasks.register("installSolanaNotaryDevKey") {
     }
 }
 
-val keysDirectory = "${project.buildDir}/nodes/solana-keys"
-val bridgeAuthorityWallet = "${custodiedKeysDirectory}/bridge-authority-wallet.json"
-val tokenMintFile = "${keysDirectory}/token-mint.pub"
-val bigBankFile = "${keysDirectory}/big-corp.pub"
+abstract class GenerateMockSolanaKeys : DefaultTask() {
+    @get:OutputFile abstract val bigBankKeyFile: RegularFileProperty
 
-tasks.register("installSolanaBridgeConfig") {
-    dependsOn(tasks.named("deployNodes"))
-    dependsOn(tasks.named("installSolanaNotaryDevKey"))
-    doLast {
-        val pubkey1 = file(bigBankFile).readText().trim()
-        val pubkey2 = file(tokenMintFile).readText().trim()
+    @get:OutputFile abstract val tokenMintKeyFile: RegularFileProperty
 
-        val stdout = ByteArrayOutputStream()
-        exec {
-            commandLine("solana-keygen", "pubkey", bridgeAuthorityWallet)
-            standardOutput = stdout
+    @get:OutputFile abstract val bridgeAuthorityKeyFile: RegularFileProperty
+
+    @TaskAction fun generate() {
+        val bigBankKey = generateMockSolanaKey()
+        val tokenMintKey = generateMockSolanaKey()
+        val bridgeAuthorityKey = generateMockSolanaKey()
+
+        bigBankKeyFile.get().asFile.apply {
+            parentFile.mkdirs()
+            writeText(bigBankKey)
         }
-        val pubkey3 = stdout.toString(Charsets.UTF_8).trim()
 
-        //TODO parameterize keys below
+        tokenMintKeyFile.get().asFile.apply {
+            parentFile.mkdirs()
+            writeText(tokenMintKey)
+        }
+
+        bridgeAuthorityKeyFile.get().asFile.apply {
+            parentFile.mkdirs()
+            writeText(bridgeAuthorityKey)
+        }
+
+        println("Generated mock Solana keys:")
+        println("  BigBank:          $bigBankKey")
+        println("  TokenMint:        $tokenMintKey")
+        println("  BridgeAuthority:  $bridgeAuthorityKey")
+    }
+
+    private fun generateMockSolanaKey(): String {
+        val base58Chars = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+        return (1..44)
+            .map { base58Chars.random() }
+            .joinToString("")
+    }
+}
+val generateKeys = tasks.register<GenerateMockSolanaKeys>("generateMockSolanaKeys") {
+    bigBankKeyFile.set(layout.buildDirectory.file("solana-keys/bigbank.pub"))
+    tokenMintKeyFile.set(layout.buildDirectory.file("solana-keys/tokenmint.pub"))
+    bridgeAuthorityKeyFile.set(layout.buildDirectory.file("solana-keys/bridge.pub"))
+    dependsOn("build")
+}
+
+abstract class InstallSolanaBridgeConfig : DefaultTask() {
+    @get:Input
+    abstract val bigBankPubkey: Property<String>
+
+    @get:Input
+    abstract val tokenMintPubkey: Property<String>
+
+    @get:Input
+    abstract val bridgeAuthorityPubkey: Property<String>
+
+    @get:Input
+    abstract val cordaTokenTypeId: Property<String>
+
+    @get:Input
+    abstract val bigBankCordaIdentity: Property<String>
+
+    @get:Input
+    @get:Optional
+    abstract val nodeName: Property<String>
+
+    @get:OutputFile
+    abstract val configFile: RegularFileProperty
+
+    @TaskAction
+    fun install() {
+        val node = nodeName.getOrElse("BridgingAuthority")
+
         val configContent = """
-            participants = {"O=WayneCo,L=SF,C=US" = "$pubkey1"}
-            mints = {"TEST" = "$pubkey2"}
-            mintAuthorities = {"TEST" = "$pubkey3"}
+            participants = {"${bigBankCordaIdentity.get()}" = "${bigBankPubkey.get()}"}
+            mints = {"${cordaTokenTypeId.get()}" = "${tokenMintPubkey.get()}"}
+            mintAuthorities = {"${cordaTokenTypeId.get()}" = "${bridgeAuthorityPubkey.get()}"}
         """.trimIndent()
 
-        //TODO parameterize node name below
-        val outputDir = file("${layout.buildDirectory.get()}/nodes/BridgingAuthority/cordapps/config")
-        outputDir.mkdirs()
-
-        val outputFile = file("$outputDir/bridging-flows-1.0.conf")
+        val outputFile = configFile.get().asFile
+        outputFile.parentFile.mkdirs()
         outputFile.writeText(configContent)
 
-        println("Generated config at: ${outputFile.absolutePath}")
+        println("Generated config for $node at: ${outputFile.absolutePath}")
     }
 }
 
+tasks.register<InstallSolanaBridgeConfig>("installSolanaBridgeConfig") {
+    val node = project.findProperty("nodeName") as String? ?: "BridgingAuthority"
+
+    bigBankPubkey.set(generateKeys.flatMap {
+        providers.fileContents(it.bigBankKeyFile).asText.map { it.trim() }
+    })
+    tokenMintPubkey.set(generateKeys.flatMap {
+        providers.fileContents(it.tokenMintKeyFile).asText.map { it.trim() }
+    })
+    bridgeAuthorityPubkey.set(generateKeys.flatMap {
+        providers.fileContents(it.bridgeAuthorityKeyFile).asText.map { it.trim() }
+    })
+
+    cordaTokenTypeId.set(project.findProperty("cordaTokenTypeId") as String? ?: "DEFAULT TEST")
+    bigBankCordaIdentity.set(
+        project.findProperty("bigBankIdentity") as String? ?: "O=WayneCo,L=SF,C=US"
+    )
+    nodeName.set(node)
+    configFile.set(layout.buildDirectory.file("nodes/$node/cordapps/config/bridging-flows-1.0.conf"))
+
+    dependsOn(generateKeys)
+    dependsOn("deployNodes")
+}
 
 
 // Adds passing TOML references for Cordform.nodeDefaults.cordapp property
