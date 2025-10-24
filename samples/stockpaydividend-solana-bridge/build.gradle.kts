@@ -3,6 +3,7 @@ import net.corda.plugins.Node
 import org.gradle.api.artifacts.MinimalExternalModuleDependency
 import org.gradle.kotlin.dsl.register
 import org.gradle.api.provider.Provider
+import java.io.ByteArrayOutputStream
 
 plugins {
     id("default-kotlin")
@@ -156,7 +157,7 @@ dependencies {
     cordappResolvable(project(":bridging-token-workflows"))
 }
 
-tasks.register("installDevKey") {
+tasks.register("installSolanaNotaryDevKey") {
     dependsOn(tasks.named("build"))
     doLast {
         val outputDir = File(projectDir, "build/dev-key")
@@ -179,6 +180,45 @@ tasks.register("installDevKey") {
         println("Dev Key Extracted to: ${outputDir.absolutePath}")
     }
 }
+
+val keysDirectory = "${project.buildDir}/nodes/solana-keys"
+val bridgeAuthorityWallet = "${custodiedKeysDirectory}/bridge-authority-wallet.json"
+val tokenMintFile = "${keysDirectory}/token-mint.pub"
+val bigBankFile = "${keysDirectory}/big-corp.pub"
+
+tasks.register("installSolanaBridgeConfig") {
+    dependsOn(tasks.named("deployNodes"))
+    dependsOn(tasks.named("installSolanaNotaryDevKey"))
+    doLast {
+        val pubkey1 = file(bigBankFile).readText().trim()
+        val pubkey2 = file(tokenMintFile).readText().trim()
+
+        val stdout = ByteArrayOutputStream()
+        exec {
+            commandLine("solana-keygen", "pubkey", bridgeAuthorityWallet)
+            standardOutput = stdout
+        }
+        val pubkey3 = stdout.toString(Charsets.UTF_8).trim()
+
+        //TODO parameterize keys below
+        val configContent = """
+            participants = {"O=WayneCo,L=SF,C=US" = "$pubkey1"}
+            mints = {"TEST" = "$pubkey2"}
+            mintAuthorities = {"TEST" = "$pubkey3"}
+        """.trimIndent()
+
+        //TODO parameterize node name below
+        val outputDir = file("${layout.buildDirectory.get()}/nodes/BridgingAuthority/cordapps/config")
+        outputDir.mkdirs()
+
+        val outputFile = file("$outputDir/bridging-flows-1.0.conf")
+        outputFile.writeText(configContent)
+
+        println("Generated config at: ${outputFile.absolutePath}")
+    }
+}
+
+
 
 // Adds passing TOML references for Cordform.nodeDefaults.cordapp property
 fun Node.cordapp(dep: Provider<MinimalExternalModuleDependency>) {

@@ -23,7 +23,7 @@ New network participants:
 
 Open a terminal and go to the project root directory and type: (to deploy the nodes using bootstrapper)
 ```
-./gradlew clean samples:stockpaydividend-solana-bridge:deployNodes samples:stockpaydividend-solana-bridge:installDevKey
+./gradlew clean samples:stockpaydividend-solana-bridge:deployNodes samples:stockpaydividend-solana-bridge:installSolanaBridgeConfig
 ```
 Then type: (to run the nodes)
 ```
