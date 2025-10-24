@@ -25,8 +25,8 @@ dependencies {
 }
 
 val solanaNotaryKeyFileName = "Dev7chG99tLCAny3PNYmBdyhaKEVcZnSTp3p1mKVb5m5.json"
-val solanaNotaryKeyPath = "$buildDir/extracted/dev-keys/$solanaNotaryKeyFileName"
-val custodiedKeysDirectory = "${project.buildDir}/nodes/custodied-keys"
+val solanaNotaryKeyPath = "${layout.buildDirectory}/nodes/dev-keys/$solanaNotaryKeyFileName" //TODO set under Solana
+val custodiedKeysDirectory = "$${layout.buildDirectory}/nodes/custodied-keys"
 
 tasks.register<Cordform>("deployNodes") {
     dependsOn(
@@ -143,6 +143,39 @@ tasks.register("writeCordappConfig") {
     }
 }
 tasks.named("deployNodes") { finalizedBy("writeCordappConfig") }
+
+val cordappResolvable by configurations.creating {
+    isCanBeResolved = true
+    isCanBeConsumed = false
+    isTransitive = false
+}
+dependencies {
+    cordappResolvable(project(":bridging-token-contracts"))
+}
+
+tasks.register("installDevKey") {
+    dependsOn(tasks.named("build"))
+    doLast {
+        val outputDir = File(projectDir, "build/nodes/dev-key")
+
+        if (outputDir.exists()) {
+            outputDir.setWritable(true, true)
+            outputDir.deleteRecursively()
+        }
+        outputDir.mkdirs()
+
+        cordappResolvable.resolve().forEach { jar ->
+            zipTree(jar).matching {
+                include("dev-keys/$solanaNotaryKeyFileName")
+            }.files.forEach { sourceFile ->
+                val destFile = File(outputDir, sourceFile.name)
+                sourceFile.copyTo(destFile, overwrite = true)
+            }
+        }
+
+        println("Dev Key Extracted to: ${outputDir.absolutePath}")
+    }
+}
 
 // Adds passing TOML references for Cordform.nodeDefaults.cordapp property
 fun Node.cordapp(dep: Provider<MinimalExternalModuleDependency>) {
