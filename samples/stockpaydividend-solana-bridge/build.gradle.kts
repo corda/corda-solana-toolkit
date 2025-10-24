@@ -25,8 +25,8 @@ dependencies {
 }
 
 val solanaNotaryKeyFileName = "Dev7chG99tLCAny3PNYmBdyhaKEVcZnSTp3p1mKVb5m5.json"
-val solanaNotaryKeyPath = "${layout.buildDirectory}/nodes/dev-keys/$solanaNotaryKeyFileName" //TODO set under Solana
-val custodiedKeysDirectory = "$${layout.buildDirectory}/nodes/custodied-keys"
+val solanaNotaryKeyPath = "${layout.buildDirectory.get()}/dev-key/$solanaNotaryKeyFileName"
+val custodiedKeysDirectory = "${layout.buildDirectory.get()}/custodied-keys"
 
 tasks.register<Cordform>("deployNodes") {
     dependsOn(
@@ -126,7 +126,7 @@ tasks.register<Cordform>("deployNodes") {
         }
         rpcUsers = commonRpcUser
         cordapp(project(":bridging-token-contracts"))
-        //cordapp(project(":bridging-token-workflows")) //TODO endable once there is a cordapp
+        cordapp(project(":bridging-token-workflows"))
     }
 }
 
@@ -144,19 +144,22 @@ tasks.register("writeCordappConfig") {
 }
 tasks.named("deployNodes") { finalizedBy("writeCordappConfig") }
 
-val cordappResolvable by configurations.creating {
+// To allow installDevKey task to get JAR file from cordapp dependency with dev key, this sevres 2 purposes:
+// - the configuration can point to single dependency avoiding scanning other jars
+// - 'cordapp' dependency cannot be resolved, it needs to be wrapped
+val cordappResolvable: Configuration by configurations.creating {
     isCanBeResolved = true
     isCanBeConsumed = false
     isTransitive = false
 }
 dependencies {
-    cordappResolvable(project(":bridging-token-contracts"))
+    cordappResolvable(project(":bridging-token-workflows"))
 }
 
 tasks.register("installDevKey") {
     dependsOn(tasks.named("build"))
     doLast {
-        val outputDir = File(projectDir, "build/nodes/dev-key")
+        val outputDir = File(projectDir, "build/dev-key")
 
         if (outputDir.exists()) {
             outputDir.setWritable(true, true)
