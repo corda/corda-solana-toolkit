@@ -32,8 +32,6 @@ val solanaNotaryKeyFileName = "Dev7chG99tLCAny3PNYmBdyhaKEVcZnSTp3p1mKVb5m5.json
 val solanaNotaryKeyPath = "${layout.buildDirectory.get()}/solana-keys/dev-key/$solanaNotaryKeyFileName"
 val custodiedKeysDirectory = "${layout.buildDirectory.get()}/custodied-keys"
 
-project.setProperty("bigBankIdentity", "O=MyBank,L=SF,C=US")
-
 tasks.register<Cordform>("deployNodes") {
     dependsOn(
         project(":bridging-token-contracts").tasks.named("jar"),
@@ -187,7 +185,7 @@ tasks.register("installSolanaNotaryDevKey") {
 }
 
 abstract class GenerateMockSolanaKeys : DefaultTask() {
-    @get:OutputFile abstract val bigBankKeyFile: RegularFileProperty
+    @get:OutputFile abstract val bigBankKeyFile: RegularFileProperty //TODO a list
 
     @get:OutputFile abstract val tokenMintKeyFile: RegularFileProperty
 
@@ -287,9 +285,9 @@ tasks.register<InstallSolanaBridgeConfig>("installSolanaBridgeConfig") {
         providers.fileContents(it.bridgeAuthorityKeyFile).asText.map { it.trim() }
     })
 
-    cordaTokenTypeId.set(project.findProperty("cordaTokenTypeId") as String? ?: "DEFAULT TEST")
+    cordaTokenTypeId.set(project.findProperty("cordaTokenTypeId") as String? ?: "TEST")
     bigBankCordaIdentity.set(
-        project.findProperty("bigBankIdentity") as String? ?: "O=WayneCo,L=SF,C=US"
+        project.findProperty("bigBankIdentity") as String? ?: "O=WayneCo,L=SF,C=US" //TODO this will be a list
     )
     nodeName.set(node)
     configFile.set(layout.buildDirectory.file("nodes/$node/cordapps/config/bridging-flows-1.0.conf"))
