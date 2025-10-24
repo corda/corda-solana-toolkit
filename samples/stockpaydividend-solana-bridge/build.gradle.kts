@@ -185,13 +185,17 @@ tasks.register("installSolanaNotaryDevKey") {
 }
 
 abstract class GenerateMockSolanaKeys : DefaultTask() {
-    @get:OutputFile abstract val bigBankKeyFile: RegularFileProperty //TODO a list
+    @get:OutputFile
+    abstract val bigBankKeyFile: RegularFileProperty //TODO a list
 
-    @get:OutputFile abstract val tokenMintKeyFile: RegularFileProperty
+    @get:OutputFile
+    abstract val tokenMintKeyFile: RegularFileProperty
 
-    @get:OutputFile abstract val bridgeAuthorityKeyFile: RegularFileProperty
+    @get:OutputFile
+    abstract val bridgeAuthorityKeyFile: RegularFileProperty
 
-    @TaskAction fun generate() {
+    @TaskAction
+    fun generate() {
         val bigBankKey = generateMockSolanaKey()
         val tokenMintKey = generateMockSolanaKey()
         val bridgeAuthorityKey = generateMockSolanaKey()
