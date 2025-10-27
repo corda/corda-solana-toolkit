@@ -23,18 +23,28 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.solana.sdk.internal.Token2022
 
 /**
- * Flows bridges a fungible token to Solana token.
+ * Bridges a Corda-side fungible token position to an equivalent SPL token on Solana.
  *
- * @param lockingHolder the identity (Confidential Identity) under which the token is locked for the bridging duration
- * @param originalHolder the owner of the token before it was moved to Bridging Authority
- * @param token fungible token to be bridge to Solana
- * @param solanaNotary notary to perform bridging
- * @param observers optional observing parties to which the transaction will be broadcast
+ * The flow orchestrates a three-phase protocol:
+ *
+ * 1. **Lock phase** — Move the Corda fungible amount under the bridge’s control to a confidential identity
+ *    owned by the identity running the flow and produce a proxy state carrying Solana minting metadata.
+ *
+ * 2. **Notary move phase** — Change the notary of the proxy state to [solanaNotary].
+ *
+ * 3. **Mint phase** — Mint the corresponding token amount on Solana and mark the proxy state as bridged.
+ *
+ * @param lockingHolder Confidential identity party that operates the bridge/escrow. The actual lock
+ *   may use a confidential identity derived from this party.
+ * @param originalHolder Current owner of [token] prior to locking.
+ * @param token The fungible token state to be bridged to Solana.
+ * @param solanaNotary Notary that performs bridging (minting on Solana).
+ * @param observers Optional observing parties to receive finalized transactions (may be empty).
  */
 @StartableByService
 @InitiatingFlow
 class BridgeFungibleTokenFlow(
-    val lockingHolder: Party,
+    val lockingHolder: AbstractParty,
     val originalHolder: AbstractParty,
     val token: StateAndRef<FungibleToken>,
     val solanaNotary: Party,
@@ -50,7 +60,7 @@ class BridgeFungibleTokenFlow(
         val participantSessions = sessionsForParties(participants)
 
         // Move the token from ourIdentity (implied BridgeAuthority) to the lock holder (confidential identity).
-        // Also, create a BridgedAssetState that will be later used to mint the tokens on Solana
+        // Also, create a proxy of Fungible Token that will be later used to mint a token on Solana
         val moveTx =
             subFlow(
                 MoveAndLockFungibleTokenFlow(

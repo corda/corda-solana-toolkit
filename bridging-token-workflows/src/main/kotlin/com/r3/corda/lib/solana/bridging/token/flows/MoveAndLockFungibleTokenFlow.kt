@@ -12,7 +12,7 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.flows.FlowSession
-import net.corda.core.identity.Party
+import net.corda.core.identity.AbstractParty
 import net.corda.core.transactions.TransactionBuilder
 
 /**
@@ -24,7 +24,7 @@ class MoveAndLockFungibleTokenFlow
 constructor(
     val token: StateAndRef<FungibleToken>,
     val bridgingCoordinates: BridgingCoordinates,
-    val lockingHolder: Party,
+    val lockingHolder: AbstractParty,
     override val participantSessions: List<FlowSession>,
     override val observerSessions: List<FlowSession> = emptyList(),
 ) : AbstractMoveTokensFlow() {
