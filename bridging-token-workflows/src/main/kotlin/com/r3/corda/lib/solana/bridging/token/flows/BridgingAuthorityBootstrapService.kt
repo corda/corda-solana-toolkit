@@ -3,6 +3,7 @@ package com.r3.corda.lib.solana.bridging.token.flows
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.cordapp.CordappConfigException
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.AppServiceHub
@@ -17,7 +18,7 @@ import java.util.concurrent.Executors
 class BridgingAuthorityBootstrapService(
     appServiceHub: AppServiceHub,
 ) : SingletonSerializeAsToken() {
-    private val holdingIdentity: Party
+    private val holdingIdentity: AbstractParty
     private val solanaNotary: Party
     private val bridgeAuthority = appServiceHub.myInfo.legalIdentities.first()
     private val logger = LoggerFactory.getLogger(BridgingAuthorityBootstrapService::class.java)

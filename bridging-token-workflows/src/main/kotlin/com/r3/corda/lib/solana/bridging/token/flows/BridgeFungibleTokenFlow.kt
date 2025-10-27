@@ -87,7 +87,7 @@ class BridgeFungibleTokenFlow(
         )
         transactionBuilder.addNotaryInstruction(instruction)
         transactionBuilder.addCommand(
-            BridgingContract.BridgingCommand.MintToSolana(),
+            BridgingContract.BridgingCommand.MintToSolana,
             listOf(ourIdentity.owningKey),
         )
         transactionBuilder.addInputState(StateAndRef(notaryChangeTx.state, notaryChangeTx.ref))

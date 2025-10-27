@@ -64,8 +64,8 @@ class BridgingContract : Contract {
     private fun verifyMintToSolana(
         tx: LedgerTransaction,
     ) {
-        val bridgingAssetState = tx.outputsOfType<BridgedFungibleTokenProxy>().singleOrNull()
-        require(bridgingAssetState != null) { "Bridging transaction must have exactly one BridgedAssetState as output" }
+        val tokenProxy = tx.outputsOfType<BridgedFungibleTokenProxy>().singleOrNull()
+        require(tokenProxy != null) { "Bridging transaction must have exactly one BridgedAssetState as output" }
 
         val mintCommand = tx.commandsOfType<BridgingCommand.MintToSolana>()
         require(mintCommand.size == 1) { "Bridging must have one mint command" }
@@ -74,10 +74,10 @@ class BridgingContract : Contract {
         require(instruction != null) { "Exactly one Solana mint instruction required" }
 
         val expectedInstruction = Token2022.mintTo(
-            bridgingAssetState.mint,
-            bridgingAssetState.mintDestination,
-            bridgingAssetState.mintAuthority,
-            bridgingAssetState.amount,
+            tokenProxy.mint,
+            tokenProxy.mintDestination,
+            tokenProxy.mintAuthority,
+            tokenProxy.amount,
         )
         require(instruction == expectedInstruction) {
             "The instruction in the transaction does not match the sum or the bridging config:\n" +
@@ -89,9 +89,10 @@ class BridgingContract : Contract {
         require(originalBridgingAssetState != null) {
             "Bridging transaction must have exactly one BridgingAssetState as input"
         }
-        require(bridgingAssetState.amount == originalBridgingAssetState.amount) {
+        require(tokenProxy.amount == originalBridgingAssetState.amount) {
             "Bridged amount must match the input amount"
         }
+        require(tokenProxy.minted) { "Bridging asset must be marked as minted" }
     }
 
     /**
@@ -124,9 +125,12 @@ class BridgingContract : Contract {
         }
 
         /**
-         * Mints the bridged amount on Solana for the designated destination (as referenced
-         * by the state being consumed/produced).
+         * Mints the bridged amount on Solana for the designated destination.
          */
-        class MintToSolana : BridgingCommand
+        object MintToSolana : BridgingCommand
+    }
+
+    companion object {
+        const val BRIDGE_PROGRAM_ID = "com.r3.corda.lib.solana.bridging.token.contracts.BridgingContract"
     }
 }

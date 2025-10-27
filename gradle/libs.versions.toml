@@ -18,6 +18,7 @@ corda-test-utils = { module = "com.r3.corda:corda-test-utils", version.ref = "co
 corda-core-test-utils = { module = "net.corda:corda-core-test-utils", version.ref = "corda-os" }
 corda-node-driver = { module = "com.r3.corda:corda-node-driver", version.ref = "corda-ent" }
 quasar-core = { module = "co.paralleluniverse:quasar-core", version = "0.7.6" }
+mockito-core = { module = "org.mockito:mockito-core", version = "5.5.0" } # ledger unit tests
 
 [plugins]
 cordapp = { id = "net.corda.plugins.cordapp", version = "5.1.3" }
