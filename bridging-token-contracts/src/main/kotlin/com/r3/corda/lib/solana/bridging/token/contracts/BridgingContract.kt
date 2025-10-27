@@ -12,6 +12,14 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.solana.sdk.instruction.SolanaInstruction
 import net.corda.solana.sdk.internal.Token2022
 
+/**
+ * Contract that governs bridging of fungible token states (from the Corda Tokens SDK) to Solana.
+ *
+ * The contract is *exhaustive* over a transaction’s non-reference states: apart from [BridgedFungibleTokenProxy],
+ * every input and output must be a Tokens SDK **fungible** token state.
+ * Any other state types/contracts are not permitted in the same transaction.
+ */
+
 class BridgingContract : Contract {
     override fun verify(tx: LedgerTransaction) {
         val bridgingCommands = tx.commandsOfType<BridgingCommand>()
@@ -28,23 +36,23 @@ class BridgingContract : Contract {
         tx: LedgerTransaction,
         bridgingCommand: BridgingCommand.LockToken,
     ) {
-        require(tx.inputs.size == 1) { "Bridging transaction must have exactly one input state" }
+        require(tx.inputs.size == 1) { "Lock transaction must have exactly one input state" }
         require(tx.inputsOfType<FungibleToken>().size == 1) {
-            "Bridging transaction must have exactly one FungibleState as input state"
+            "Lock transaction must have exactly one FungibleState as input state"
         }
 
         val lockedToken = tx.outputsOfType<FungibleToken>().singleOrNull()
         val tokenProxy = tx.outputsOfType<BridgedFungibleTokenProxy>().singleOrNull()
 
-        require(lockedToken != null) { "Bridging transaction must have exactly one FungibleToken as output" }
-        require(tokenProxy != null) { "Bridging transaction must have exactly one BridgedAssetState as output" }
+        require(lockedToken != null) { "Lock transaction must have exactly one FungibleToken as output" }
+        require(tokenProxy != null) { "Lock transaction must have exactly one BridgedAssetState as output" }
         require(bridgingCommand.bridgeAuthority in tokenProxy.participants) {
             "Bridge Authority must be a participant"
         }
 
         val tokenCommand = tx.commandsOfType<TokenCommand>().singleOrNull()
         require(tokenCommand != null && tokenCommand.value is MoveTokenCommand) {
-            "Bridging must have a single token command (Move Token) to lock token with the locking identity"
+            "Lock must have a single token command (Move Token) to lock token with the locking identity"
         }
         // the correctness of input and output FungibleToken is verified by TokenSdk contract for MoveTokenCommand
 
@@ -57,6 +65,11 @@ class BridgingContract : Contract {
         }
         require(!tokenProxy.minted) { "Bridging asset must not be marked as minted when issuing" }
 
+        require(tx.commands.size == 2) {
+            // Presence of individual commands verified till this point
+            "Lock transaction must only contain commands LockToken and token command (Move Token)"
+        }
+
         // TODO verify the locked token data matches as well, such as the tokenId and original owner
         //  this will come with redemption code
     }
@@ -65,7 +78,9 @@ class BridgingContract : Contract {
         tx: LedgerTransaction,
     ) {
         val tokenProxy = tx.outputsOfType<BridgedFungibleTokenProxy>().singleOrNull()
-        require(tokenProxy != null) { "Bridging transaction must have exactly one BridgedAssetState as output" }
+        require(tokenProxy != null) {
+            "Bridging transaction must have exactly one BridgedFungibleTokenProxy as output"
+        }
 
         val mintCommand = tx.commandsOfType<BridgingCommand.MintToSolana>()
         require(mintCommand.size == 1) { "Bridging must have one mint command" }
@@ -87,12 +102,16 @@ class BridgingContract : Contract {
 
         val originalBridgingAssetState = tx.inputsOfType<BridgedFungibleTokenProxy>().singleOrNull()
         require(originalBridgingAssetState != null) {
-            "Bridging transaction must have exactly one BridgingAssetState as input"
+            "Bridging transaction must have exactly one BridgedFungibleTokenProxy as input"
         }
         require(tokenProxy.amount == originalBridgingAssetState.amount) {
             "Bridged amount must match the input amount"
         }
         require(tokenProxy.minted) { "Bridging asset must be marked as minted" }
+
+        require(tx.commands.size == 1) {
+            "Bridging transaction must only contain a single command"
+        }
     }
 
     /**
