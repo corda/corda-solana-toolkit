@@ -5,6 +5,8 @@ ktlint:
         active: false
     ClassSignature:
         active: false
+    FunctionSignature:
+        active: false
     FunctionExpressionBody:
         active: false
 style:

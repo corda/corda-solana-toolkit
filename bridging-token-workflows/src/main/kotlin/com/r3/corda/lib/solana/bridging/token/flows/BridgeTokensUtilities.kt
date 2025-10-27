@@ -6,7 +6,6 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.node.ServiceHub
 
 // TODO this potentially could go to BridgingAuthorityBootstrapService
-@Suppress("FunctionSignature")
 fun findPreviousHolderOfToken(
     serviceHub: ServiceHub,
     output: StateAndRef<FungibleToken>,

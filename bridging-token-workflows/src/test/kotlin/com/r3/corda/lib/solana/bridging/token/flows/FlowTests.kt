@@ -1,7 +1,7 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
 import com.lmax.solana4j.api.PublicKey
-import com.r3.corda.lib.solana.bridging.token.states.BridgedAssetState
+import com.r3.corda.lib.solana.bridging.token.states.BridgedFungibleTokenProxy
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.contracts.types.TokenType
 import com.r3.corda.lib.tokens.workflows.flows.rpc.MoveFungibleTokens
@@ -289,10 +289,10 @@ class FlowTests {
                 it.state.data.amount.token.tokenType == stock
             }
         assertNotNull(token)
-        val bridgingState: StateAndRef<BridgedAssetState>? =
+        val bridgingState: StateAndRef<BridgedFungibleTokenProxy>? =
             bridgingAuthority
                 .services.vaultService
-                .queryBy(BridgedAssetState::class.java)
+                .queryBy(BridgedFungibleTokenProxy::class.java)
                 .states
                 .firstOrNull()
         assertNotNull(bridgingState)

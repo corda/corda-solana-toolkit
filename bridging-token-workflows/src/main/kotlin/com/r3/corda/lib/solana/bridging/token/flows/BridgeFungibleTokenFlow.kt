@@ -2,7 +2,7 @@ package com.r3.corda.lib.solana.bridging.token.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import com.r3.corda.lib.solana.bridging.token.contracts.BridgingContract
-import com.r3.corda.lib.solana.bridging.token.states.BridgedAssetState
+import com.r3.corda.lib.solana.bridging.token.states.BridgedFungibleTokenProxy
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.workflows.flows.move.MoveTokensFlowHandler
 import com.r3.corda.lib.tokens.workflows.utilities.sessionsForParties
@@ -63,7 +63,8 @@ class BridgeFungibleTokenFlow(
             )
 
         // Change notary to Solana notary
-        val moveBridgingAssetState = moveTx.toLedgerTransaction(serviceHub).outRefsOfType<BridgedAssetState>().single()
+        val moveBridgingAssetState =
+            moveTx.toLedgerTransaction(serviceHub).outRefsOfType<BridgedFungibleTokenProxy>().single()
         val notaryChangeTx = subFlow(NotaryChangeFlow(moveBridgingAssetState, solanaNotary))
 
         // Mint on Solana
@@ -76,7 +77,7 @@ class BridgeFungibleTokenFlow(
         )
         transactionBuilder.addNotaryInstruction(instruction)
         transactionBuilder.addCommand(
-            BridgingContract.BridgingCommand.MintToSolana(ourIdentity),
+            BridgingContract.BridgingCommand.MintToSolana(),
             listOf(ourIdentity.owningKey),
         )
         transactionBuilder.addInputState(StateAndRef(notaryChangeTx.state, notaryChangeTx.ref))

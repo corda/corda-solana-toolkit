@@ -88,7 +88,6 @@ class BridgingAuthorityBootstrapService(
         }
     }
 
-    @Suppress("FunctionSignature")
     private fun callFlow(
         fungibleTokens: Collection<StateAndRef<FungibleToken>>,
         appServiceHub: AppServiceHub,

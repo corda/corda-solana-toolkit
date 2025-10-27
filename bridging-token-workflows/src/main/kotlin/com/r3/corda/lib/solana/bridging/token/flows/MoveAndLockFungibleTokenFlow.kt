@@ -2,6 +2,7 @@ package com.r3.corda.lib.solana.bridging.token.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import com.r3.corda.lib.solana.bridging.token.contracts.BridgingContract
+import com.r3.corda.lib.solana.bridging.token.flows.BridgingCoordinates.Companion.toProxy
 import com.r3.corda.lib.tokens.contracts.states.AbstractToken
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.contracts.types.IssuedTokenType
@@ -54,11 +55,11 @@ constructor(
             "When bridging a fungible token, only one token type can be moved at a time."
         }
 
-        val bridgingState: ContractState = bridgingCoordinates.toUnmintedBridgedAssetState(token, listOf(ourIdentity))
+        val bridgingState: ContractState = token.toProxy(bridgingCoordinates, listOf(ourIdentity))
 
         transactionBuilder.addOutputState(bridgingState)
 
-        val bridgingCommand = BridgingContract.BridgingCommand.IssueBridgingAsset(ourIdentity, lockingHolder)
+        val bridgingCommand = BridgingContract.BridgingCommand.LockToken(ourIdentity, lockingHolder)
 
         outputGroups.forEach { (issuedTokenType: IssuedTokenType, _: List<AbstractToken>) ->
             val inputGroup =

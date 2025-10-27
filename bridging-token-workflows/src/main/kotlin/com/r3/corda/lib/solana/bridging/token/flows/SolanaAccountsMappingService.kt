@@ -60,7 +60,6 @@ class SolanaAccountsMappingService(
         val mintAuthority = checkNotNull(mintAuthorities[cordaTokenId]) {
             "No mint authority mapping found for token type id $cordaTokenId"
         }
-        val coordinates = BridgingCoordinates(originalOwner, cordaTokenId, mint, mintAuthority, destination)
-        return coordinates
+        return BridgingCoordinates(mint, mintAuthority, destination)
     }
 }
