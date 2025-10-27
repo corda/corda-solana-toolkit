@@ -19,7 +19,6 @@ import net.corda.solana.sdk.internal.Token2022
  * every input and output must be a Tokens SDK **fungible** token state.
  * Any other state types/contracts are not permitted in the same transaction.
  */
-
 class BridgingContract : Contract {
     override fun verify(tx: LedgerTransaction) {
         val bridgingCommands = tx.commandsOfType<BridgingCommand>()

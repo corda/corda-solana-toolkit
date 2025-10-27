@@ -119,6 +119,8 @@ class BridgingVerificationTests {
         }
     }
 
+    // TODO error tests for locking phase
+
     @Test
     fun mintAmountErrors() {
         services.ledger {
