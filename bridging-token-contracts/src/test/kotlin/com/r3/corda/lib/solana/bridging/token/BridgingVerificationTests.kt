@@ -223,10 +223,79 @@ class BridgingVerificationTests {
         }
     }
 
+    @Suppress("LongMethod")
     @Test
     fun lockCommandErrors() {
-        // TODO
+        services.ledger {
+            transaction {
+                attachment(contractId)
+                attachment(BRIDGE_PROGRAM_ID)
+                input(
+                    contractId,
+                    FungibleToken(cordaIssuedTokenType, bridgeAuthorityParty)
+                )
+                output(
+                    contractId,
+                    FungibleToken(cordaIssuedTokenType, confidentialIdentity)
+                )
+                output(
+                    BRIDGE_PROGRAM_ID,
+                    BRIDGE_PROGRAM_ID,
+                    BridgedFungibleTokenProxy(
+                        10000,
+                        false,
+                        tokenAccount,
+                        mint,
+                        mintAuthority,
+                        listOf(bridgeAuthorityParty)
+                    )
+                )
+                tweak {
+                    `fails with`("A transaction must contain at least one command")
+                }
+                tweak {
+                    command(
+                        listOf(bridgeAuthorityParty.owningKey, confidentialIdentity.owningKey),
+                        MoveTokenCommand(cordaIssuedTokenType.token, listOf(0), listOf(0))
+                    )
+                    `fails with`("Bridging transactions must have single bridging command")
+                }
+                tweak {
+                    command(
+                        listOf(bridgeAuthorityParty.owningKey),
+                        BridgingContract.BridgingCommand.LockToken(bridgeAuthorityParty, confidentialIdentity)
+                    )
+                    `fails with`("There must be at least one token command in this transaction.")
+                }
+                tweak {
+                    command(
+                        listOf(bridgeAuthorityParty.owningKey, confidentialIdentity.owningKey),
+                        MoveTokenCommand(cordaIssuedTokenType.token, listOf(0), listOf(0))
+                    )
+                    command(
+                        listOf(bridgeAuthorityParty.owningKey),
+                        BridgingContract.BridgingCommand.LockToken(bridgeAuthorityParty, confidentialIdentity)
+                    )
+                    command(
+                        listOf(bridgeAuthorityParty.owningKey),
+                        BridgingContract.BridgingCommand.MintToSolana
+                    )
+                    `fails with`(" Bridging transactions must have single bridging command")
+                }
+                command(
+                    listOf(bridgeAuthorityParty.owningKey, confidentialIdentity.owningKey),
+                    MoveTokenCommand(cordaIssuedTokenType.token, listOf(0), listOf(0))
+                )
+                command(
+                    listOf(bridgeAuthorityParty.owningKey),
+                    BridgingContract.BridgingCommand.LockToken(bridgeAuthorityParty, confidentialIdentity)
+                )
+                verifies()
+            }
+        }
     }
+
+    // TODO test with a surplus dummy unrelated state and contracts
 
     @Test
     fun lockInstructionError() {
@@ -262,7 +331,6 @@ class BridgingVerificationTests {
                     listOf(bridgeAuthorityParty.owningKey),
                     BridgingContract.BridgingCommand.LockToken(bridgeAuthorityParty, confidentialIdentity)
                 )
-
                 tweak {
                     notaryInstruction(Token2022.mintTo(mint, mintAuthority, mintAuthority, 10000))
                     `fails with`("No Solana mint instruction allowed")
