@@ -118,7 +118,158 @@ class BridgingVerificationTests {
         }
     }
 
-    // TODO error tests for locking phase
+    @Test
+    fun lockAmountErrors() {
+        services.ledger {
+            transaction {
+                attachment(contractId)
+                attachment(BRIDGE_PROGRAM_ID)
+                input(
+                    contractId,
+                    FungibleToken(cordaIssuedTokenType, bridgeAuthorityParty)
+                )
+                command(
+                    listOf(bridgeAuthorityParty.owningKey, confidentialIdentity.owningKey),
+                    MoveTokenCommand(cordaIssuedTokenType.token, listOf(0), listOf(0))
+                )
+                command(
+                    listOf(bridgeAuthorityParty.owningKey),
+                    BridgingContract.BridgingCommand.LockToken(bridgeAuthorityParty, confidentialIdentity)
+                )
+
+                tweak {
+                    output(
+                        contractId,
+                        FungibleToken(cordaIssuedTokenType, confidentialIdentity)
+                    )
+                    output(
+                        BRIDGE_PROGRAM_ID,
+                        BRIDGE_PROGRAM_ID,
+                        BridgedFungibleTokenProxy(
+                            9999,
+                            false,
+                            tokenAccount,
+                            mint,
+                            mintAuthority,
+                            listOf(bridgeAuthorityParty)
+                        )
+                    )
+                    `fails with`("Locked amount of 10000 must match amount to recorded in the proxy 9999")
+                }
+
+                tweak {
+                    output(
+                        contractId,
+                        FungibleToken(cordaIssuedTokenType, confidentialIdentity)
+                    )
+                    output(
+                        BRIDGE_PROGRAM_ID,
+                        BRIDGE_PROGRAM_ID,
+                        BridgedFungibleTokenProxy(
+                            10001,
+                            false,
+                            tokenAccount,
+                            mint,
+                            mintAuthority,
+                            listOf(bridgeAuthorityParty)
+                        )
+                    )
+                    `fails with`("Locked amount of 10000 must match amount to recorded in the proxy 10001")
+                }
+
+                tweak {
+                    val overspendCordaIssuedTokenType = (10001 of TokenType("TEST", 0)).issuedBy(tokenIssuer)
+                    output(
+                        contractId,
+                        FungibleToken(overspendCordaIssuedTokenType, confidentialIdentity)
+                    )
+                    output(
+                        BRIDGE_PROGRAM_ID,
+                        BRIDGE_PROGRAM_ID,
+                        BridgedFungibleTokenProxy(
+                            10000,
+                            false,
+                            tokenAccount,
+                            mint,
+                            mintAuthority,
+                            listOf(bridgeAuthorityParty)
+                        )
+                    )
+                    `fails with`("In move groups the amount of input tokens MUST EQUAL the amount of output tokens")
+                }
+
+                tweak {
+                    val underspendCordaIssuedTokenType = (9999 of TokenType("TEST", 0)).issuedBy(tokenIssuer)
+                    output(
+                        contractId,
+                        FungibleToken(underspendCordaIssuedTokenType, confidentialIdentity)
+                    )
+                    output(
+                        BRIDGE_PROGRAM_ID,
+                        BRIDGE_PROGRAM_ID,
+                        BridgedFungibleTokenProxy(
+                            10000,
+                            false,
+                            tokenAccount,
+                            mint,
+                            mintAuthority,
+                            listOf(bridgeAuthorityParty)
+                        )
+                    )
+                    `fails with`("In move groups the amount of input tokens MUST EQUAL the amount of output tokens")
+                }
+            }
+        }
+    }
+
+    @Test
+    fun lockCommandErrors() {
+        // TODO
+    }
+
+    @Test
+    fun lockInstructionError() {
+        services.ledger {
+            transaction {
+                attachment(contractId)
+                attachment(BRIDGE_PROGRAM_ID)
+                input(
+                    contractId,
+                    FungibleToken(cordaIssuedTokenType, bridgeAuthorityParty)
+                )
+                output(
+                    contractId,
+                    FungibleToken(cordaIssuedTokenType, confidentialIdentity)
+                )
+                output(
+                    BRIDGE_PROGRAM_ID,
+                    BRIDGE_PROGRAM_ID,
+                    BridgedFungibleTokenProxy(
+                        10000,
+                        false,
+                        tokenAccount,
+                        mint,
+                        mintAuthority,
+                        listOf(bridgeAuthorityParty)
+                    )
+                )
+                command(
+                    listOf(bridgeAuthorityParty.owningKey, confidentialIdentity.owningKey),
+                    MoveTokenCommand(cordaIssuedTokenType.token, listOf(0), listOf(0))
+                )
+                command(
+                    listOf(bridgeAuthorityParty.owningKey),
+                    BridgingContract.BridgingCommand.LockToken(bridgeAuthorityParty, confidentialIdentity)
+                )
+
+                tweak {
+                    notaryInstruction(Token2022.mintTo(mint, mintAuthority, mintAuthority, 10000))
+                    `fails with`("No Solana mint instruction allowed")
+                }
+            }
+        }
+    }
+
 
     @Test
     fun mintAmountErrors() {
