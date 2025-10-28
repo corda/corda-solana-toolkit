@@ -118,6 +118,7 @@ class BridgingVerificationTests {
         }
     }
 
+    @Suppress("LongMethod")
     @Test
     fun lockAmountErrors() {
         services.ledger {
@@ -269,7 +270,6 @@ class BridgingVerificationTests {
             }
         }
     }
-
 
     @Test
     fun mintAmountErrors() {
