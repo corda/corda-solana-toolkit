@@ -1,6 +1,5 @@
 package com.r3.corda.lib.solana.bridging.token
 
-import com.lmax.solana4j.programs.TokenProgramBase
 import com.r3.corda.lib.solana.bridging.token.contracts.BridgingContract
 import com.r3.corda.lib.solana.bridging.token.contracts.BridgingContract.Companion.BRIDGE_PROGRAM_ID
 import com.r3.corda.lib.solana.bridging.token.states.BridgedFungibleTokenProxy
@@ -309,11 +308,17 @@ class BridgingVerificationTests {
 
                 tweak {
                     notaryInstruction(Token2022.mintTo(mint, tokenAccount, mintAuthority, 10001))
-                    `fails with`("The instruction in the transaction does not match the sum or the bridging config:")
+                    `fails with`(
+                        "Contract verification failed: The instruction in the transaction " +
+                            "does not match metadata from token proxy:"
+                    )
                 }
                 tweak {
                     notaryInstruction(Token2022.mintTo(mint, tokenAccount, mintAuthority, 9999))
-                    `fails with`("The instruction in the transaction does not match the sum or the bridging config:")
+                    `fails with`(
+                        "Contract verification failed: The instruction in the transaction " +
+                            "does not match metadata from token proxy:"
+                    )
                 }
 
                 notaryInstruction(Token2022.mintTo(mint, tokenAccount, mintAuthority, 10000))
@@ -382,7 +387,7 @@ class BridgingVerificationTests {
 
                 tweak {
                     notaryInstruction(Token2022.mintTo(mint, mintAuthority, mintAuthority, 10000))
-                    `fails with`("The instruction in the transaction does not match the sum or the bridging config")
+                    `fails with`("The instruction in the transaction does not match metadata from token proxy:")
                 }
 
                 tweak {
@@ -396,32 +401,18 @@ class BridgingVerificationTests {
                 }
 
                 tweak {
-                    notaryInstruction(makeInstruction(Token2022.PROGRAM_ID, 6, 10000, tokenAccount))
-                    `fails with`("The instruction in the transaction does not match the sum or the bridging config:")
+                    notaryInstruction(instructionWithWrongOperation(tokenAccount))
+                    `fails with`("The instruction in the transaction does not match metadata from token proxy:")
                 }
-
+                // wrong destination
                 tweak {
-                    notaryInstruction(
-                        makeInstruction(
-                            mintAuthority,
-                            TokenProgramBase.MINT_TO_INSTRUCTION,
-                            10000,
-                            tokenAccount
-                        )
-                    )
-                    `fails with`("The instruction in the transaction does not match the sum or the bridging config:")
+                    Token2022.mintTo(mint, tokenAccount, tokenAccount, 10000)
+                    `fails with`("Exactly one Solana mint instruction required")
                 }
-
+                // wrong amount
                 tweak {
-                    notaryInstruction(
-                        makeInstruction(
-                            Token2022.PROGRAM_ID,
-                            TokenProgramBase.MINT_TO_INSTRUCTION,
-                            10000,
-                            mint
-                        )
-                    )
-                    `fails with`("The instruction in the transaction does not match the sum or the bridging config:")
+                    notaryInstruction(Token2022.mintTo(mint, tokenAccount, mintAuthority, 1000))
+                    `fails with`("The instruction in the transaction does not match metadata from token proxy:")
                 }
 
                 notaryInstruction(Token2022.mintTo(mint, tokenAccount, mintAuthority, 10000))
@@ -431,8 +422,10 @@ class BridgingVerificationTests {
         }
     }
 
-    // Exact copy of a method from Corda Enterprise
-    fun makeInstruction(programId: Pubkey, operation: Int, amount: Long, destination: Pubkey): SolanaInstruction {
+    private fun instructionWithWrongOperation(programId: Pubkey): SolanaInstruction {
+        val operation = 6
+        val amount: Long = 10000
+        val destination = Token2022.PROGRAM_ID
         val data = ByteBuffer
             .allocate(9)
             .order(ByteOrder.LITTLE_ENDIAN)

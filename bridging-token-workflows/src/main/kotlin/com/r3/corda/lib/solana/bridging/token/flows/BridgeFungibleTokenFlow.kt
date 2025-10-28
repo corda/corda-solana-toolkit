@@ -36,7 +36,7 @@ import net.corda.solana.sdk.internal.Token2022
  *
  * @param lockingHolder Confidential identity party that operates the bridge/escrow. The actual lock
  *   may use a confidential identity derived from this party.
- * @param originalHolder Current owner of [token] prior to locking.
+ * @param originalHolder the identity that transferred [token] to the bridging authority prior to locking.
  * @param token The fungible token state to be bridged to Solana.
  * @param solanaNotary Notary that performs bridging (minting on Solana).
  * @param observers Optional observing parties to receive finalized transactions (may be empty).

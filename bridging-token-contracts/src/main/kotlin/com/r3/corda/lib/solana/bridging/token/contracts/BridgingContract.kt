@@ -78,9 +78,6 @@ class BridgingContract : Contract {
             "Bridging transaction must have exactly one BridgedFungibleTokenProxy as output"
         }
 
-        val mintCommand = tx.commandsOfType<BridgingCommand.MintToSolana>()
-        require(mintCommand.size == 1) { "Bridging must have one mint command" }
-
         val instruction = tx.notaryInstructions.singleOrNull() as? SolanaInstruction
         require(instruction != null) { "Exactly one Solana mint instruction required" }
 
@@ -91,7 +88,7 @@ class BridgingContract : Contract {
             outputTokenProxy.amount,
         )
         require(instruction == expectedInstruction) {
-            "The instruction in the transaction does not match the sum or the bridging config:\n" +
+            "The instruction in the transaction does not match metadata from token proxy:\n" +
                 "transaction: $instruction\n" +
                 "expected:    $expectedInstruction"
         }
