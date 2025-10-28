@@ -286,7 +286,7 @@ class BridgingVerificationTests {
                 )
                 tweak {
                     notaryInstruction(Token2022.mintTo(mint, mintAuthority, mintAuthority, 10000))
-                    `fails with`("No Solana mint instruction allowed")
+                    `fails with`("No Solana instructions allowed")
                 }
             }
         }

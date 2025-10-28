@@ -61,13 +61,10 @@ constructor(
 
         val bridgingCommand = BridgingContract.BridgingCommand.LockToken(ourIdentity, lockingHolder)
 
-        outputGroups.forEach { (issuedTokenType: IssuedTokenType, _: List<AbstractToken>) ->
-            val inputGroup =
-                inputGroups[issuedTokenType]
-                    ?: throw IllegalArgumentException(
-                        "No corresponding inputs for the outputs issued token type: " +
-                            "$issuedTokenType",
-                    )
+        for (issuedTokenType: IssuedTokenType in outputGroups.keys) {
+            val inputGroup = requireNotNull(inputGroups[issuedTokenType]) {
+                "No corresponding inputs for the outputs issued token type: $issuedTokenType"
+            }
             val keys = inputGroup.map { it.state.data.holder.owningKey }
             transactionBuilder.addCommand(bridgingCommand, keys)
         }

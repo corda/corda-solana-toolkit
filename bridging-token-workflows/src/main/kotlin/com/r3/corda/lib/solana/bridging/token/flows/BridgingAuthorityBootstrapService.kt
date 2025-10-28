@@ -7,6 +7,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.AppServiceHub
+import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.debug
@@ -15,48 +16,34 @@ import java.util.UUID
 import java.util.concurrent.Executors
 
 @CordaService
-class BridgingAuthorityBootstrapService(
-    appServiceHub: AppServiceHub,
-) : SingletonSerializeAsToken() {
+class BridgingAuthorityBootstrapService(appServiceHub: AppServiceHub) : SingletonSerializeAsToken() {
+    companion object {
+        private val logger = LoggerFactory.getLogger(BridgingAuthorityBootstrapService::class.java)
+    }
+
     private val holdingIdentity: AbstractParty
     private val solanaNotary: Party
     private val bridgeAuthority = appServiceHub.myInfo.legalIdentities.first()
-    private val logger = LoggerFactory.getLogger(BridgingAuthorityBootstrapService::class.java)
 
     private val executor = Executors.newSingleThreadExecutor()
 
     init {
-        val cfg = appServiceHub.getAppContext().config
-        val holdingIdentityLabel = UUID.fromString(cfg.getString("holdingIdentityLabel"))
-        val holdingIdentityPublicKey =
-            appServiceHub
-                .identityService
-                .publicKeysForExternalId(holdingIdentityLabel)
-                .singleOrNull()
-        holdingIdentity =
-            if (holdingIdentityPublicKey == null) {
-                // Generate a new key pair and self-signed certificate for the holding identity
-                appServiceHub.keyManagementService
-                    .freshKeyAndCert(
-                        identity =
-                        requireNotNull(
-                            appServiceHub.identityService.certificateFromKey(bridgeAuthority.owningKey),
-                        ) {
-                            "Could not find certificate for key ${bridgeAuthority.owningKey}"
-                        },
-                        revocationEnabled = false,
-                        externalId = holdingIdentityLabel,
-                    ).party
-            } else {
-                // Reuse the existing key pair and certificate for the holding identity
-                checkNotNull(
-                    appServiceHub.identityService.certificateFromKey(holdingIdentityPublicKey)?.party,
-                ) {
-                    "Could not find certificate for key $holdingIdentityPublicKey"
-                }
+        val config = appServiceHub.getAppContext().config
+        val holdingIdentityLabel = UUID.fromString(config.getString("holdingIdentityLabel"))
+        val holdingIdentityPublicKey = appServiceHub
+            .identityService
+            .publicKeysForExternalId(holdingIdentityLabel)
+            .singleOrNull()
+        holdingIdentity = if (holdingIdentityPublicKey == null) {
+            createHoldingIdentity(appServiceHub, holdingIdentityLabel)
+        } else {
+            // Reuse the existing key pair and certificate for the holding identity
+            checkNotNull(appServiceHub.identityService.certificateFromKey(holdingIdentityPublicKey)?.party) {
+                "Could not find certificate for key $holdingIdentityPublicKey"
             }
+        }
         val solanaNotaryName = try {
-            CordaX500Name.parse(cfg.getString("solanaNotaryName"))
+            CordaX500Name.parse(config.getString("solanaNotaryName"))
         } catch (_: CordappConfigException) {
             error("Could not find configuration entry 'solanaNotaryName'")
         }
@@ -70,6 +57,17 @@ class BridgingAuthorityBootstrapService(
         onStartup(appServiceHub)
     }
 
+    private fun createHoldingIdentity(appServiceHub: AppServiceHub, holdingIdentityLabel: UUID): Party {
+        // Generate a new key pair and self-signed certificate for the holding identity
+        val identity = requireNotNull(appServiceHub.identityService.certificateFromKey(bridgeAuthority.owningKey)) {
+            "Could not find certificate for key ${bridgeAuthority.owningKey}"
+        }
+        return appServiceHub
+            .keyManagementService
+            .freshKeyAndCert(identity = identity, revocationEnabled = false, externalId = holdingIdentityLabel)
+            .party
+    }
+
     private fun onStop() {
         executor.shutdown()
     }
@@ -78,42 +76,58 @@ class BridgingAuthorityBootstrapService(
         // Retrieve states from receiver
         val receivedStates = appServiceHub.vaultService.queryBy(FungibleToken::class.java).states
 
-        callFlow(receivedStates, appServiceHub)
-        addVaultListener(appServiceHub)
+        receivedStates.forEach { token ->
+            callBridgeFlow(appServiceHub, token)
+        }
+        listenForFungibleTokens(appServiceHub)
     }
 
-    private fun addVaultListener(appServiceHub: AppServiceHub) {
+    private fun listenForFungibleTokens(appServiceHub: AppServiceHub) {
         appServiceHub.vaultService.trackBy(FungibleToken::class.java).updates.subscribe {
-            val producedStockStates = it.produced
-            callFlow(producedStockStates, appServiceHub)
+            for (newToken in it.produced) {
+                callBridgeFlow(appServiceHub, newToken)
+            }
         }
     }
 
-    private fun callFlow(
-        fungibleTokens: Collection<StateAndRef<FungibleToken>>,
-        appServiceHub: AppServiceHub,
-    ) {
-        fungibleTokens.forEach { token ->
-            val previousHolder = try {
-                findPreviousHolderOfToken(appServiceHub, token)
+    private fun callBridgeFlow(appServiceHub: AppServiceHub, token: StateAndRef<FungibleToken>) {
+        val previousHolder = try {
+            findPreviousHolderOfToken(appServiceHub, token)
+        } catch (e: Exception) {
+            logger.warn("Could not start flow to bridge for ${token.state.data.amount} due to ${e.message}")
+            return
+        }
+        if (previousHolder == bridgeAuthority || previousHolder == holdingIdentity) {
+            return
+        }
+        logger.debug { "Starting flow to bridge ${token.state.data.amount} to Solana" }
+        executor.submit {
+            try {
+                appServiceHub.startFlow(
+                    BridgeFungibleTokenFlow(
+                        holdingIdentity,
+                        previousHolder,
+                        token,
+                        solanaNotary,
+                        emptyList(), // TODO an observer is not a generic concept in tokens
+                    ),
+                )
             } catch (e: Exception) {
-                logger.warn("Could not start flow to bridge for ${token.state.data.amount} due to ${e.message}")
-                return@forEach
-            }
-            if (previousHolder !in listOf(bridgeAuthority, holdingIdentity)) {
-                logger.debug { "Starting flow to bridge ${token.state.data.amount} to Solana" }
-                executor.submit {
-                    appServiceHub.startFlow(
-                        BridgeFungibleTokenFlow(
-                            holdingIdentity,
-                            previousHolder,
-                            token,
-                            solanaNotary,
-                            emptyList(), // TODO an observer is not a generic concept in tokens
-                        ),
-                    )
-                }
+                logger.error("Unable to start BridgeFungibleTokenFlow for $token", e)
             }
         }
+    }
+
+    private fun findPreviousHolderOfToken(serviceHub: ServiceHub, output: StateAndRef<FungibleToken>): AbstractParty {
+        val txHash = output.ref.txhash
+        val stx = serviceHub.validatedTransactions.getTransaction(txHash) ?: error("Transaction $txHash not found")
+
+        val inputTokens: List<FungibleToken> = stx.toLedgerTransaction(serviceHub).inputsOfType<FungibleToken>()
+        require(inputTokens.isNotEmpty()) { "Transaction doesn't contains inputs of fungible token" }
+
+        val holders = inputTokens.map { it.holder }.toSet()
+        require(holders.size == 1) { "Transaction contains tokens of multiple holders" } // This should not happen
+
+        return holders.single()
     }
 }

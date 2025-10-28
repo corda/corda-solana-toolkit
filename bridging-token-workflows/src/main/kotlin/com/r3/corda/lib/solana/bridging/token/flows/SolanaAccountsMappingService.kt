@@ -44,10 +44,7 @@ class SolanaAccountsMappingService(
         val cordaTokenId =
             when (val tokenType = token.state.data.amount.token.tokenType) {
                 // TODO while testing StockCordapp check if tokenType.tokenIdentifier can replace TokenPointer<*>
-                is TokenPointer<*> ->
-                    tokenType.pointer.pointer.id
-                        .toString()
-
+                is TokenPointer<*> -> tokenType.pointer.pointer.id.toString()
                 else -> tokenType.tokenIdentifier
             }
 
