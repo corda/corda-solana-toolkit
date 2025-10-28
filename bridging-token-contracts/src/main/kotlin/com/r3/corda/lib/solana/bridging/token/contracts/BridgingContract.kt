@@ -13,7 +13,7 @@ import net.corda.solana.sdk.instruction.SolanaInstruction
 import net.corda.solana.sdk.internal.Token2022
 
 /**
- * Contract that governs bridging of fungible token states (from the Corda Tokens SDK) to Solana.
+ * Contract that governs bridging of fungible token states (from the Corda Token SDK) to Solana.
  *
  * The contract is *exhaustive* over a transaction’s non-reference states: apart from [BridgedFungibleTokenProxy],
  * every input and output must be a Tokens SDK **fungible** token state.
@@ -53,7 +53,7 @@ class BridgingContract : Contract {
         require(tokenCommand != null && tokenCommand.value is MoveTokenCommand) {
             "Lock must have a single token command (Move Token) to lock token with the locking identity"
         }
-        // the correctness of input and output FungibleToken is verified by TokenSdk contract for MoveTokenCommand
+        // the correctness of input and output tokens is verified by Token SDK contract for MoveTokenCommand
 
         require(lockedToken.holder != bridgingCommand.bridgeAuthority)
 
@@ -65,7 +65,7 @@ class BridgingContract : Contract {
         require(!tokenProxy.minted) { "Bridging asset must not be marked as minted when issuing" }
 
         require(tx.commands.size == 2) {
-            // Presence of individual commands verified till this point
+            // Presence of individual commands had been verified till this point
             "Lock transaction must only contain commands LockToken and token command (Move Token)"
         }
 
