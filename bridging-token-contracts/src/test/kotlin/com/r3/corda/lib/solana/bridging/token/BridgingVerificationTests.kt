@@ -90,7 +90,6 @@ class BridgingVerificationTests {
                     listOf(bridgeAuthorityParty.owningKey),
                     BridgingContract.BridgingCommand.LockToken(bridgeAuthorityParty, confidentialIdentity)
                 )
-                notaryInstruction(Token2022.mintTo(mint, tokenAccount, mintAuthority, 10000))
 
                 verifies()
             }

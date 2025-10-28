@@ -69,6 +69,9 @@ class BridgingContract : Contract {
             "Lock transaction must only contain commands LockToken and token command (Move Token)"
         }
 
+        val noSolanaInstructions = tx.notaryInstructions.none { it is SolanaInstruction }
+        require(noSolanaInstructions) { "No Solana mint instruction allowed" }
+
         // TODO verify the locked token data matches as well, such as the tokenId and original owner
         //  this will come with redemption code
     }
