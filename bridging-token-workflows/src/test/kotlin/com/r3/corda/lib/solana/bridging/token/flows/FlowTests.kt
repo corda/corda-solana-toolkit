@@ -5,7 +5,7 @@ import com.r3.corda.lib.solana.bridging.token.states.BridgedFungibleTokenProxy
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.contracts.types.TokenType
 import com.r3.corda.lib.tokens.workflows.flows.rpc.MoveFungibleTokens
-import com.r3.corda.lib.tokens.workflows.utilities.tokenBalance
+import com.r3.corda.lib.tokens.workflows.utilities.tokenAmountsByToken
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.identity.CordaX500Name
@@ -173,7 +173,10 @@ class FlowTests {
             .get()
             .first()
             .state.data.tokenType
-        val (balance) = this.services.vaultService.tokenBalance(fungibleToken)
+        val myIdentity = this.services.myInfo.legalIdentities.first()
+        val fungibleTokens = this.services.vaultService.tokenAmountsByToken(fungibleToken).states.map { it.state.data }
+        val myFungibleTokens = fungibleTokens.filter { it.holder == myIdentity }
+        val balance = myFungibleTokens.sumOf { it.amount.quantity }
         return balance
     }
 
@@ -229,8 +232,12 @@ class FlowTests {
         Thread.sleep(5000)
 
         val finalCordaQuantity = bridgingAuthority.getShares(aliceIdentity, msftStock)
-        assertEquals(MOVE_QUANTITY, finalCordaQuantity)
-        // TODO the stock should belongs to CI not BA, so this should be assertEquals(0, finalCordaQuantity)
+        assertEquals(
+            0,
+            finalCordaQuantity,
+            "Bridging Authority has no longer MSFT shares, they are under Locking Identity"
+        )
+        // TODO check that a FungibleToken is held a party that is neither Bridging Authority nor Alice
 
         val token: StateAndRef<FungibleToken>? =
             bridgingAuthority.services.vaultService.queryBy(FungibleToken::class.java).states.firstOrNull {
