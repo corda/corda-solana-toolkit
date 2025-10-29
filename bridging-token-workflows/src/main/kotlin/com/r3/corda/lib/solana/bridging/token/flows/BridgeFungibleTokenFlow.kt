@@ -78,12 +78,23 @@ class BridgeFungibleTokenFlow(
         val notaryChangeTx = subFlow(NotaryChangeFlow(moveBridgingAssetState, solanaNotary))
 
         // Mint on Solana
+        val transactionBuilder = createMintTransaction(moveBridgingAssetState, bridgingCoordinates, notaryChangeTx)
+
+        val bridgingAuthoritySignedTransaction = serviceHub.signInitialTransaction(transactionBuilder)
+        return subFlow(FinalityFlow(bridgingAuthoritySignedTransaction, emptyList()))
+    }
+
+    private fun createMintTransaction(
+        tokenProxy: StateAndRef<BridgedFungibleTokenProxy>,
+        coordinates: BridgingCoordinates,
+        notaryChangeTx: StateAndRef<BridgedFungibleTokenProxy>,
+    ): TransactionBuilder {
         val transactionBuilder = TransactionBuilder(solanaNotary)
         val instruction = Token2022.mintTo(
-            bridgingCoordinates.mint,
-            bridgingCoordinates.destination,
-            bridgingCoordinates.mintAuthority,
-            moveBridgingAssetState.state.data.amount,
+            coordinates.mint,
+            coordinates.destination,
+            coordinates.mintAuthority,
+            tokenProxy.state.data.amount,
         )
         transactionBuilder.addNotaryInstruction(instruction)
         transactionBuilder.addCommand(
@@ -95,11 +106,8 @@ class BridgeFungibleTokenFlow(
             state = notaryChangeTx.state.data.copy(minted = true),
             contract = FungibleTokenBridgingContract::class.qualifiedName!!,
         )
-
-        // Verify
         transactionBuilder.verify(serviceHub)
-        val bridgingAuthoritySignedTransaction = serviceHub.signInitialTransaction(transactionBuilder)
-        return subFlow(FinalityFlow(bridgingAuthoritySignedTransaction, emptyList()))
+        return transactionBuilder
     }
 }
 
