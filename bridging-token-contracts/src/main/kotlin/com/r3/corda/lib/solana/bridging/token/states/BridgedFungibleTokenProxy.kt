@@ -1,6 +1,6 @@
 package com.r3.corda.lib.solana.bridging.token.states
 
-import com.r3.corda.lib.solana.bridging.token.contracts.BridgingContract
+import com.r3.corda.lib.solana.bridging.token.contracts.FungibleTokenBridgingContract
 import net.corda.core.contracts.BelongsToContract
 import net.corda.core.contracts.ContractState
 import net.corda.core.identity.AbstractParty
@@ -23,7 +23,7 @@ import net.corda.solana.sdk.instruction.Pubkey
  * (address controlled by the bridge).
  * @property participants Corda participants who should see and record this state (the bridge party).
  */
-@BelongsToContract(BridgingContract::class)
+@BelongsToContract(FungibleTokenBridgingContract::class)
 data class BridgedFungibleTokenProxy(
     // TODO originalOwner, tokenTypeId and tokenRef will be added alongside redemption code
     val amount: Long,
