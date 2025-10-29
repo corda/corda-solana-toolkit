@@ -1,7 +1,7 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import com.r3.corda.lib.solana.bridging.token.contracts.BridgingContract
+import com.r3.corda.lib.solana.bridging.token.contracts.FungibleTokenBridgingContract
 import com.r3.corda.lib.solana.bridging.token.states.BridgedFungibleTokenProxy
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.workflows.flows.move.MoveTokensFlowHandler
@@ -87,13 +87,13 @@ class BridgeFungibleTokenFlow(
         )
         transactionBuilder.addNotaryInstruction(instruction)
         transactionBuilder.addCommand(
-            BridgingContract.BridgingCommand.MintToSolana,
+            FungibleTokenBridgingContract.BridgingCommand.MintToSolana,
             listOf(ourIdentity.owningKey),
         )
         transactionBuilder.addInputState(StateAndRef(notaryChangeTx.state, notaryChangeTx.ref))
         transactionBuilder.addOutputState(
             state = notaryChangeTx.state.data.copy(minted = true),
-            contract = BridgingContract::class.qualifiedName!!,
+            contract = FungibleTokenBridgingContract::class.qualifiedName!!,
         )
 
         // Verify

@@ -1,7 +1,7 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import com.r3.corda.lib.solana.bridging.token.contracts.BridgingContract
+import com.r3.corda.lib.solana.bridging.token.contracts.FungibleTokenBridgingContract
 import com.r3.corda.lib.solana.bridging.token.flows.BridgingCoordinates.Companion.toProxy
 import com.r3.corda.lib.tokens.contracts.states.AbstractToken
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
@@ -59,7 +59,7 @@ constructor(
 
         transactionBuilder.addOutputState(bridgingState)
 
-        val bridgingCommand = BridgingContract.BridgingCommand.LockToken(ourIdentity, lockingHolder)
+        val bridgingCommand = FungibleTokenBridgingContract.BridgingCommand.LockToken(ourIdentity, lockingHolder)
 
         for (issuedTokenType: IssuedTokenType in outputGroups.keys) {
             val inputGroup = requireNotNull(inputGroups[issuedTokenType]) {
