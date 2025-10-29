@@ -36,6 +36,7 @@ import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 import java.util.UUID
 import kotlin.collections.first
+import kotlin.test.assertTrue
 
 class FlowTests {
     private lateinit var network: MockNetwork
@@ -167,14 +168,21 @@ class FlowTests {
         notaryLegalIdentity = "$generalNotaryName"
         """.trimIndent()
 
-    private fun StartedMockNode.getShares(issuer: Party, stock: TokenType): Long {
+    private fun StartedMockNode.getAllFungibleTokes(issuer: Party, stock: TokenType): List<FungibleToken> {
         val fungibleToken = this
             .startFlow(QuerySimpleTokensFlow(issuer, stock))
             .get()
             .first()
             .state.data.tokenType
+        return this.services.vaultService
+            .tokenAmountsByToken(fungibleToken)
+            .states
+            .map { it.state.data }
+    }
+
+    private fun StartedMockNode.getMySharesBalance(issuer: Party, stock: TokenType): Long {
         val myIdentity = this.services.myInfo.legalIdentities.first()
-        val fungibleTokens = this.services.vaultService.tokenAmountsByToken(fungibleToken).states.map { it.state.data }
+        val fungibleTokens = this.getAllFungibleTokes(issuer, stock)
         val myFungibleTokens = fungibleTokens.filter { it.holder == myIdentity }
         val balance = myFungibleTokens.sumOf { it.amount.quantity }
         return balance
@@ -192,7 +200,7 @@ class FlowTests {
             .get()
         assertEquals(
             ISSUING_QUANTITY,
-            alice.getShares(aliceIdentity, msftStock),
+            alice.getMySharesBalance(aliceIdentity, msftStock),
             "MSFT stock issued to Alice",
         )
 
@@ -202,7 +210,7 @@ class FlowTests {
             .get()
         assertEquals(
             ISSUING_QUANTITY,
-            bridgingAuthority.getShares(bridgingAuthorityIdentity, applStock),
+            bridgingAuthority.getMySharesBalance(bridgingAuthorityIdentity, applStock),
             "APPL shares issued on Bridging Authority",
         )
 
@@ -218,26 +226,42 @@ class FlowTests {
 
         assertEquals(
             ISSUING_QUANTITY - MOVE_QUANTITY,
-            alice.getShares(aliceIdentity, msftStock),
+            alice.getMySharesBalance(aliceIdentity, msftStock),
             "Alice transferred some of MSFT shares",
         )
 
         assertEquals(
             MOVE_QUANTITY,
-            bridgingAuthority.getShares(aliceIdentity, msftStock),
+            bridgingAuthority.getMySharesBalance(aliceIdentity, msftStock),
             "Bridging Authority received MSFT shares",
         )
 
         // We need to wait for the vault listener to process the newly received token
         Thread.sleep(5000)
 
-        val finalCordaQuantity = bridgingAuthority.getShares(aliceIdentity, msftStock)
+        val finalCordaQuantity = bridgingAuthority.getMySharesBalance(aliceIdentity, msftStock)
         assertEquals(
             0,
             finalCordaQuantity,
             "Bridging Authority has no longer MSFT shares, they are under Locking Identity"
         )
-        // TODO check that a FungibleToken is held a party that is neither Bridging Authority nor Alice
+        val msftFungibleToken = bridgingAuthority
+            .getAllFungibleTokes(aliceIdentity, msftStock)
+            .singleOrNull()
+        assertNotNull(
+            msftFungibleToken,
+            "There should be single MSFT fungible token in Bridge Authority vault",
+        )
+        assertTrue(
+            msftFungibleToken.holder !in setOf(aliceIdentity, bridgingAuthorityIdentity),
+            "Bridging Authority moved MSFT under Lock Identity (CI) ownership as neither BA nor Alice holds the token",
+        ) // Locking Identity is Confidential Identity, and we don't know its identity upfront,
+        // so indirect check to by proving no knows participant owns the token
+        assertEquals(
+            MOVE_QUANTITY,
+            msftFungibleToken.amount.quantity,
+            "Lock Identity received expected number of MSFT shares",
+        )
 
         val token: StateAndRef<FungibleToken>? =
             bridgingAuthority.services.vaultService.queryBy(FungibleToken::class.java).states.firstOrNull {
@@ -266,7 +290,7 @@ class FlowTests {
 
         assertEquals(
             ISSUING_QUANTITY,
-            bridgingAuthority.getShares(bridgingAuthorityIdentity, applStock),
+            bridgingAuthority.getMySharesBalance(bridgingAuthorityIdentity, applStock),
             "Apple shares balance on Bridging Authority remained unchanged",
         )
     }
