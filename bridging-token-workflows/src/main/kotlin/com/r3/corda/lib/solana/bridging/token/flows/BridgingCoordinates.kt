@@ -20,21 +20,19 @@ data class BridgingCoordinates(
     val mintAuthority: Pubkey,
     val destination: Pubkey,
 ) {
-    companion object {
-        /**
-         * Creates an unminted [BridgedFungibleTokenProxy] from the [FungibleToken].
-         * Converts the Fungible Token amount to Solana token amount in 1:1 ration.
-         * @param coordinates the metadata for Solana
-         * @param participants Corda participants who should see and record this state (the bridge party).
-         */
-        fun StateAndRef<FungibleToken>.toProxy(coordinates: BridgingCoordinates, participants: List<Party>) =
-            BridgedFungibleTokenProxy(
-                amount = this.state.data.amount.quantity,
-                minted = false,
-                mint = coordinates.mint,
-                mintAuthority = coordinates.mintAuthority,
-                mintDestination = coordinates.destination,
-                participants = participants,
-            )
-    }
+    /**
+     * Creates an unminted [BridgedFungibleTokenProxy].
+     * Converts the Fungible Token amount to Solana token amount in 1:1 ration.
+     * @param token the source of amount to bridge
+     * @param participants Corda participants who should see and record this state (the bridge party).
+     */
+    fun toFungibleTokenProxy(token: StateAndRef<FungibleToken>, participants: List<Party>) =
+        BridgedFungibleTokenProxy(
+            amount = token.state.data.amount.quantity,
+            minted = false,
+            mint = this.mint,
+            mintAuthority = this.mintAuthority,
+            mintDestination = this.destination,
+            participants = participants,
+        )
 }
