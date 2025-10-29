@@ -4,17 +4,12 @@ import co.paralleluniverse.fibers.Suspendable
 import com.r3.corda.lib.solana.bridging.token.contracts.FungibleTokenBridgingContract
 import com.r3.corda.lib.solana.bridging.token.states.BridgedFungibleTokenProxy
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
-import com.r3.corda.lib.tokens.workflows.flows.move.MoveTokensFlowHandler
 import com.r3.corda.lib.tokens.workflows.utilities.sessionsForParties
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowSession
-import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.NotaryChangeFlow
-import net.corda.core.flows.ReceiveFinalityFlow
-import net.corda.core.flows.SignTransactionFlow
 import net.corda.core.flows.StartableByService
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
@@ -52,7 +47,7 @@ class BridgeFungibleTokenFlow(
 ) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
-        val solanaMapping = serviceHub.cordaService(SolanaAccountsMappingService::class.java)
+        val solanaMapping: SolanaAccountsMapping = serviceHub.cordaService(BridgingService::class.java)
         val bridgingCoordinates = solanaMapping.getBridgingCoordinates(token, originalHolder)
 
         val participants = listOf(lockingHolder)
@@ -81,6 +76,7 @@ class BridgeFungibleTokenFlow(
         val transactionBuilder = createMintTransaction(moveBridgingAssetState, bridgingCoordinates, notaryChangeTx)
 
         val bridgingAuthoritySignedTransaction = serviceHub.signInitialTransaction(transactionBuilder)
+        // TODO ENT-14346 Shouldn't the observer sessions be passed to finality of this transaction?
         return subFlow(FinalityFlow(bridgingAuthoritySignedTransaction, emptyList()))
     }
 
@@ -108,28 +104,5 @@ class BridgeFungibleTokenFlow(
         )
         transactionBuilder.verify(serviceHub)
         return transactionBuilder
-    }
-}
-
-/**
- * Responder flow for [BridgeFungibleTokenFlow].
- */
-@InitiatedBy(BridgeFungibleTokenFlow::class)
-class BridgeFungibleTokenHandler(
-    val otherSession: FlowSession,
-) : FlowLogic<Unit>() {
-    @Suspendable
-    override fun call() {
-        subFlow(MoveTokensFlowHandler(otherSession))
-
-        val signedTransaction =
-            subFlow(
-                object : SignTransactionFlow(otherSession) {
-                    override fun checkTransaction(stx: SignedTransaction) {
-                        // Nothing additional to check
-                    }
-                },
-            )
-        subFlow(ReceiveFinalityFlow(otherSession, signedTransaction.id))
     }
 }

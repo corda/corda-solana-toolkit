@@ -1,7 +1,9 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
+import com.r3.corda.lib.tokens.contracts.types.TokenPointer
 import net.corda.core.contracts.StateAndRef
+import net.corda.core.cordapp.CordappConfig
 import net.corda.core.cordapp.CordappConfigException
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
@@ -11,16 +13,23 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.debug
+import net.corda.solana.sdk.instruction.Pubkey
 import org.slf4j.LoggerFactory
+import java.lang.IllegalStateException
 import java.util.*
 import java.util.concurrent.Executors
+import kotlin.collections.component1
+import kotlin.collections.component2
 
 @CordaService
-class BridgingAuthorityBootstrapService(appServiceHub: AppServiceHub) : SingletonSerializeAsToken() {
+class BridgingService(appServiceHub: AppServiceHub) : SingletonSerializeAsToken(), SolanaAccountsMapping {
     companion object {
-        private val logger = LoggerFactory.getLogger(BridgingAuthorityBootstrapService::class.java)
+        private val logger = LoggerFactory.getLogger(BridgingService::class.java)
     }
 
+    private var participants: Map<CordaX500Name, Pubkey>
+    private var mints: Map<String, Pubkey>
+    private var mintAuthorities: Map<String, Pubkey>
     private val holdingIdentity: AbstractParty
     private val solanaNotary: Party
     private val bridgeAuthority = appServiceHub.myInfo.legalIdentities.first()
@@ -29,6 +38,23 @@ class BridgingAuthorityBootstrapService(appServiceHub: AppServiceHub) : Singleto
 
     init {
         val config = appServiceHub.getAppContext().config
+
+        participants =
+            (config.getUnchecked("participants"))
+                ?.map { (k, v) -> CordaX500Name.parse(k) to Pubkey.fromBase58(v) }
+                ?.toMap() ?: throw IllegalStateException("Missing participants configuration")
+
+        mints =
+            (config.getUnchecked("mints"))
+                ?.map { (k, v) -> k to Pubkey.fromBase58(v) }
+                ?.toMap() ?: throw IllegalStateException("Missing mints configuration")
+
+        mintAuthorities =
+            (config.getUnchecked("mintAuthorities"))
+                ?.map { (k, v) -> k to Pubkey.fromBase58(v) }
+                ?.toMap()
+                ?: throw IllegalStateException("Missing mintAuthorities configuration")
+
         val holdingIdentityLabel = UUID.fromString(config.getString("holdingIdentityLabel"))
         val holdingIdentityPublicKey = appServiceHub
             .identityService
@@ -47,12 +73,33 @@ class BridgingAuthorityBootstrapService(appServiceHub: AppServiceHub) : Singleto
         } catch (_: CordappConfigException) {
             error("Could not find configuration entry 'solanaNotaryName'")
         }
-
         solanaNotary = requireNotNull(appServiceHub.networkMapCache.getNotary(solanaNotaryName)) {
             "Cound not find Solana Notary '$solanaNotaryName' in the network parameters"
         }
         appServiceHub.registerUnloadHandler { onStop() }
         onStartup(appServiceHub)
+    }
+
+    override fun getBridgingCoordinates(token: StateAndRef<FungibleToken>, originalHolder: AbstractParty):
+        BridgingCoordinates {
+        val cordaTokenId =
+            when (val tokenType = token.state.data.amount.token.tokenType) {
+                // TODO ENT-14343 while testing StockCordapp
+                //  check if tokenType.tokenIdentifier can replace TokenPointer<*>
+                is TokenPointer<*> -> tokenType.pointer.pointer.id.toString()
+                else -> tokenType.tokenIdentifier
+            }
+
+        val destination = checkNotNull(participants[originalHolder.nameOrNull()]) {
+            "No Solana account mapping found for previous owner ${originalHolder.nameOrNull()}"
+        }
+        val mint = checkNotNull(mints[cordaTokenId]) {
+            "No mint mapping found for token type id $cordaTokenId"
+        }
+        val mintAuthority = checkNotNull(mintAuthorities[cordaTokenId]) {
+            "No mint authority mapping found for token type id $cordaTokenId"
+        }
+        return BridgingCoordinates(mint, mintAuthority, destination)
     }
 
     private fun createHoldingIdentity(appServiceHub: AppServiceHub, holdingIdentityLabel: UUID): Party {
@@ -107,7 +154,7 @@ class BridgingAuthorityBootstrapService(appServiceHub: AppServiceHub) : Singleto
                         previousHolder,
                         token,
                         solanaNotary,
-                        emptyList(), // TODO an observer is not a generic concept in tokens
+                        emptyList(), // TODO ENT-14346 an observer is not a generic concept in tokens
                     ),
                 )
             } catch (e: Exception) {
@@ -128,4 +175,7 @@ class BridgingAuthorityBootstrapService(appServiceHub: AppServiceHub) : Singleto
 
         return holders.single()
     }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun CordappConfig.getUnchecked(configName: String) = this.get(configName) as? Map<String, String>
 }
