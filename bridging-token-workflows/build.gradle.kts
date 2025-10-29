@@ -49,8 +49,8 @@ tasks.withType<Test>().configureEach {
         "--add-opens=java.base/java.lang.invoke=ALL-UNNAMED",
         "--add-opens=java.base/java.time=ALL-UNNAMED",
     )
-    systemProperty("java.io.tmpdir", buildDir.absolutePath)
 }
+
 quasar {
     excludePackages.addAll(
         "org.apiguardian.**",
