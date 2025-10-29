@@ -1,4 +1,3 @@
-import org.gradle.kotlin.dsl.resolver.buildSrcSourceRootsFilePath
 import java.nio.file.Files
 
 plugins {
