@@ -12,7 +12,7 @@ import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.debug
 import org.slf4j.LoggerFactory
-import java.util.UUID
+import java.util.*
 import java.util.concurrent.Executors
 
 @CordaService
@@ -48,11 +48,9 @@ class BridgingAuthorityBootstrapService(appServiceHub: AppServiceHub) : Singleto
             error("Could not find configuration entry 'solanaNotaryName'")
         }
 
-        solanaNotary =
-            appServiceHub.networkParameters.notaries
-                .firstOrNull { it.identity.name == solanaNotaryName }
-                ?.identity
-                ?: error("Cound not find Solana Notary '$solanaNotaryName' in the network parameters")
+        solanaNotary = requireNotNull(appServiceHub.networkMapCache.getNotary(solanaNotaryName)) {
+            "Cound not find Solana Notary '$solanaNotaryName' in the network parameters"
+        }
         appServiceHub.registerUnloadHandler { onStop() }
         onStartup(appServiceHub)
     }
@@ -73,7 +71,7 @@ class BridgingAuthorityBootstrapService(appServiceHub: AppServiceHub) : Singleto
     }
 
     private fun onStartup(appServiceHub: AppServiceHub) {
-        // Retrieve states from receiver
+        // Retrieve unprocessed fungible tokens received while the node was offline
         val receivedStates = appServiceHub.vaultService.queryBy(FungibleToken::class.java).states
 
         receivedStates.forEach { token ->
