@@ -8,7 +8,7 @@ interface SolanaAccountsMapping {
     /**
      * Returns Solana mint metadata for a given original holder of a fungible token.
      * @param token the Corda fungible token
-     * @param originalHolder the identity that transferred [token] to the bridging authority prior to locking.
+     * @param originalHolder the identity that transferred [token] to the bridge authority prior to locking.
      */
     fun getBridgingCoordinates(token: StateAndRef<FungibleToken>, originalHolder: AbstractParty): BridgingCoordinates
 }

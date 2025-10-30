@@ -31,7 +31,7 @@ import net.corda.solana.sdk.internal.Token2022
  *
  * @param lockingHolder Confidential identity party that operates the bridge/escrow. The actual lock
  *   may use a confidential identity derived from this party.
- * @param originalHolder the identity that transferred [token] to the bridging authority prior to locking.
+ * @param originalHolder the identity that transferred [token] to the bridge authority prior to locking.
  * @param token The fungible token state to be bridged to Solana.
  * @param solanaNotary Notary that performs bridging (minting on Solana).
  * @param observers Optional observing parties to receive finalized transactions (may be empty).
@@ -50,59 +50,50 @@ class BridgeFungibleTokenFlow(
         val solanaMapping: SolanaAccountsMapping = serviceHub.cordaService(BridgingService::class.java)
         val bridgingCoordinates = solanaMapping.getBridgingCoordinates(token, originalHolder)
 
-        val participants = listOf(lockingHolder)
-        val observerSessions = sessionsForParties(observers)
-        val participantSessions = sessionsForParties(participants)
-
         // Move the token from ourIdentity (implied BridgeAuthority) to the lock holder (confidential identity).
         // Also, create a proxy of Fungible Token that will be later used to mint a token on Solana
-        val moveTx =
-            subFlow(
-                MoveAndLockFungibleTokenFlow(
-                    token,
-                    bridgingCoordinates,
-                    lockingHolder,
-                    participantSessions,
-                    observerSessions,
-                ),
+        val moveTx = subFlow(
+            MoveAndLockFungibleTokenFlow(
+                token,
+                bridgingCoordinates,
+                lockingHolder,
+                participantSessions = sessionsForParties(listOf(lockingHolder)),
+                observerSessions = sessionsForParties(observers),
             )
+        )
 
         // Change notary to Solana notary
-        val moveBridgingAssetState =
-            moveTx.toLedgerTransaction(serviceHub).outRefsOfType<BridgedFungibleTokenProxy>().single()
-        val notaryChangeTx = subFlow(NotaryChangeFlow(moveBridgingAssetState, solanaNotary))
+        val tokenProxy = moveTx.toLedgerTransaction(serviceHub).outRefsOfType<BridgedFungibleTokenProxy>().single()
+        // TODO This needs to use the new MoveNotaryFlow
+        val tokenProxyOnSolanaNotary = subFlow(NotaryChangeFlow(tokenProxy, solanaNotary))
 
         // Mint on Solana
-        val transactionBuilder = createMintTransaction(moveBridgingAssetState, bridgingCoordinates, notaryChangeTx)
+        val mintTx = createMintTransaction(tokenProxyOnSolanaNotary)
 
-        val bridgingAuthoritySignedTransaction = serviceHub.signInitialTransaction(transactionBuilder)
         // TODO ENT-14346 Shouldn't the observer sessions be passed to finality of this transaction?
-        return subFlow(FinalityFlow(bridgingAuthoritySignedTransaction, emptyList()))
+        return subFlow(FinalityFlow(mintTx, emptyList()))
     }
 
-    private fun createMintTransaction(
-        tokenProxy: StateAndRef<BridgedFungibleTokenProxy>,
-        coordinates: BridgingCoordinates,
-        notaryChangeTx: StateAndRef<BridgedFungibleTokenProxy>,
-    ): TransactionBuilder {
+    private fun createMintTransaction(tokenProxyRef: StateAndRef<BridgedFungibleTokenProxy>): SignedTransaction {
+        val tokenProxy = tokenProxyRef.state.data
         val transactionBuilder = TransactionBuilder(solanaNotary)
         val instruction = Token2022.mintTo(
-            coordinates.mint,
-            coordinates.destination,
-            coordinates.mintAuthority,
-            tokenProxy.state.data.amount,
+            tokenProxy.mint,
+            tokenProxy.mintDestination,
+            tokenProxy.mintAuthority,
+            tokenProxy.amount,
         )
         transactionBuilder.addNotaryInstruction(instruction)
         transactionBuilder.addCommand(
             FungibleTokenBridgingContract.BridgingCommand.MintToSolana,
             listOf(ourIdentity.owningKey),
         )
-        transactionBuilder.addInputState(StateAndRef(notaryChangeTx.state, notaryChangeTx.ref))
+        transactionBuilder.addInputState(tokenProxyRef)
         transactionBuilder.addOutputState(
-            state = notaryChangeTx.state.data.copy(minted = true),
+            state = tokenProxy.copy(minted = true),
             contract = FungibleTokenBridgingContract::class.qualifiedName!!,
         )
         transactionBuilder.verify(serviceHub)
-        return transactionBuilder
+        return serviceHub.signInitialTransaction(transactionBuilder)
     }
 }

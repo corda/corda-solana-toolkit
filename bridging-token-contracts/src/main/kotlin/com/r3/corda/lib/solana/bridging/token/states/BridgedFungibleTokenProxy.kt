@@ -4,6 +4,7 @@ import com.r3.corda.lib.solana.bridging.token.contracts.FungibleTokenBridgingCon
 import net.corda.core.contracts.BelongsToContract
 import net.corda.core.contracts.ContractState
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.Party
 import net.corda.solana.sdk.instruction.Pubkey
 
 /**
@@ -21,7 +22,7 @@ import net.corda.solana.sdk.instruction.Pubkey
  * @property mint Token **mint** public key on Solana (the asset definition).
  * @property mintAuthority Public key that is authorized to mint for [mint] on Solana
  * (address controlled by the bridge).
- * @property participants Corda participants who should see and record this state (the bridge party).
+ * @property bridgeAuthority The party performing the bridge onto Solana.
  */
 @BelongsToContract(FungibleTokenBridgingContract::class)
 data class BridgedFungibleTokenProxy(
@@ -31,5 +32,8 @@ data class BridgedFungibleTokenProxy(
     val mintDestination: Pubkey,
     val mint: Pubkey,
     val mintAuthority: Pubkey,
-    override val participants: List<AbstractParty>,
-) : ContractState
+    val bridgeAuthority: Party,
+) : ContractState {
+    override val participants: List<AbstractParty>
+        get() = listOf(bridgeAuthority)
+}

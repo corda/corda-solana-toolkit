@@ -20,7 +20,7 @@ tasks.processTestResources {
 tasks.withType<Test> {
     useJUnitPlatform()
     val testLogLevel = when (gradle.startParameter.logLevel) {
-        LogLevel.LIFECYCLE -> "WARN"
+        LogLevel.LIFECYCLE -> "FATAL"
         LogLevel.QUIET -> "FATAL"
         else -> gradle.startParameter.logLevel.name
     }

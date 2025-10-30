@@ -7,7 +7,6 @@ import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.contracts.types.IssuedTokenType
 import com.r3.corda.lib.tokens.workflows.flows.move.AbstractMoveTokensFlow
 import com.r3.corda.lib.tokens.workflows.flows.move.addMoveTokens
-import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.flows.FlowSession
@@ -29,8 +28,7 @@ constructor(
 ) : AbstractMoveTokensFlow() {
     @Suspendable
     override fun addMove(transactionBuilder: TransactionBuilder) {
-        val amount: Amount<IssuedTokenType> = token.state.data.amount
-        val output = FungibleToken(amount, lockingHolder)
+        val output = token.state.data.withNewHolder(lockingHolder)
         addMoveTokens(transactionBuilder = transactionBuilder, inputs = listOf(token), outputs = listOf(output))
 
         val outputGroups: Map<IssuedTokenType, List<AbstractToken>> =
@@ -54,13 +52,13 @@ constructor(
             "When bridging a fungible token, only one token type can be moved at a time."
         }
 
-        val bridgingState: ContractState = bridgingCoordinates.toFungibleTokenProxy(token, listOf(ourIdentity))
+        val bridgingState: ContractState = bridgingCoordinates.toFungibleTokenProxy(token.state.data, ourIdentity)
 
         transactionBuilder.addOutputState(bridgingState)
 
         val bridgingCommand = FungibleTokenBridgingContract.BridgingCommand.LockToken(ourIdentity, lockingHolder)
 
-        for (issuedTokenType: IssuedTokenType in outputGroups.keys) {
+        for (issuedTokenType in outputGroups.keys) {
             val inputGroup = requireNotNull(inputGroups[issuedTokenType]) {
                 "No corresponding inputs for the outputs issued token type: $issuedTokenType"
             }

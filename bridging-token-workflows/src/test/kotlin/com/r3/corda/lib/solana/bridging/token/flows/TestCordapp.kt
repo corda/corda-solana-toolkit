@@ -29,7 +29,7 @@ class IssueSimpleTokenFlow(
     override fun call(): SignedTransaction {
         val notary = serviceHub.networkMapCache.notaryIdentities.first { it.name == notaryName }
         val amount = (quantity of mint).issuedBy(ourIdentity)
-        val token = FungibleToken(amount, ourIdentity, null)
+        val token = FungibleToken(amount, ourIdentity)
         val txb = TransactionBuilder(notary)
         addIssueTokens(txb, listOf(token))
         val ptx = serviceHub.signInitialTransaction(txb)

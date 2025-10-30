@@ -62,7 +62,7 @@ class BridgingVerificationTests {
         tokenAccount,
         mint,
         mintAuthority,
-        listOf(bridgeAuthorityParty)
+        bridgeAuthorityParty
     )
 
     @Test
@@ -108,7 +108,7 @@ class BridgingVerificationTests {
                 )
                 output(
                     BRIDGE_PROGRAM_ID,
-                    bridgedFungibleTokenProxy.copy(minted = true, participants = emptyList())
+                    bridgedFungibleTokenProxy.copy(minted = true, bridgeAuthority = bridgeAuthorityParty)
                 )
                 command(
                     listOf(bridgeAuthorityParty.owningKey),
@@ -150,7 +150,7 @@ class BridgingVerificationTests {
                         BRIDGE_PROGRAM_ID,
                         bridgedFungibleTokenProxy.copy(amount = 9999)
                     )
-                    `fails with`("Locked amount of 10000 must match amount to recorded in the proxy 9999")
+                    `fails with`("BridgedFungibleTokenProxy must have the same amount as the locked token")
                 }
 
                 tweak {
@@ -162,7 +162,7 @@ class BridgingVerificationTests {
                         BRIDGE_PROGRAM_ID,
                         bridgedFungibleTokenProxy.copy(amount = 10001)
                     )
-                    `fails with`("Locked amount of 10000 must match amount to recorded in the proxy 10001")
+                    `fails with`("BridgedFungibleTokenProxy must have the same amount as the locked token")
                 }
 
                 tweak {
@@ -221,7 +221,7 @@ class BridgingVerificationTests {
                         listOf(bridgeAuthorityParty.owningKey, confidentialIdentity.owningKey),
                         MoveTokenCommand(cordaIssuedTokenType.token, listOf(0), listOf(0))
                     )
-                    `fails with`("Bridging transactions must have single bridging command")
+                    `fails with`("Bridging transactions must have a single bridging command")
                 }
                 tweak {
                     command(
@@ -249,7 +249,7 @@ class BridgingVerificationTests {
                         listOf(bridgeAuthorityParty.owningKey),
                         FungibleTokenBridgingContract.BridgingCommand.MintToSolana
                     )
-                    `fails with`(" Bridging transactions must have single bridging command")
+                    `fails with`("Bridging transactions must have a single bridging command")
                 }
                 command(
                     listOf(bridgeAuthorityParty.owningKey, confidentialIdentity.owningKey),
@@ -311,7 +311,7 @@ class BridgingVerificationTests {
                 )
                 output(
                     BRIDGE_PROGRAM_ID,
-                    bridgedFungibleTokenProxy.copy(minted = true, participants = emptyList())
+                    bridgedFungibleTokenProxy.copy(minted = true)
                 )
                 command(
                     listOf(bridgeAuthorityParty.owningKey),
@@ -320,17 +320,11 @@ class BridgingVerificationTests {
 
                 tweak {
                     notaryInstruction(Token2022.mintTo(mint, tokenAccount, mintAuthority, 10001))
-                    `fails with`(
-                        "Contract verification failed: The instruction in the transaction " +
-                            "does not match metadata from token proxy:"
-                    )
+                    `fails with`("Solana instruction in the transaction not the expected mint instruction:")
                 }
                 tweak {
                     notaryInstruction(Token2022.mintTo(mint, tokenAccount, mintAuthority, 9999))
-                    `fails with`(
-                        "Contract verification failed: The instruction in the transaction " +
-                            "does not match metadata from token proxy:"
-                    )
+                    `fails with`("Solana instruction in the transaction not the expected mint instruction:")
                 }
 
                 notaryInstruction(Token2022.mintTo(mint, tokenAccount, mintAuthority, 10000))
@@ -351,7 +345,7 @@ class BridgingVerificationTests {
                 )
                 output(
                     BRIDGE_PROGRAM_ID,
-                    bridgedFungibleTokenProxy.copy(minted = true, participants = emptyList())
+                    bridgedFungibleTokenProxy.copy(minted = true)
                 )
                 notaryInstruction(Token2022.mintTo(mint, tokenAccount, mintAuthority, 10000))
 
@@ -370,7 +364,7 @@ class BridgingVerificationTests {
                         listOf(bridgeAuthorityParty.owningKey),
                         FungibleTokenBridgingContract.BridgingCommand.MintToSolana,
                     )
-                    `fails with`("Bridging transactions must have single bridging command")
+                    `fails with`("Bridging transactions must have a single bridging command")
                 }
 
                 // one bridging command, one random command
@@ -399,7 +393,7 @@ class BridgingVerificationTests {
                 )
                 output(
                     BRIDGE_PROGRAM_ID,
-                    bridgedFungibleTokenProxy.copy(minted = true, participants = emptyList())
+                    bridgedFungibleTokenProxy.copy(minted = true)
                 )
                 command(
                     listOf(bridgeAuthorityParty.owningKey),
@@ -408,32 +402,32 @@ class BridgingVerificationTests {
 
                 tweak {
                     notaryInstruction(Token2022.mintTo(mint, mintAuthority, mintAuthority, 10000))
-                    `fails with`("The instruction in the transaction does not match metadata from token proxy:")
+                    `fails with`("Solana instruction in the transaction not the expected mint instruction:")
                 }
 
                 tweak {
-                    `fails with`("Exactly one Solana mint instruction required")
+                    `fails with`("Exactly one Solana instruction required")
                 }
 
                 tweak {
                     notaryInstruction(Token2022.mintTo(mint, tokenAccount, mintAuthority, 10000))
                     notaryInstruction(Token2022.mintTo(mint, tokenAccount, mintAuthority, 10000))
-                    `fails with`("Exactly one Solana mint instruction required")
+                    `fails with`("Exactly one Solana instruction required")
                 }
 
                 tweak {
                     notaryInstruction(instructionWithWrongOperation(tokenAccount))
-                    `fails with`("The instruction in the transaction does not match metadata from token proxy:")
+                    `fails with`("Solana instruction in the transaction not the expected mint instruction:")
                 }
                 // wrong destination
                 tweak {
                     Token2022.mintTo(mint, tokenAccount, tokenAccount, 10000)
-                    `fails with`("Exactly one Solana mint instruction required")
+                    `fails with`("Exactly one Solana instruction required")
                 }
                 // wrong amount
                 tweak {
                     notaryInstruction(Token2022.mintTo(mint, tokenAccount, mintAuthority, 1000))
-                    `fails with`("The instruction in the transaction does not match metadata from token proxy:")
+                    `fails with`("Solana instruction in the transaction not the expected mint instruction:")
                 }
 
                 notaryInstruction(Token2022.mintTo(mint, tokenAccount, mintAuthority, 10000))
