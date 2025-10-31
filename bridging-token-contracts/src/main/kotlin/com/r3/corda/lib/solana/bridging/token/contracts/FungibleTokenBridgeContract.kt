@@ -1,6 +1,6 @@
 package com.r3.corda.lib.solana.bridging.token.contracts
 
-import com.r3.corda.lib.solana.bridging.token.states.BridgedFungibleTokenProxy
+import com.r3.corda.lib.solana.bridging.token.states.MintState
 import com.r3.corda.lib.tokens.contracts.commands.MoveTokenCommand
 import com.r3.corda.lib.tokens.contracts.commands.TokenCommand
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
@@ -15,10 +15,11 @@ import net.corda.solana.sdk.internal.Token2022
 /**
  * Contract that governs bridging of fungible token states (from the Corda Token SDK) to Solana.
  *
- * The contract is *exhaustive* over a transaction’s non-reference states: apart from [BridgedFungibleTokenProxy],
+ * The contract is *exhaustive* over a transaction’s non-reference states: apart from [MintState],
  * every input and output must be a Tokens SDK **fungible** token state.
  * Any other state types/contracts are not permitted in the same transaction.
  */
+<<<<<<<< HEAD:bridging-token-contracts/src/main/kotlin/com/r3/corda/lib/solana/bridging/token/contracts/FungibleTokenBridgeContract.kt
 class FungibleTokenBridgeContract : Contract {
     override fun verify(tx: LedgerTransaction) {
         val bridgeCommands = tx.commandsOfType<BridgeCommand>()
@@ -32,6 +33,21 @@ class FungibleTokenBridgeContract : Contract {
     }
 
     private fun verifyLockToken(tx: LedgerTransaction, lockingCommand: BridgeCommand.LockToken) {
+========
+class MintContract : Contract {
+    override fun verify(tx: LedgerTransaction) {
+        val mintCommands = tx.commandsOfType<MintCommand>()
+        val mintCommand = mintCommands.requireSingle {
+            "Bridging transactions must have a single bridging command"
+        }
+        when (val cmdData = mintCommand.value) {
+            is MintCommand.LockToken -> verifyLockToken(tx, cmdData)
+            is MintCommand.MintToSolana -> verifyMintToSolana(tx)
+        }
+    }
+
+    private fun verifyLockToken(tx: LedgerTransaction, lockingCommand: MintCommand.LockToken) {
+>>>>>>>> 761f46a (ENT-14342 - Redemption first draft):bridging-token-contracts/src/main/kotlin/com/r3/corda/lib/solana/bridging/token/contracts/MintContract.kt
         require(tx.inputs.size == 1) { "Lock transaction must have exactly one input state" }
         val inputToken = tx.inputsOfType<FungibleToken>().requireSingle {
             "Lock transaction must have exactly one FungibleState as input state"
@@ -44,7 +60,7 @@ class FungibleTokenBridgeContract : Contract {
         val outputToken = tx.outputsOfType<FungibleToken>().requireSingle {
             "Lock transaction must have exactly one FungibleToken as output"
         }
-        val tokenProxy = tx.outputsOfType<BridgedFungibleTokenProxy>().requireSingle {
+        val tokenProxy = tx.outputsOfType<MintState>().requireSingle {
             "Lock transaction must have exactly one BridgedFungibleTokenProxy as output"
         }
 
@@ -75,20 +91,34 @@ class FungibleTokenBridgeContract : Contract {
     }
 
     private fun verifyMintToSolana(tx: LedgerTransaction) {
+<<<<<<<< HEAD:bridging-token-contracts/src/main/kotlin/com/r3/corda/lib/solana/bridging/token/contracts/FungibleTokenBridgeContract.kt
         val bridgedFungibleTokenProxy = tx.inputsOfType<BridgedFungibleTokenProxy>().requireSingle {
             "Bridge to Solana transaction must have exactly one BridgedFungibleTokenProxy as input"
         }
         require(tx.outputsOfType<BridgedFungibleTokenProxy>().isEmpty()) {
             "Bridge to Solana transaction must not have any BridgedFungibleTokenProxy outputs"
         }
+========
+        val mintState = tx.inputsOfType<MintState>().requireSingle {
+            "Bridging transaction must have exactly one MintState as input"
+        }
+
+>>>>>>>> 761f46a (ENT-14342 - Redemption first draft):bridging-token-contracts/src/main/kotlin/com/r3/corda/lib/solana/bridging/token/contracts/MintContract.kt
         val solanaInstruction = tx.notaryInstructionsOfType<SolanaInstruction>().requireSingle {
             "Exactly one Solana instruction required"
         }
         val expectedMintInstruction = Token2022.mintTo(
+<<<<<<<< HEAD:bridging-token-contracts/src/main/kotlin/com/r3/corda/lib/solana/bridging/token/contracts/FungibleTokenBridgeContract.kt
             bridgedFungibleTokenProxy.mint,
             bridgedFungibleTokenProxy.mintDestination,
             bridgedFungibleTokenProxy.mintAuthority,
             bridgedFungibleTokenProxy.amount,
+========
+            mintState.mint,
+            mintState.mintDestination,
+            mintState.mintAuthority,
+            mintState.amount,
+>>>>>>>> 761f46a (ENT-14342 - Redemption first draft):bridging-token-contracts/src/main/kotlin/com/r3/corda/lib/solana/bridging/token/contracts/MintContract.kt
         )
         require(solanaInstruction == expectedMintInstruction) {
             "Solana instruction in the transaction not the expected mint instruction:\n" +
@@ -111,13 +141,17 @@ class FungibleTokenBridgeContract : Contract {
      * 1) [LockToken] — lock (escrow) the Corda-side fungible tokens under the bridge’s control.
      * 2) [MintToSolana] — (after evidence/confirmation) mint the equivalent SPL amount on Solana.
      */
+<<<<<<<< HEAD:bridging-token-contracts/src/main/kotlin/com/r3/corda/lib/solana/bridging/token/contracts/FungibleTokenBridgeContract.kt
     sealed interface BridgeCommand : CommandData {
+========
+    sealed interface MintCommand : CommandData {
+>>>>>>>> 761f46a (ENT-14342 - Redemption first draft):bridging-token-contracts/src/main/kotlin/com/r3/corda/lib/solana/bridging/token/contracts/MintContract.kt
         /**
          * Locks a Corda-side fungible token balance so it cannot be spent while the
          * equivalent amount is minted on Solana.
          *
          * @property bridgeAuthority The well-known Corda [Party] operating the bridge,
-         *   that owns a proxy of the fungible token [BridgedFungibleTokenProxy] to be used for minting on Solana.
+         *   that owns a proxy of the fungible token [MintState] to be used for minting on Solana.
          * @property lockingIdentity The Corda identity (confidential) that owns
          *   the token being locked prior to minting on Solana.
          *
@@ -126,7 +160,11 @@ class FungibleTokenBridgeContract : Contract {
         data class LockToken(
             val bridgeAuthority: Party,
             val lockingIdentity: AbstractParty,
+<<<<<<<< HEAD:bridging-token-contracts/src/main/kotlin/com/r3/corda/lib/solana/bridging/token/contracts/FungibleTokenBridgeContract.kt
         ) : BridgeCommand {
+========
+        ) : MintCommand {
+>>>>>>>> 761f46a (ENT-14342 - Redemption first draft):bridging-token-contracts/src/main/kotlin/com/r3/corda/lib/solana/bridging/token/contracts/MintContract.kt
             init {
                 require(bridgeAuthority != lockingIdentity) {
                     "Locking identity must be different from the bridge authority"
@@ -137,10 +175,18 @@ class FungibleTokenBridgeContract : Contract {
         /**
          * Mints the bridged amount on Solana for the designated destination.
          */
+<<<<<<<< HEAD:bridging-token-contracts/src/main/kotlin/com/r3/corda/lib/solana/bridging/token/contracts/FungibleTokenBridgeContract.kt
         object MintToSolana : BridgeCommand
     }
 
     companion object {
         const val CONTRACT_ID = "com.r3.corda.lib.solana.bridging.token.contracts.FungibleTokenBridgeContract"
+========
+        object MintToSolana : MintCommand
+    }
+
+    companion object {
+        val contractId = this::class.java.enclosingClass.canonicalName
+>>>>>>>> 761f46a (ENT-14342 - Redemption first draft):bridging-token-contracts/src/main/kotlin/com/r3/corda/lib/solana/bridging/token/contracts/MintContract.kt
     }
 }

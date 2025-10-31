@@ -1,0 +1,104 @@
+package com.r3.corda.lib.solana.bridging.token.flows
+
+import co.paralleluniverse.fibers.Suspendable
+import com.r3.corda.lib.solana.bridging.token.contracts.RedeemContract
+import com.r3.corda.lib.solana.bridging.token.states.RedeemState
+import com.r3.corda.lib.tokens.contracts.states.FungibleToken
+import com.r3.corda.lib.tokens.workflows.flows.rpc.MoveFungibleTokens
+import net.corda.core.contracts.Amount
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.flows.*
+import net.corda.core.identity.Party
+import net.corda.core.node.services.Vault
+import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.toNonEmptySet
+import net.corda.solana.sdk.instruction.Pubkey
+import net.corda.solana.sdk.internal.Token2022
+import java.math.BigDecimal
+
+/**
+ * Flows bridges a fungible token redemption to Solana token burn.
+ *
+ * @param burnSource the Solana public key where the redeemed tokens will be sent
+ * @param originalHolder the owner of the token before it was moved to Bridging Authority
+ * @param tokenTypeId the identifier of the token being redeemed
+ * @param amount the amount of tokens to redeem
+ * @param solanaNotary notary to perform bridging
+ */
+@StartableByService
+@InitiatingFlow
+class RedeemTokenFlow(
+    val burnSource: Pubkey,
+    val originalHolder: Party,
+    val tokenTypeId: String,
+    val amount: Long,
+    val solanaNotary: Party,
+    val lockingHolder: Party
+) : FlowLogic<SignedTransaction>() {
+
+    @Suspendable
+    override fun call(): SignedTransaction {
+        val bridgingService = serviceHub.cordaService(BridgingService::class.java)
+        val bridgingCoordinates = bridgingService.configHandler.getBridgingCoordinates(tokenTypeId, originalHolder)
+        val token = bridgingService.findTokenTypeOfFungibleTokenBy(tokenTypeId)
+        val moveAmount = Amount.fromDecimal(BigDecimal.valueOf(amount), token)
+
+        // Move the token from ourIdentity (implied BridgeAuthority) to the lock holder (confidential identity).
+        // Also, create a RedeemState that will be later used to mint the tokens on Solana
+        val unlockTx =
+            subFlow(
+                MoveAndUnlockFungibleTokenFlow(
+                    bridgingCoordinates,
+                    ourIdentity,
+                    lockingHolder,
+                    moveAmount,
+                    burnSource
+                ),
+            )
+
+        // Change notary to Solana notary
+        val unlockLedgerTx = unlockTx.toLedgerTransaction(serviceHub)
+        val redeemStateAndRef = unlockLedgerTx.outRefsOfType<RedeemState>().single()
+        val notaryChangeTx = subFlow(MoveNotaryFlow(listOf(redeemStateAndRef), solanaNotary)).single()
+        val redeemTxState = notaryChangeTx.state
+
+        serviceHub.vaultService.softLockRelease(redeemTxState.data.lockId, unlockLedgerTx.outRefsOfType<FungibleToken>().map { it.ref }.toNonEmptySet())
+
+        val states = serviceHub.vaultService.queryBy(
+            FungibleToken::class.java,
+            QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED, softLockingCondition = QueryCriteria.SoftLockingCondition(
+                QueryCriteria.SoftLockingType.UNLOCKED_ONLY))
+        ).states
+
+        // Return the moved tokens to the original holder
+        subFlow(
+            MoveFungibleTokens(moveAmount, originalHolder)
+        )
+
+        // Burn on Solana
+        val transactionBuilder = TransactionBuilder(solanaNotary)
+        val instruction = with(redeemTxState.data) {
+            Token2022.burn(
+                mint = mint,
+                owner = bridgeRedemptionWallet,
+                source = burnSource,
+                amount = amount,
+            )
+        }
+
+        transactionBuilder.addNotaryInstruction(instruction)
+        transactionBuilder.addCommand(
+            RedeemContract.RedeemCommand.BurnOnSolana(),
+            listOf(ourIdentity.owningKey),
+        )
+        // We consume the RedeemState to mark the token is burnt on Solana
+        transactionBuilder.addInputState(StateAndRef(redeemTxState, notaryChangeTx.ref))
+
+        // Verify
+        transactionBuilder.verify(serviceHub)
+        val bridgingAuthoritySignedTransaction = serviceHub.signInitialTransaction(transactionBuilder)
+        return subFlow(FinalityFlow(bridgingAuthoritySignedTransaction, emptyList()))
+    }
+}
