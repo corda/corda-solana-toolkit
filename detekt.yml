@@ -5,8 +5,12 @@ ktlint:
         active: false
     ClassSignature:
         active: false
+    FunctionSignature:
+        active: false
     FunctionExpressionBody:
         active: false
+    ChainMethodContinuation:
+        forceMultilineWhenChainOperatorCountGreaterOrEqualThan: 5
 style:
     ThrowsCount:
         active: false

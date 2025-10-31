@@ -13,8 +13,8 @@ pluginManagement {
     }
 }
 
+@Suppress("UnstableApiUsage")
 dependencyResolutionManagement {
-    @Suppress("UnstableApiUsage")
     repositories {
         mavenLocal()
         mavenCentral()
@@ -34,17 +34,28 @@ dependencyResolutionManagement {
             url = uri("https://software.r3.com/artifactory/corda-dependencies")
             credentials { artifactory(this) }
         }
-        maven { url = uri("https://jitpack.io") } // For compiling Cordapps from Github samples-kotlin to use in samples/stockpaydividend-solana-bridge
-        // Corda Enterprise snapshot versions
+        // For com.r3.libs:r3-libs-obfuscator:1.4.1 required by corda-node-driver
+        maven {
+            url = uri("https://software.r3.com/artifactory/r3-corda-releases")
+            credentials { artifactory(this) }
+            mavenContent {
+                releasesOnly()
+            }
+        }
+        // For gradle-tooling-api-7.6.4.
+        maven { url = uri("https://repo.gradle.org/gradle/libs-releases") }
+        // For Corda (OS and Enterprise) SNAPSHOT versions
         maven {
             url = uri("https://software.r3.com/artifactory/r3-corda-dev")
             credentials { artifactory(this) }
         }
-        // com.r3.libs:r3-libs-obfuscator required by corda-node-driver
+        // For corda-node-driver required by com.r3.libs:r3-libs-obfuscator
         maven {
             url = uri("https://software.r3.com/artifactory/r3-corda-releases")
             credentials { artifactory(this) }
         }
+        // For compiling Cordapp from Github samples-kotlin to use in samples/stockpaydividend-solana-bridge
+        maven { url = uri("https://jitpack.io") }
     }
 }
 

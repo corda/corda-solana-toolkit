@@ -13,7 +13,6 @@ is deployed to several parties (the same as in [Stock Cordapp](https://github.co
 * **Bank** - issues fiat tokens.
 * **Observer** - monitors all the stocks by keeping a copy of transactions whenever a stock is created or updated.
 
-
 New network participants:
 * **Bridging Authority** - performs bridging by running "Corda-Solana-Toolkit" Cordapp
 * **Solana Notary** - ensures states are created on Solana Network

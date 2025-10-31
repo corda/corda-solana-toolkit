@@ -135,7 +135,7 @@ tasks.register<Cordform>("deployNodes") {
 }
 
 // After adding second Notary (Solana Notary) the stock issuance flow may use a wrong notary,
-// set the original notary as the default notary for the cordapp for WayneCo node.
+// set the original notary as the default one for the cordapp for WayneCo node.
 tasks.register("writeCordappConfig") {
     dependsOn("deployNodes")
     doLast {
@@ -143,7 +143,6 @@ tasks.register("writeCordappConfig") {
             dir.mkdirs()
             val cfgFile = File(dir, "tokens-workflows-1.3.2.conf")
             cfgFile.writeText("\"notary\" = \"O=Notary Service,L=London,C=GB\"\n")
-
     }
 }
 tasks.named("deployNodes") { finalizedBy("writeCordappConfig") }
