@@ -28,8 +28,8 @@ import net.corda.testing.node.TestCordapp
 import net.corda.testing.solana.SolanaTestValidator
 import net.corda.testing.solana.randomKeypairFile
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNotNull
@@ -179,19 +179,19 @@ class EvolvableTokenFlowTests {
         val msftTokenType = alice.issue(msftTokenDescriptor, ISSUING_QUANTITY, generalNotaryName)
         val aaplTokenType = bridgeAuthority.issue(aaplTokenDesriptior, ISSUING_QUANTITY, generalNotaryName)
 
-        Assertions.assertEquals(0, testValidator.getSolanaTokenBalance(aliceTokenAccount), "Nothing on Solana")
+        assertEquals(0, testValidator.getSolanaTokenBalance(aliceTokenAccount), "Nothing on Solana")
 
         alice
             .startFlow(MoveFungibleTokens(Amount(MOVE_QUANTITY, msftTokenType), bridgeAuthorityIdentity))
             .get()
 
-        Assertions.assertEquals(
+        assertEquals(
             ISSUING_QUANTITY - MOVE_QUANTITY,
             alice.myTokenBalance(aliceIdentity, msftTokenType),
             "Alice transferred some of MSFT shares",
         )
 
-        Assertions.assertEquals(
+        assertEquals(
             MOVE_QUANTITY,
             bridgeAuthority.myTokenBalance(aliceIdentity, msftTokenType),
             "Bridge Authority received MSFT shares",
@@ -200,7 +200,7 @@ class EvolvableTokenFlowTests {
         // We need to wait for the vault listener to process the newly received token
         Thread.sleep(5000)
 
-        Assertions.assertEquals(
+        assertEquals(
             0,
             bridgeAuthority.myTokenBalance(aliceIdentity, msftTokenType),
             "Bridge Authority has no longer MSFT shares, they are under Locking Identity"
@@ -210,12 +210,12 @@ class EvolvableTokenFlowTests {
             .getAllFungibleTokens(aliceIdentity, msftTokenType)
             .singleOrNull()
         assertNotNull(msftFungibleToken, "There should be single MSFT fungible token in Bridge Authority vault")
-        assertFalse(
-            msftFungibleToken.holder in setOf(aliceIdentity, bridgeAuthorityIdentity),
+        assertTrue(
+            msftFungibleToken.holder !in setOf(aliceIdentity, bridgeAuthorityIdentity),
             "Bridge Authority moved MSFT under Lock Identity (CI) ownership as neither BA nor Alice holds the token",
         ) // Locking Identity is Confidential Identity, and we don't know its identity upfront,
         // so indirect check to by proving no knows participant owns the token
-        Assertions.assertEquals(
+        assertEquals(
             MOVE_QUANTITY,
             msftFungibleToken.amount.toDecimal().longValueExact(),
             "Lock Identity received expected number of MSFT shares",
@@ -228,13 +228,13 @@ class EvolvableTokenFlowTests {
         val tokenProxyState = bridgeAuthority.queryStates<BridgedFungibleTokenProxy>().firstOrNull()
         assertNotNull(tokenProxyState, "There should be BridgedFungibleTokenProxy state")
 
-        Assertions.assertEquals(
+        assertEquals(
             MOVE_QUANTITY,
             testValidator.getSolanaTokenBalance(aliceTokenAccount),
             "Solana token amount equals Corda bridged amount",
         )
 
-        Assertions.assertEquals(
+        assertEquals(
             ISSUING_QUANTITY,
             bridgeAuthority.myTokenBalance(bridgeAuthorityIdentity, aaplTokenType),
             "Apple shares balance on Bridge Authority remained unchanged",
@@ -256,7 +256,7 @@ class EvolvableTokenFlowTests {
         ).get()
         assertNotNull(issuedTypeToken)
         val tokenType = issuedTypeToken.tokenType
-        Assertions.assertEquals(amount, myTokenBalance(info.legalIdentities.first(), tokenType))
+        assertEquals(amount, myTokenBalance(info.legalIdentities.first(), tokenType))
         return tokenType
     }
 }
