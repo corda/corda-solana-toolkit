@@ -1,6 +1,6 @@
 package com.r3.corda.lib.solana.bridging.token.contracts
 
-import com.r3.corda.lib.solana.bridging.token.states.BridgedFungibleTokenProxy
+import com.r3.corda.lib.solana.bridging.token.states.MintState
 import com.r3.corda.lib.tokens.contracts.commands.MoveTokenCommand
 import com.r3.corda.lib.tokens.contracts.commands.TokenCommand
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
@@ -15,23 +15,23 @@ import net.corda.solana.sdk.internal.Token2022
 /**
  * Contract that governs bridging of fungible token states (from the Corda Token SDK) to Solana.
  *
- * The contract is *exhaustive* over a transaction’s non-reference states: apart from [BridgedFungibleTokenProxy],
+ * The contract is *exhaustive* over a transaction’s non-reference states: apart from [MintState],
  * every input and output must be a Tokens SDK **fungible** token state.
  * Any other state types/contracts are not permitted in the same transaction.
  */
-class FungibleTokenBridgingContract : Contract {
+class MintContract : Contract {
     override fun verify(tx: LedgerTransaction) {
-        val bridgingCommands = tx.commandsOfType<BridgingCommand>()
-        val bridgingCommand = bridgingCommands.requireSingle {
+        val mintCommands = tx.commandsOfType<MintCommand>()
+        val mintCommand = mintCommands.requireSingle {
             "Bridging transactions must have a single bridging command"
         }
-        when (val cmdData = bridgingCommand.value) {
-            is BridgingCommand.LockToken -> verifyLockToken(tx, cmdData)
-            is BridgingCommand.MintToSolana -> verifyMintToSolana(tx)
+        when (val cmdData = mintCommand.value) {
+            is MintCommand.LockToken -> verifyLockToken(tx, cmdData)
+            is MintCommand.MintToSolana -> verifyMintToSolana(tx)
         }
     }
 
-    private fun verifyLockToken(tx: LedgerTransaction, lockingCommand: BridgingCommand.LockToken) {
+    private fun verifyLockToken(tx: LedgerTransaction, lockingCommand: MintCommand.LockToken) {
         require(tx.inputs.size == 1) { "Lock transaction must have exactly one input state" }
         val inputToken = tx.inputsOfType<FungibleToken>().requireSingle {
             "Lock transaction must have exactly one FungibleState as input state"
@@ -44,7 +44,7 @@ class FungibleTokenBridgingContract : Contract {
         val outputToken = tx.outputsOfType<FungibleToken>().requireSingle {
             "Lock transaction must have exactly one FungibleToken as output"
         }
-        val tokenProxy = tx.outputsOfType<BridgedFungibleTokenProxy>().requireSingle {
+        val tokenProxy = tx.outputsOfType<MintState>().requireSingle {
             "Lock transaction must have exactly one BridgedFungibleTokenProxy as output"
         }
 
@@ -76,27 +76,18 @@ class FungibleTokenBridgingContract : Contract {
     }
 
     private fun verifyMintToSolana(tx: LedgerTransaction) {
-        val inputTokenProxy = tx.inputsOfType<BridgedFungibleTokenProxy>().requireSingle {
-            "Bridging transaction must have exactly one BridgedFungibleTokenProxy as input"
-        }
-        val outputTokenProxy = tx.outputsOfType<BridgedFungibleTokenProxy>().requireSingle {
-            "Bridging transaction must have exactly one BridgedFungibleTokenProxy as output"
-        }
-        require(!inputTokenProxy.minted && outputTokenProxy.minted) {
-            "BridgedFungibleTokenProxy must be marked as minted"
-        }
-        require(outputTokenProxy.copy(minted = false) == inputTokenProxy) {
-            "BridgedFungibleTokenProxy must not change"
+        val mintState = tx.inputsOfType<MintState>().requireSingle {
+            "Bridging transaction must have exactly one MintState as input"
         }
 
         val solanaInstruction = tx.notaryInstructionsOfType<SolanaInstruction>().requireSingle {
             "Exactly one Solana instruction required"
         }
         val expectedMintInstruction = Token2022.mintTo(
-            outputTokenProxy.mint,
-            outputTokenProxy.mintDestination,
-            outputTokenProxy.mintAuthority,
-            outputTokenProxy.amount,
+            mintState.mint,
+            mintState.mintDestination,
+            mintState.mintAuthority,
+            mintState.amount,
         )
         require(solanaInstruction == expectedMintInstruction) {
             "Solana instruction in the transaction not the expected mint instruction:\n" +
@@ -119,13 +110,13 @@ class FungibleTokenBridgingContract : Contract {
      * 1) [LockToken] — lock (escrow) the Corda-side fungible tokens under the bridge’s control.
      * 2) [MintToSolana] — (after evidence/confirmation) mint the equivalent SPL amount on Solana.
      */
-    sealed interface BridgingCommand : CommandData {
+    sealed interface MintCommand : CommandData {
         /**
          * Locks a Corda-side fungible token balance so it cannot be spent while the
          * equivalent amount is minted on Solana.
          *
          * @property bridgeAuthority The well-known Corda [Party] operating the bridge,
-         *   that owns a proxy of the fungible token [BridgedFungibleTokenProxy] to be used for minting on Solana.
+         *   that owns a proxy of the fungible token [MintState] to be used for minting on Solana.
          * @property lockingIdentity The Corda identity (confidential) that owns
          *   the token being locked prior to minting on Solana.
          *
@@ -134,7 +125,7 @@ class FungibleTokenBridgingContract : Contract {
         data class LockToken(
             val bridgeAuthority: Party,
             val lockingIdentity: AbstractParty,
-        ) : BridgingCommand {
+        ) : MintCommand {
             init {
                 require(bridgeAuthority != lockingIdentity) {
                     "Locking identity must be different from the bridge authority"
@@ -145,10 +136,10 @@ class FungibleTokenBridgingContract : Contract {
         /**
          * Mints the bridged amount on Solana for the designated destination.
          */
-        object MintToSolana : BridgingCommand
+        object MintToSolana : MintCommand
     }
 
     companion object {
-        const val BRIDGE_PROGRAM_ID = "com.r3.corda.lib.solana.bridging.token.contracts.FungibleTokenBridgingContract"
+        val contractId = this::class.java.enclosingClass.canonicalName
     }
 }

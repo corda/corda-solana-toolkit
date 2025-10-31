@@ -1,17 +1,12 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import com.r3.corda.lib.solana.bridging.token.contracts.FungibleTokenBridgingContract
-import com.r3.corda.lib.solana.bridging.token.states.BridgedFungibleTokenProxy
+import com.r3.corda.lib.solana.bridging.token.contracts.MintContract
+import com.r3.corda.lib.solana.bridging.token.states.MintState
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.workflows.utilities.sessionsForParties
 import net.corda.core.contracts.StateAndRef
-import net.corda.core.flows.FinalityFlow
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.NotaryChangeFlow
-import net.corda.core.flows.StartableByService
-import net.corda.core.identity.AbstractParty
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -38,17 +33,17 @@ import net.corda.solana.sdk.internal.Token2022
  */
 @StartableByService
 @InitiatingFlow
-class BridgeFungibleTokenFlow(
-    val lockingHolder: AbstractParty,
-    val originalHolder: AbstractParty,
+class MintTokenFlow(
+    val lockingHolder: Party,
+    val originalHolder: Party,
     val token: StateAndRef<FungibleToken>,
     val solanaNotary: Party,
     val observers: List<Party>,
 ) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
-        val solanaMapping: SolanaAccountsMapping = serviceHub.cordaService(BridgingService::class.java)
-        val bridgingCoordinates = solanaMapping.getBridgingCoordinates(token, originalHolder)
+        val bridgingService= serviceHub.cordaService(BridgingService::class.java)
+        val bridgingCoordinates = bridgingService.configHandler.getBridgingCoordinates(token, originalHolder)
 
         // Move the token from ourIdentity (implied BridgeAuthority) to the lock holder (confidential identity).
         // Also, create a proxy of Fungible Token that will be later used to mint a token on Solana
@@ -63,9 +58,9 @@ class BridgeFungibleTokenFlow(
         )
 
         // Change notary to Solana notary
-        val tokenProxy = moveTx.toLedgerTransaction(serviceHub).outRefsOfType<BridgedFungibleTokenProxy>().single()
+        val mintState = moveTx.toLedgerTransaction(serviceHub).outRefsOfType<MintState>().single()
         // TODO This needs to use the new MoveNotaryFlow
-        val tokenProxyOnSolanaNotary = subFlow(NotaryChangeFlow(tokenProxy, solanaNotary))
+        val tokenProxyOnSolanaNotary = subFlow(NotaryChangeFlow(mintState, solanaNotary))
 
         // Mint on Solana
         val mintTx = createMintTransaction(tokenProxyOnSolanaNotary)
@@ -74,25 +69,21 @@ class BridgeFungibleTokenFlow(
         return subFlow(FinalityFlow(mintTx, emptyList()))
     }
 
-    private fun createMintTransaction(tokenProxyRef: StateAndRef<BridgedFungibleTokenProxy>): SignedTransaction {
-        val tokenProxy = tokenProxyRef.state.data
+    private fun createMintTransaction(tokenProxyRef: StateAndRef<MintState>): SignedTransaction {
+        val mintState = tokenProxyRef.state.data
         val transactionBuilder = TransactionBuilder(solanaNotary)
         val instruction = Token2022.mintTo(
-            tokenProxy.mint,
-            tokenProxy.mintDestination,
-            tokenProxy.mintAuthority,
-            tokenProxy.amount,
+            mintState.mint,
+            mintState.mintDestination,
+            mintState.mintAuthority,
+            mintState.amount,
         )
         transactionBuilder.addNotaryInstruction(instruction)
         transactionBuilder.addCommand(
-            FungibleTokenBridgingContract.BridgingCommand.MintToSolana,
+            MintContract.MintCommand.MintToSolana,
             listOf(ourIdentity.owningKey),
         )
         transactionBuilder.addInputState(tokenProxyRef)
-        transactionBuilder.addOutputState(
-            state = tokenProxy.copy(minted = true),
-            contract = FungibleTokenBridgingContract::class.qualifiedName!!,
-        )
         transactionBuilder.verify(serviceHub)
         return serviceHub.signInitialTransaction(transactionBuilder)
     }

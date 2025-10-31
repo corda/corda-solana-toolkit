@@ -1,6 +1,6 @@
 package com.r3.corda.lib.solana.bridging.token.states
 
-import com.r3.corda.lib.solana.bridging.token.contracts.FungibleTokenBridgingContract
+import com.r3.corda.lib.solana.bridging.token.contracts.MintContract
 import net.corda.core.contracts.BelongsToContract
 import net.corda.core.contracts.ContractState
 import net.corda.core.identity.AbstractParty
@@ -24,9 +24,9 @@ import net.corda.solana.sdk.instruction.Pubkey
  * (address controlled by the bridge).
  * @property bridgeAuthority The party performing the bridge onto Solana.
  */
-@BelongsToContract(FungibleTokenBridgingContract::class)
-data class BridgedFungibleTokenProxy(
-    // TODO originalOwner, tokenTypeId and tokenRef will be added alongside redemption code
+@BelongsToContract(MintContract::class)
+data class MintState(
+    val originalOwner: AbstractParty,
     val amount: Long,
     val minted: Boolean,
     val mintDestination: Pubkey,
