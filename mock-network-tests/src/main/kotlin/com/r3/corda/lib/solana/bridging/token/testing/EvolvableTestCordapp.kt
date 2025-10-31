@@ -14,7 +14,6 @@ import net.corda.core.contracts.BelongsToContract
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.TransactionState
 import net.corda.core.contracts.UniqueIdentifier
-import net.corda.core.contracts.requireThat
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
@@ -26,15 +25,9 @@ import net.corda.core.transactions.LedgerTransaction
 import java.util.UUID
 
 class TestEvolvableTokenContract : EvolvableTokenContract(), Contract {
-    override fun additionalCreateChecks(tx: LedgerTransaction) {
-        requireThat {
-        }
-    }
+    override fun additionalCreateChecks(tx: LedgerTransaction) = Unit
 
-    override fun additionalUpdateChecks(tx: LedgerTransaction) {
-        requireThat {
-        }
-    }
+    override fun additionalUpdateChecks(tx: LedgerTransaction) = Unit
 }
 
 @BelongsToContract(TestEvolvableTokenContract::class)
