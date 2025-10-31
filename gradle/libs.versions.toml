@@ -6,6 +6,7 @@ corda-ent = "4.14-20251021.004000-3"
 tokens-sdk = "1.3.2"
 artifactory = "6.0.2"
 detekt = "2.0.0-alpha.0"
+corda-plugin = "5.1.3"
 samples-kotlin = "94f90ceb81cba943f196b9acfba55ade6701f131" # for a sample Corddap deployment refresh to a commit in samples-kotlin repo with amendments for Jitpack
 
 [libraries]
@@ -14,6 +15,13 @@ corda-core = { module = "net.corda:corda-core", version.ref = "corda-os" }
 tokens-contracts = { module = "com.r3.corda.lib.tokens:tokens-contracts", version.ref = "tokens-sdk" }
 tokens-workflows = { module = "com.r3.corda.lib.tokens:tokens-workflows", version.ref = "tokens-sdk" }
 detekt-ktlint-wrapper = { module = "dev.detekt:detekt-rules-ktlint-wrapper", version.ref = "detekt" }
+corda-solana-common = { module = "com.r3.corda:corda-solana-common", version.ref = "corda-ent" }
+corda-solana-sdk = { module = "com.r3.corda:corda-solana-sdk", version.ref = "corda-ent" }
+corda-test-utils = { module = "com.r3.corda:corda-test-utils", version.ref = "corda-ent" }
+corda-core-test-utils = { module = "net.corda:corda-core-test-utils", version.ref = "corda-os" }
+corda-node-driver = { module = "com.r3.corda:corda-node-driver", version.ref = "corda-ent" }
+quasar-core = { module = "co.paralleluniverse:quasar-core", version = "0.7.6" }
+mockito-core = { module = "org.mockito:mockito-core", version = "5.5.0" } # ledger unit tests
 
 # Libraries for a sample Corddap deployment
 corda-node-api = { module = "net.corda:corda-node-api", version.ref = "corda-os" }
@@ -24,4 +32,5 @@ samples-kotlin-stockpaydividend-workflows = { module= "com.github.corda.samples-
 
 [plugins]
 cordapp = { id = "net.corda.plugins.cordapp", version = "5.1.3" }
+quasar-utils = { id = "net.corda.plugins.quasar-utils", version.ref = "corda-plugin" }
 cordformation = { id = "net.corda.plugins.cordformation", version = "5.1.1" }
