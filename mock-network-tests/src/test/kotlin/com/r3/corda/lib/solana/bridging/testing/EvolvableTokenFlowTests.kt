@@ -50,6 +50,8 @@ class EvolvableTokenFlowTests {
 
     companion object {
         // TODO This needs to be more realistic with a non-zero value (e.g. 2)
+        //  Adding decimals to EvolvableTokenType causes an issue with Solana rounding
+        //  (files on longValueExact, works on toLong), need to investigate, works fine for a simple TokenType
         private const val TOKEN_DECIMALS = 0
 
         // Whole token amounts
@@ -182,8 +184,12 @@ class EvolvableTokenFlowTests {
         assertEquals(0, testValidator.getSolanaTokenBalance(aliceTokenAccount), "Nothing on Solana")
 
         alice
-            .startFlow(MoveFungibleTokens(Amount(MOVE_QUANTITY, msftTokenType), bridgeAuthorityIdentity))
-            .get()
+            .startFlow(
+                MoveFungibleTokens(
+                    Amount.fromDecimal(MOVE_QUANTITY.toBigDecimal(), msftTokenType),
+                    bridgeAuthorityIdentity,
+                )
+            ).get()
 
         assertEquals(
             ISSUING_QUANTITY - MOVE_QUANTITY,
