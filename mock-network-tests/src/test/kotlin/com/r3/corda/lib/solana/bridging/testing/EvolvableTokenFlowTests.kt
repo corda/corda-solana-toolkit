@@ -49,10 +49,7 @@ class EvolvableTokenFlowTests {
     private lateinit var notaryParty: Party
 
     companion object {
-        // TODO This needs to be more realistic with a non-zero value (e.g. 2)
-        //  Adding decimals to EvolvableTokenType causes an issue with Solana rounding
-        //  (files on longValueExact, works on toLong), need to investigate, works fine for a simple TokenType
-        private const val TOKEN_DECIMALS = 0
+        private const val TOKEN_DECIMALS = 3
 
         // Whole token amounts
         private const val ISSUING_QUANTITY = 2000L
@@ -173,13 +170,19 @@ class EvolvableTokenFlowTests {
         notaryLegalIdentity = "$generalNotaryName"
         """.trimIndent()
 
+    @Suppress("LongMethod")
     @Test
     fun bridgeTest() {
         val aliceIdentity = alice.info.legalIdentities.first()
         val bridgeAuthorityIdentity = bridgeAuthority.info.legalIdentities.first()
 
-        val msftTokenType = alice.issue(msftTokenDescriptor, ISSUING_QUANTITY, generalNotaryName)
-        val aaplTokenType = bridgeAuthority.issue(aaplTokenDesriptior, ISSUING_QUANTITY, generalNotaryName)
+        val msftTokenType = alice.issue(msftTokenDescriptor, ISSUING_QUANTITY, TOKEN_DECIMALS, generalNotaryName)
+        val aaplTokenType = bridgeAuthority.issue(
+            aaplTokenDesriptior,
+            ISSUING_QUANTITY,
+            TOKEN_DECIMALS,
+            generalNotaryName,
+        )
 
         assertEquals(0, testValidator.getSolanaTokenBalance(aliceTokenAccount), "Nothing on Solana")
 
@@ -250,6 +253,7 @@ class EvolvableTokenFlowTests {
     private fun StartedMockNode.issue(
         tokenDescriptor: Pair<String, UUID>,
         amount: Long,
+        fractionDigits: Int,
         notaryName: CordaX500Name,
     ): TokenType {
         val issuedTypeToken = startFlow(
@@ -257,6 +261,7 @@ class EvolvableTokenFlowTests {
                 tokenDescriptor.first,
                 tokenDescriptor.second,
                 amount,
+                fractionDigits,
                 notaryName,
             )
         ).get()

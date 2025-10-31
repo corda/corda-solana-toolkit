@@ -53,6 +53,7 @@ class IssueEvolvableTokenTypeFlow(
     private val ticker: String,
     private val tokenTypeIdentifier: UUID,
     private val quantity: Long,
+    private val fractionDigits: Int,
     private val notaryName: CordaX500Name,
 ) : FlowLogic<FungibleToken>() {
     @Suspendable
@@ -60,14 +61,14 @@ class IssueEvolvableTokenTypeFlow(
         val stock = StockTokenType(
             ticker = ticker,
             maintainers = listOf(ourIdentity),
-            fractionDigits = 0,
+            fractionDigits = fractionDigits,
             linearId = UniqueIdentifier(id = tokenTypeIdentifier)
         )
         val notary = serviceHub.networkMapCache.notaryIdentities.first { it.name == notaryName }
         subFlow(CreateEvolvableTokens(listOf(TransactionState(stock, notary = notary))))
         val pointer: TokenPointer<StockTokenType> = stock.toPointer<StockTokenType>()
         val issued = pointer issuedBy ourIdentity
-        val amount: Amount<IssuedTokenType> = Amount(quantity, issued)
+        val amount: Amount<IssuedTokenType> = Amount.fromDecimal(quantity.toBigDecimal(), issued)
         val token = FungibleToken(amount = amount, holder = ourIdentity)
         subFlow(IssueTokens(listOf(token)))
         return token
