@@ -1,20 +1,20 @@
-package com.r3.corda.lib.solana.bridging.token.flows
+package com.r3.corda.lib.solana.bridging.testing
 
 import com.lmax.solana4j.api.PublicKey
+import com.r3.corda.lib.solana.bridging.testing.SimpleTokenFlowTests.Utils.getAllFungibleTokens
+import com.r3.corda.lib.solana.bridging.testing.SimpleTokenFlowTests.Utils.getSolanaTokenBalance
+import com.r3.corda.lib.solana.bridging.testing.SimpleTokenFlowTests.Utils.myTokenBalance
+import com.r3.corda.lib.solana.bridging.testing.SimpleTokenFlowTests.Utils.queryStates
 import com.r3.corda.lib.solana.bridging.token.states.BridgedFungibleTokenProxy
+import com.r3.corda.lib.solana.bridging.token.testing.IssueEvolvableTokenTypeFlow
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.contracts.types.TokenType
-import com.r3.corda.lib.tokens.contracts.utilities.sumTokenStatesOrThrow
 import com.r3.corda.lib.tokens.workflows.flows.rpc.MoveFungibleTokens
-import com.r3.corda.lib.tokens.workflows.utilities.tokenAmountsByToken
 import net.corda.core.contracts.Amount
-import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.solana.aggregator.common.RpcParams
 import net.corda.solana.aggregator.common.Signer
-import net.corda.solana.aggregator.common.checkResponse
 import net.corda.solana.sdk.internal.Token2022
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
@@ -27,19 +27,18 @@ import net.corda.testing.node.StartedMockNode
 import net.corda.testing.node.TestCordapp
 import net.corda.testing.solana.SolanaTestValidator
 import net.corda.testing.solana.randomKeypairFile
-import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNotNull
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 import java.util.UUID
-import kotlin.test.assertTrue
 
-class FlowTests {
+class EvolvableTokenFlowTests {
+    private lateinit var testValidator: SolanaTestValidator
     private lateinit var network: MockNetwork
     private lateinit var alice: StartedMockNode
     private lateinit var bridgeAuthority: StartedMockNode
@@ -61,59 +60,55 @@ class FlowTests {
         private val bridgeAuthorityIdentity = TestIdentity(CordaX500Name("Bridge Authority", "New York", "US"))
         private val solanaNotaryName = CordaX500Name("Solana Notary Service", "London", "GB")
         private val generalNotaryName = CordaX500Name("Notary Service", "Zurich", "CH")
-        private val msftTokenType = TokenType("MSFT", TOKEN_DECIMALS)
-        private val aaplTokenType = TokenType("AAPL", TOKEN_DECIMALS)
+        private val msftTokenDescriptor = Pair("MSFT", UUID.randomUUID())
+        private val aaplTokenDesriptior = Pair("AAPL", UUID.randomUUID())
+    }
 
-        @TempDir
-        lateinit var generalDir: Path
+    private lateinit var solanaNotaryKeyFile: Path
+    private lateinit var solanaNotaryKey: Signer
+    private lateinit var mintAuthority: Signer
 
-        @TempDir
-        lateinit var custodiedKeysDir: Path
+    private lateinit var tokenMint: PublicKey
+    private lateinit var aliceTokenAccount: PublicKey
 
-        private lateinit var solanaNotaryKeyFile: Path
-        private lateinit var solanaNotaryKey: Signer
-        private lateinit var mintAuthority: Signer
-        private lateinit var testValidator: SolanaTestValidator
+    @TempDir
+    lateinit var generalDir: Path
 
-        private lateinit var tokenMint: PublicKey
-        private lateinit var aliceTokenAccount: PublicKey
+    @TempDir
+    lateinit var custodiedKeysDir: Path
 
-        @BeforeAll
-        @JvmStatic
-        fun startTestValidator() {
-            testValidator = SolanaTestValidator()
-            solanaNotaryKeyFile = randomKeypairFile(generalDir)
-            solanaNotaryKey = Signer.fromFile(solanaNotaryKeyFile)
-            mintAuthority = Signer.fromFile(randomKeypairFile(custodiedKeysDir))
-            testValidator.start()
-            testValidator.defaultNotaryProgramSetup(solanaNotaryKey.account)
-            testValidator.fundAccount(10, mintAuthority)
+    fun startTestValidator() {
+        testValidator = SolanaTestValidator()
+        solanaNotaryKeyFile = randomKeypairFile(generalDir)
+        solanaNotaryKey = Signer.fromFile(solanaNotaryKeyFile)
+        mintAuthority = Signer.fromFile(randomKeypairFile(custodiedKeysDir))
+        testValidator.start()
+        testValidator.defaultNotaryProgramSetup(solanaNotaryKey.account)
+        testValidator.fundAccount(10, mintAuthority)
 
-            val accountOwner = Signer.random()
+        val accountOwner = Signer.random()
 
-            testValidator.fundAccount(10, accountOwner)
+        testValidator.fundAccount(10, accountOwner)
 
-            tokenMint = testValidator.createToken(mintAuthority, decimals = TOKEN_DECIMALS.toByte())
-            aliceTokenAccount = testValidator.createTokenAccount(accountOwner, tokenMint)
-        }
+        tokenMint = testValidator.createToken(mintAuthority, decimals = TOKEN_DECIMALS.toByte())
+        aliceTokenAccount = testValidator.createTokenAccount(accountOwner, tokenMint)
+    }
 
-        @AfterAll
-        @JvmStatic
-        fun stopTestValidator() {
-            if (::testValidator.isInitialized) {
-                testValidator.close()
-            }
+    fun stopTestValidator() {
+        if (::testValidator.isInitialized) {
+            testValidator.close()
         }
     }
 
     @BeforeEach
     fun setup() {
+        startTestValidator()
         val bridgingContractsCordapp = TestCordapp.findCordapp("com.r3.corda.lib.solana.bridging.token.contracts")
         val bridgingFlowsCordapp = TestCordapp.findCordapp("com.r3.corda.lib.solana.bridging.token.flows")
         val baConfig = mapOf(
             "participants" to mapOf(aliceIdentity.name.toString() to aliceTokenAccount.base58()),
-            "mints" to mapOf(msftTokenType.tokenIdentifier to tokenMint.base58()),
-            "mintAuthorities" to mapOf(msftTokenType.tokenIdentifier to mintAuthority.account.base58()),
+            "mints" to mapOf("${msftTokenDescriptor.second}" to tokenMint.base58()),
+            "mintAuthorities" to mapOf("${msftTokenDescriptor.second}" to mintAuthority.account.base58()),
             "lockingIdentityLabel" to UUID.randomUUID().toString(),
             "solanaNotaryName" to solanaNotaryName.toString(),
         )
@@ -122,6 +117,7 @@ class FlowTests {
                 cordappsForAllNodes = listOf(
                     TestCordapp.findCordapp("com.r3.corda.lib.tokens.contracts"),
                     TestCordapp.findCordapp("com.r3.corda.lib.tokens.workflows"),
+                    TestCordapp.findCordapp("com.r3.corda.lib.solana.bridging.token.testing"),
                 ),
                 notarySpecs = listOf(
                     MockNetworkNotarySpec(
@@ -154,6 +150,7 @@ class FlowTests {
     @AfterEach
     fun tearDown() {
         network.stopNodes()
+        stopTestValidator()
     }
 
     private fun createSolanaNotaryConfig(): String =
@@ -179,22 +176,22 @@ class FlowTests {
         val aliceIdentity = alice.info.legalIdentities.first()
         val bridgeAuthorityIdentity = bridgeAuthority.info.legalIdentities.first()
 
-        alice.issue(msftTokenType, ISSUING_QUANTITY, generalNotaryName)
-        bridgeAuthority.issue(aaplTokenType, ISSUING_QUANTITY, generalNotaryName)
+        val msftTokenType = alice.issue(msftTokenDescriptor, ISSUING_QUANTITY, generalNotaryName)
+        val aaplTokenType = bridgeAuthority.issue(aaplTokenDesriptior, ISSUING_QUANTITY, generalNotaryName)
 
-        assertEquals(0, getSolanaTokenBalance(aliceTokenAccount), "Nothing on Solana")
+        Assertions.assertEquals(0, testValidator.getSolanaTokenBalance(aliceTokenAccount), "Nothing on Solana")
 
         alice
             .startFlow(MoveFungibleTokens(Amount(MOVE_QUANTITY, msftTokenType), bridgeAuthorityIdentity))
             .get()
 
-        assertEquals(
+        Assertions.assertEquals(
             ISSUING_QUANTITY - MOVE_QUANTITY,
             alice.myTokenBalance(aliceIdentity, msftTokenType),
             "Alice transferred some of MSFT shares",
         )
 
-        assertEquals(
+        Assertions.assertEquals(
             MOVE_QUANTITY,
             bridgeAuthority.myTokenBalance(aliceIdentity, msftTokenType),
             "Bridge Authority received MSFT shares",
@@ -203,7 +200,7 @@ class FlowTests {
         // We need to wait for the vault listener to process the newly received token
         Thread.sleep(5000)
 
-        assertEquals(
+        Assertions.assertEquals(
             0,
             bridgeAuthority.myTokenBalance(aliceIdentity, msftTokenType),
             "Bridge Authority has no longer MSFT shares, they are under Locking Identity"
@@ -213,12 +210,12 @@ class FlowTests {
             .getAllFungibleTokens(aliceIdentity, msftTokenType)
             .singleOrNull()
         assertNotNull(msftFungibleToken, "There should be single MSFT fungible token in Bridge Authority vault")
-        assertTrue(
-            msftFungibleToken.holder !in setOf(aliceIdentity, bridgeAuthorityIdentity),
+        assertFalse(
+            msftFungibleToken.holder in setOf(aliceIdentity, bridgeAuthorityIdentity),
             "Bridge Authority moved MSFT under Lock Identity (CI) ownership as neither BA nor Alice holds the token",
         ) // Locking Identity is Confidential Identity, and we don't know its identity upfront,
         // so indirect check to by proving no knows participant owns the token
-        assertEquals(
+        Assertions.assertEquals(
             MOVE_QUANTITY,
             msftFungibleToken.amount.toDecimal().longValueExact(),
             "Lock Identity received expected number of MSFT shares",
@@ -231,60 +228,35 @@ class FlowTests {
         val tokenProxyState = bridgeAuthority.queryStates<BridgedFungibleTokenProxy>().firstOrNull()
         assertNotNull(tokenProxyState, "There should be BridgedFungibleTokenProxy state")
 
-        assertEquals(
+        Assertions.assertEquals(
             MOVE_QUANTITY,
-            getSolanaTokenBalance(aliceTokenAccount),
+            testValidator.getSolanaTokenBalance(aliceTokenAccount),
             "Solana token amount equals Corda bridged amount",
         )
 
-        assertEquals(
+        Assertions.assertEquals(
             ISSUING_QUANTITY,
             bridgeAuthority.myTokenBalance(bridgeAuthorityIdentity, aaplTokenType),
             "Apple shares balance on Bridge Authority remained unchanged",
         )
     }
 
-    private fun StartedMockNode.issue(tokenType: TokenType, amount: Long, notaryName: CordaX500Name) {
-        startFlow(IssueSimpleTokenFlow(tokenType, amount, notaryName)).get()
-        assertEquals(amount, myTokenBalance(info.legalIdentities.first(), tokenType))
-    }
-
-    private inline fun <reified T : ContractState> StartedMockNode.queryStates(): List<StateAndRef<T>> {
-        return services.vaultService.queryBy(T::class.java).states
-    }
-
-    private fun StartedMockNode.myTokenBalance(issuer: Party, tokenType: TokenType): Long {
-        val myIdentity = this.services.myInfo.legalIdentities.first()
-        val fungibleTokens = getAllFungibleTokens(issuer, tokenType).filter { it.holder == myIdentity }
-        return if (fungibleTokens.isEmpty()) {
-            0
-        } else {
-            fungibleTokens
-                .sumTokenStatesOrThrow()
-                .toDecimal()
-                .longValueExact()
-        }
-    }
-
-    private fun StartedMockNode.getAllFungibleTokens(issuer: Party, stock: TokenType): List<FungibleToken> {
-        val fungibleToken = this
-            .startFlow(QuerySimpleTokensFlow(issuer, stock))
-            .get()
-            .first()
-            .state.data.tokenType
-        return this.services.vaultService
-            .tokenAmountsByToken(fungibleToken)
-            .states
-            .map { it.state.data }
-    }
-
-    private fun getSolanaTokenBalance(publicKey: PublicKey): Long {
-        return testValidator
-            .client
-            .getTokenAccountBalance(publicKey.base58(), RpcParams())
-            .checkResponse("getTokenAccountBalance")!!
-            .uiAmountString
-            .toBigDecimal()
-            .longValueExact()
+    private fun StartedMockNode.issue(
+        tokenDescriptor: Pair<String, UUID>,
+        amount: Long,
+        notaryName: CordaX500Name,
+    ): TokenType {
+        val issuedTypeToken = startFlow(
+            IssueEvolvableTokenTypeFlow(
+                tokenDescriptor.first,
+                tokenDescriptor.second,
+                amount,
+                notaryName,
+            )
+        ).get()
+        assertNotNull(issuedTypeToken)
+        val tokenType = issuedTypeToken.tokenType
+        Assertions.assertEquals(amount, myTokenBalance(info.legalIdentities.first(), tokenType))
+        return tokenType
     }
 }
