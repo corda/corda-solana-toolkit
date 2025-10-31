@@ -55,8 +55,7 @@ class SimpleTokenFlowTests {
     private lateinit var notaryParty: Party
 
     companion object {
-        // TODO This needs to be more realistic with a non-zero value (e.g. 2)
-        private const val TOKEN_DECIMALS = 0
+        private const val TOKEN_DECIMALS = 3
 
         // Whole token amounts
         private const val ISSUING_QUANTITY = 2000L
@@ -188,8 +187,12 @@ class SimpleTokenFlowTests {
         assertEquals(0, testValidator.getSolanaTokenBalance(aliceTokenAccount), "Nothing on Solana")
 
         alice
-            .startFlow(MoveFungibleTokens(Amount(MOVE_QUANTITY, msftTokenType), bridgeAuthorityIdentity))
-            .get()
+            .startFlow(
+                MoveFungibleTokens(
+                    Amount.fromDecimal(MOVE_QUANTITY.toBigDecimal(), msftTokenType),
+                    bridgeAuthorityIdentity,
+                )
+            ).get()
 
         assertEquals(
             ISSUING_QUANTITY - MOVE_QUANTITY,
