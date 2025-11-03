@@ -1,5 +1,6 @@
 package com.r3.corda.lib.solana.bridging.testing
 
+import com.r3.corda.lib.solana.bridging.testing.FlowsTest.Companion.TOKEN_DECIMALS
 import com.r3.corda.lib.solana.bridging.token.testing.IssueEvolvableTokenTypeFlow
 import com.r3.corda.lib.tokens.contracts.types.TokenType
 import net.corda.core.identity.CordaX500Name
@@ -11,17 +12,17 @@ import java.util.UUID
 
 class EvolvableDescriptor(
     override val ticker: String,
-    override val fractionDigits: Int,
-) : Descriptor {
+    override val fractionDigits: Int = TOKEN_DECIMALS,
+) : TokenTypeDescriptor {
     override val tokenTypeIdentifier: String = UUID.randomUUID().toString()
 }
 
 class EvolvableTokenFlowTests : FlowsTest() {
-    override val msftDescriptor: Descriptor = EvolvableDescriptor("MSFT", TOKEN_DECIMALS)
-    override val aaplDescriptor: Descriptor = EvolvableDescriptor("AAPL", TOKEN_DECIMALS)
+    override val msftDescriptor: TokenTypeDescriptor = EvolvableDescriptor(MSFT_TICKER)
+    override val aaplDescriptor: TokenTypeDescriptor = EvolvableDescriptor(APPL_TICKER)
 
     override fun StartedMockNode.issue(
-        tokenDescriptor: Descriptor,
+        tokenDescriptor: TokenTypeDescriptor,
         amount: Long,
         notaryName: CordaX500Name,
     ): TokenType {

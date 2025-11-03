@@ -38,10 +38,14 @@ import java.nio.file.Path
 import java.util.UUID
 
 abstract class FlowsTest {
-    abstract val msftDescriptor: Descriptor
-    abstract val aaplDescriptor: Descriptor
+    abstract val msftDescriptor: TokenTypeDescriptor
+    abstract val aaplDescriptor: TokenTypeDescriptor
 
-    abstract fun StartedMockNode.issue(tokenDescriptor: Descriptor, amount: Long, notaryName: CordaX500Name): TokenType
+    abstract fun StartedMockNode.issue(
+        tokenDescriptor: TokenTypeDescriptor,
+        amount: Long,
+        notaryName: CordaX500Name,
+    ): TokenType
 
     private lateinit var network: MockNetwork
     private lateinit var alice: StartedMockNode
@@ -54,6 +58,8 @@ abstract class FlowsTest {
 
     companion object {
         const val TOKEN_DECIMALS = 3
+        const val MSFT_TICKER = "MSFT"
+        const val APPL_TICKER = "AAPL"
 
         // Whole token amounts
         private const val ISSUING_QUANTITY = 2000L
@@ -294,7 +300,7 @@ abstract class FlowsTest {
     }
 }
 
-interface Descriptor {
+interface TokenTypeDescriptor {
     val ticker: String
     val fractionDigits: Int
     val tokenTypeIdentifier: String

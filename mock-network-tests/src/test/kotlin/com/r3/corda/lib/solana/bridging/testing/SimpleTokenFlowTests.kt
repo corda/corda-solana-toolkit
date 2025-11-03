@@ -1,5 +1,6 @@
 package com.r3.corda.lib.solana.bridging.testing
 
+import com.r3.corda.lib.solana.bridging.testing.FlowsTest.Companion.TOKEN_DECIMALS
 import com.r3.corda.lib.solana.bridging.token.testing.IssueSimpleTokenFlow
 import com.r3.corda.lib.tokens.contracts.types.TokenType
 import net.corda.core.identity.CordaX500Name
@@ -9,17 +10,17 @@ import org.junit.jupiter.api.Test
 
 class SimpleDescriptor(
     override val ticker: String,
-    override val fractionDigits: Int,
-) : Descriptor {
+    override val fractionDigits: Int = TOKEN_DECIMALS,
+) : TokenTypeDescriptor {
     override val tokenTypeIdentifier: String = ticker
 }
 
 class SimpleTokenFlowTests : FlowsTest() {
-    override val msftDescriptor: Descriptor = SimpleDescriptor("MSFT", TOKEN_DECIMALS)
-    override val aaplDescriptor: Descriptor = SimpleDescriptor("AAPL", TOKEN_DECIMALS)
+    override val msftDescriptor: TokenTypeDescriptor = SimpleDescriptor(MSFT_TICKER)
+    override val aaplDescriptor: TokenTypeDescriptor = SimpleDescriptor(APPL_TICKER)
 
     override fun StartedMockNode.issue(
-        tokenDescriptor: Descriptor,
+        tokenDescriptor: TokenTypeDescriptor,
         amount: Long,
         notaryName: CordaX500Name,
     ): TokenType {
