@@ -75,6 +75,7 @@ abstract class FlowsTest {
     private lateinit var solanaNotaryKey: Signer
     private lateinit var mintAuthority: Signer
     private lateinit var testValidator: SolanaTestValidator
+
     private lateinit var tokenMint: PublicKey
     private lateinit var aliceTokenAccount: PublicKey
 
