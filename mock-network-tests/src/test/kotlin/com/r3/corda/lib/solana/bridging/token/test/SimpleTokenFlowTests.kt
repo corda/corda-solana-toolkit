@@ -6,6 +6,7 @@ import com.r3.corda.lib.tokens.contracts.types.TokenType
 import net.corda.core.identity.CordaX500Name
 import net.corda.testing.node.StartedMockNode
 import org.junit.jupiter.api.Assertions.assertEquals
+import java.math.BigDecimal
 
 class SimpleDescriptor(
     override val ticker: String,
@@ -20,7 +21,7 @@ class SimpleTokenFlowTests : FlowsTest() {
 
     override fun StartedMockNode.issue(
         tokenDescriptor: TokenTypeDescriptor,
-        amount: Long,
+        amount: BigDecimal,
         notaryName: CordaX500Name,
     ): TokenType {
         val tokenType = TokenType(tokenDescriptor.ticker, tokenDescriptor.fractionDigits)

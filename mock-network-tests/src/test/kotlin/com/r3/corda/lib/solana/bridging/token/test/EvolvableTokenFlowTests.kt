@@ -7,6 +7,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.testing.node.StartedMockNode
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.assertNotNull
+import java.math.BigDecimal
 import java.util.UUID
 
 class EvolvableDescriptor(
@@ -22,7 +23,7 @@ class EvolvableTokenFlowTests : FlowsTest() {
 
     override fun StartedMockNode.issue(
         tokenDescriptor: TokenTypeDescriptor,
-        amount: Long,
+        amount: BigDecimal,
         notaryName: CordaX500Name,
     ): TokenType {
         val issuedTypeToken = startFlow(

@@ -35,6 +35,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNotNull
 import org.junit.jupiter.api.io.TempDir
+import java.math.BigDecimal
 import java.nio.file.Path
 import java.util.UUID
 
@@ -44,7 +45,7 @@ abstract class FlowsTest {
 
     abstract fun StartedMockNode.issue(
         tokenDescriptor: TokenTypeDescriptor,
-        amount: Long,
+        amount: BigDecimal,
         notaryName: CordaX500Name,
     ): TokenType
 
@@ -63,8 +64,8 @@ abstract class FlowsTest {
         const val APPL_TICKER = "AAPL"
 
         // Whole token amounts
-        private const val ISSUING_QUANTITY = 2000L
-        private const val MOVE_QUANTITY = 100L
+        private val ISSUING_QUANTITY = BigDecimal("2000.000")
+        private val MOVE_QUANTITY = BigDecimal("10.250")
 
         private val aliceIdentity = TestIdentity(ALICE_NAME)
         private val bridgeAuthorityIdentity = TestIdentity(CordaX500Name("Bridge Authority", "New York", "US"))
@@ -196,12 +197,12 @@ abstract class FlowsTest {
         val msftTokenType = alice.issue(msftDescriptor, ISSUING_QUANTITY, generalNotaryName)
         val aaplTokenType = bridgeAuthority.issue(aaplDescriptor, ISSUING_QUANTITY, generalNotaryName)
 
-        assertEquals(0, getSolanaTokenBalance(aliceTokenAccount), "Nothing on Solana")
+        assertEquals(BigDecimal.ZERO, getSolanaTokenBalance(aliceTokenAccount), "Nothing on Solana")
 
         alice
             .startFlow(
                 MoveFungibleTokens(
-                    Amount.fromDecimal(MOVE_QUANTITY.toBigDecimal(), msftTokenType),
+                    Amount.fromDecimal(MOVE_QUANTITY, msftTokenType),
                     bridgeAuthorityIdentity,
                 )
             ).get()
@@ -222,7 +223,7 @@ abstract class FlowsTest {
         Thread.sleep(5000)
 
         assertEquals(
-            0,
+            BigDecimal.ZERO,
             bridgeAuthority.myTokenBalance(aliceIdentity, msftTokenType),
             "Bridge Authority has no longer MSFT shares, they are under Locking Identity"
         )
@@ -238,7 +239,7 @@ abstract class FlowsTest {
         // so indirect check to by proving no knows participant owns the token
         assertEquals(
             MOVE_QUANTITY,
-            msftFungibleToken.amount.toDecimal().longValueExact(),
+            msftFungibleToken.amount.toDecimal(),
             "Lock Identity received expected number of MSFT shares",
         )
 
@@ -249,8 +250,10 @@ abstract class FlowsTest {
         val tokenProxyState = bridgeAuthority.queryStates<BridgedFungibleTokenProxy>().firstOrNull()
         assertNotNull(tokenProxyState, "There should be BridgedFungibleTokenProxy state")
 
+        // TODO value from solana has no last trailing zero, however numerically is correct,
+        //  hence trimming 0 from the expected value, investigate
         assertEquals(
-            MOVE_QUANTITY,
+            MOVE_QUANTITY.stripTrailingZeros(),
             getSolanaTokenBalance(aliceTokenAccount),
             "Solana token amount equals Corda bridged amount",
         )
@@ -266,16 +269,15 @@ abstract class FlowsTest {
         return services.vaultService.queryBy(T::class.java).states
     }
 
-    protected fun StartedMockNode.myTokenBalance(issuer: Party, tokenType: TokenType): Long {
+    protected fun StartedMockNode.myTokenBalance(issuer: Party, tokenType: TokenType): BigDecimal {
         val myIdentity = this.services.myInfo.legalIdentities.first()
         val fungibleTokens = getAllFungibleTokens(issuer, tokenType).filter { it.holder == myIdentity }
         return if (fungibleTokens.isEmpty()) {
-            0
+            BigDecimal.ZERO
         } else {
             fungibleTokens
                 .sumTokenStatesOrThrow()
                 .toDecimal()
-                .longValueExact()
         }
     }
 
@@ -291,14 +293,13 @@ abstract class FlowsTest {
             .map { it.state.data }
     }
 
-    private fun getSolanaTokenBalance(publicKey: PublicKey): Long {
+    private fun getSolanaTokenBalance(publicKey: PublicKey): BigDecimal {
         return testValidator
             .client
             .getTokenAccountBalance(publicKey.base58(), RpcParams())
             .checkResponse("getTokenAccountBalance")!!
             .uiAmountString
             .toBigDecimal()
-            .longValueExact()
     }
 }
 
