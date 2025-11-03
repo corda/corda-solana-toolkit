@@ -65,17 +65,16 @@ abstract class FlowsTest {
         private val generalNotaryName = CordaX500Name("Notary Service", "Zurich", "CH")
     }
 
-    private lateinit var solanaNotaryKeyFile: Path
-    private lateinit var solanaNotaryKey: Signer
-    private lateinit var mintAuthority: Signer
-    private lateinit var testValidator: SolanaTestValidator
-
     @TempDir
     lateinit var generalDir: Path
 
     @TempDir
     lateinit var custodiedKeysDir: Path
 
+    private lateinit var solanaNotaryKeyFile: Path
+    private lateinit var solanaNotaryKey: Signer
+    private lateinit var mintAuthority: Signer
+    private lateinit var testValidator: SolanaTestValidator
     private lateinit var tokenMint: PublicKey
     private lateinit var aliceTokenAccount: PublicKey
 
