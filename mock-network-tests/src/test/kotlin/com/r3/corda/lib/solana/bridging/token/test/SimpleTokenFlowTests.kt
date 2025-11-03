@@ -6,7 +6,6 @@ import com.r3.corda.lib.tokens.contracts.types.TokenType
 import net.corda.core.identity.CordaX500Name
 import net.corda.testing.node.StartedMockNode
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Test
 
 class SimpleDescriptor(
     override val ticker: String,
@@ -28,10 +27,5 @@ class SimpleTokenFlowTests : FlowsTest() {
         startFlow(IssueSimpleTokenFlow(tokenType, amount, notaryName)).get()
         assertEquals(amount, myTokenBalance(info.legalIdentities.first(), tokenType))
         return tokenType
-    }
-
-    @Test
-    override fun bridgeTest() {
-        super.bridgeTest()
     }
 }

@@ -32,6 +32,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNotNull
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
@@ -187,6 +188,7 @@ abstract class FlowsTest {
         notaryLegalIdentity = "$generalNotaryName"
         """.trimIndent()
 
+    @Test
     open fun bridgeTest() {
         val aliceIdentity = alice.info.legalIdentities.first()
         val bridgeAuthorityIdentity = bridgeAuthority.info.legalIdentities.first()

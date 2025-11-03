@@ -6,7 +6,6 @@ import com.r3.corda.lib.tokens.contracts.types.TokenType
 import net.corda.core.identity.CordaX500Name
 import net.corda.testing.node.StartedMockNode
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNotNull
 import java.util.UUID
 
@@ -39,10 +38,5 @@ class EvolvableTokenFlowTests : FlowsTest() {
         val tokenType = issuedTypeToken.tokenType
         assertEquals(amount, myTokenBalance(info.legalIdentities.first(), tokenType))
         return tokenType
-    }
-
-    @Test
-    override fun bridgeTest() {
-        super.bridgeTest()
     }
 }
