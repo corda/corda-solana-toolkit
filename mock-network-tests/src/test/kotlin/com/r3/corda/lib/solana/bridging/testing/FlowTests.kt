@@ -43,7 +43,6 @@ abstract class FlowsTest {
 
     abstract fun StartedMockNode.issue(tokenDescriptor: Descriptor, amount: Long, notaryName: CordaX500Name): TokenType
 
-    private lateinit var testValidator: SolanaTestValidator
     private lateinit var network: MockNetwork
     private lateinit var alice: StartedMockNode
     private lateinit var bridgeAuthority: StartedMockNode
@@ -69,15 +68,16 @@ abstract class FlowsTest {
     private lateinit var solanaNotaryKeyFile: Path
     private lateinit var solanaNotaryKey: Signer
     private lateinit var mintAuthority: Signer
-
-    private lateinit var tokenMint: PublicKey
-    private lateinit var aliceTokenAccount: PublicKey
+    private lateinit var testValidator: SolanaTestValidator
 
     @TempDir
     lateinit var generalDir: Path
 
     @TempDir
     lateinit var custodiedKeysDir: Path
+
+    private lateinit var tokenMint: PublicKey
+    private lateinit var aliceTokenAccount: PublicKey
 
     @BeforeEach
     fun setup() {
@@ -188,7 +188,7 @@ abstract class FlowsTest {
         val msftTokenType = alice.issue(msftDescriptor, ISSUING_QUANTITY, generalNotaryName)
         val aaplTokenType = bridgeAuthority.issue(aaplDescriptor, ISSUING_QUANTITY, generalNotaryName)
 
-        assertEquals(0, testValidator.getSolanaTokenBalance(aliceTokenAccount), "Nothing on Solana")
+        assertEquals(0, getSolanaTokenBalance(aliceTokenAccount), "Nothing on Solana")
 
         alice
             .startFlow(
@@ -243,7 +243,7 @@ abstract class FlowsTest {
 
         assertEquals(
             MOVE_QUANTITY,
-            testValidator.getSolanaTokenBalance(aliceTokenAccount),
+            getSolanaTokenBalance(aliceTokenAccount),
             "Solana token amount equals Corda bridged amount",
         )
 
@@ -283,8 +283,9 @@ abstract class FlowsTest {
             .map { it.state.data }
     }
 
-    private fun SolanaTestValidator.getSolanaTokenBalance(publicKey: PublicKey): Long {
-        return client
+    private fun getSolanaTokenBalance(publicKey: PublicKey): Long {
+        return testValidator
+            .client
             .getTokenAccountBalance(publicKey.base58(), RpcParams())
             .checkResponse("getTokenAccountBalance")!!
             .uiAmountString
