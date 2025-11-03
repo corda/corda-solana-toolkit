@@ -1,4 +1,4 @@
-package com.r3.corda.lib.solana.bridging.testing
+package com.r3.corda.lib.solana.bridging.token.test
 
 import com.lmax.solana4j.api.PublicKey
 import com.r3.corda.lib.solana.bridging.token.states.BridgedFungibleTokenProxy
