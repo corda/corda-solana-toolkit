@@ -16,7 +16,7 @@ class EvolvableDescriptor(
     override val tokenTypeIdentifier: String = UUID.randomUUID().toString()
 }
 
-class EvolvableTokenFlowTests : TokenFlowTestBase() {
+class EvolvableTokenFlowTests : FlowsTest() {
     override val msftDescriptor: Descriptor = EvolvableDescriptor("MSFT", TOKEN_DECIMALS)
     override val aaplDescriptor: Descriptor = EvolvableDescriptor("AAPL", TOKEN_DECIMALS)
 
