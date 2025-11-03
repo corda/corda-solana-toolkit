@@ -180,7 +180,7 @@ abstract class InstallSolanaNotaryDevKeyTask : DefaultTask() {
 tasks.register<InstallSolanaNotaryDevKeyTask>("installSolanaNotaryDevKey") {
     dependsOn("deployNodes")
     val detached = configurations.detachedConfiguration(
-        //dependencies.create("com.example:bridging-token-workflows:1.0.0")
+        //dependencies.create("com.r3.corda.lib.solana:bridging-token-workflows:0.1.0-SNAPSHOT") // for project outside this repo
         dependencies.create(project(":bridging-token-workflows"))
     )
     cordapps.from(detached)
