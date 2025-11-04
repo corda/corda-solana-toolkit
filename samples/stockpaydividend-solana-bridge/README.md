@@ -23,13 +23,12 @@ New network participants:
 
 Open a terminal and go to the project root directory and type: (to deploy the nodes using bootstrapper)
 ```bash
-./gradlew samples:stockpaydividend-solana-bridge:deployNodes samples:stockpaydividend-solana-bridge:installSolanaNotaryDevKey  samples:stockpaydividend-solana-bridge:setupSolanaAccounts samples:stockpaydividend-solana-bridge:installSolanaBridgeConfig
+./gradlew samples:stockpaydividend-solana-bridge:deployNodes
 ```
 
 Create and fund Solana accounts for `Wayne Company` and the `Bridge Authority`, create `Mint` and `TokenAccount`:
-
 ```bash
-./gradlew samples:stockpaydividend-solana-bridge:setupSolanaAccounts
+./gradlew samples:stockpaydividend-solana-bridge:installSolanaBridgeConfig
 ```
 
 Then type: (to run the nodes)
@@ -69,8 +68,8 @@ Network ID: 0
 ```
 
 Follow the steps from Running on Solana Dev Net.
-The only change is to replace Solana Dev Net url with local validator url `http://localhost:8899` in notary config in
-`depolyNodes` task.
+The only change is to replace Solana DevNet URL with the local validator url ( `"rpcUrl" = "http://localhost:8899"`)
+in the notary config entry of `depolyNodes` task.
 
 
 ## Interacting with the nodes

@@ -35,7 +35,8 @@ val custodiedKeysDirectory = "${layout.buildDirectory.get()}/custodied-keys"
 tasks.register<Cordform>("deployNodes") {
     dependsOn(
         project(":bridging-token-contracts").tasks.named("jar"),
-        project(":bridging-token-workflows").tasks.named("jar")
+        project(":bridging-token-workflows").tasks.named("jar"),
+        "installSolanaNotaryDevKey"
     )
     val commonRpcUser =  listOf(
         mapOf(
@@ -76,7 +77,7 @@ tasks.register<Cordform>("deployNodes") {
             "solana" to mapOf(
                 "notaryKeypairFile" to file(solanaNotaryKeyPath).absolutePath,
                 "custodiedKeysDir" to file(custodiedKeysDirectory).absolutePath,
-                "rpcUrl" to "http://localhost:8899"
+                "rpcUrl" to "https://api.devnet.solana.com"
             )
         )
         p2pPort(10019)
@@ -137,7 +138,6 @@ tasks.register<Cordform>("deployNodes") {
 // After adding second Notary (Solana Notary) the stock issuance flow may use a wrong notary,
 // set the original notary as the default one for the cordapp for WayneCo node.
 tasks.register("writeCordappConfig") {// TODO should work for list of nodes
-    dependsOn("deployNodes")
     doLast {
             val dir = layout.buildDirectory.dir("nodes/WayneCo/cordapps/config").get().asFile
             dir.mkdirs()
@@ -178,7 +178,6 @@ abstract class InstallSolanaNotaryDevKeyTask : DefaultTask() {
 }
 
 tasks.register<InstallSolanaNotaryDevKeyTask>("installSolanaNotaryDevKey") {
-    //dependsOn("deployNodes")
     val detached = configurations.detachedConfiguration(
         //dependencies.create("com.r3.corda.lib.solana:bridging-token-workflows:0.1.0-SNAPSHOT") // for project outside this repo
         dependencies.create(project(":bridging-token-workflows"))
@@ -187,6 +186,7 @@ tasks.register<InstallSolanaNotaryDevKeyTask>("installSolanaNotaryDevKey") {
     keyFileName.set(solanaNotaryKeyFileName)
     outputDir.set(layout.buildDirectory.dir("solana-keys/dev-key"))
 }
+tasks.named("deployNodes") { finalizedBy("installSolanaNotaryDevKey") }
 
 abstract class SetupAccounts : DefaultTask() {
     @get:Input
@@ -221,12 +221,9 @@ abstract class SetupAccounts : DefaultTask() {
 }
 
 val generateKeys = tasks.register<SetupAccounts>("setupSolanaAccounts") {
-    //dependsOn("deployNodes")
     notaryKeyPath.set(solanaNotaryKeyPath)
     participants.set(listOf("O=WayneCo,L=SF,C=US"))
-    println("Tesla ${layout.buildDirectory.asFile.get().absolutePath}")
     val outputDir = layout.buildDirectory.dir("solana-keys")
-    println("Tesla2 ${outputDir.get().asFile.absolutePath}")
 
     participantKeyFiles.setFrom(
         participants.map { names ->
@@ -280,7 +277,7 @@ abstract class InstallSolanaBridgeConfig : DefaultTask() {
 }
 
 tasks.register<InstallSolanaBridgeConfig>("installSolanaBridgeConfig") {
-    //dependsOn(generateKeys)
+    dependsOn(generateKeys)
 
     val node = project.findProperty("nodeName") as String? ?: "BridgingAuthority"
     inputDir.set(layout.buildDirectory.dir("solana-keys"))
