@@ -22,6 +22,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.schemas.StatePersistable
 import net.corda.core.transactions.LedgerTransaction
+import java.math.BigDecimal
 import java.util.UUID
 
 class TestEvolvableTokenContract : EvolvableTokenContract(), Contract {
@@ -45,7 +46,7 @@ data class StockTokenType(
 class IssueEvolvableTokenTypeFlow(
     private val ticker: String,
     private val tokenTypeIdentifier: UUID,
-    private val quantity: Long,
+    private val quantity: BigDecimal,
     private val fractionDigits: Int,
     private val notaryName: CordaX500Name,
 ) : FlowLogic<FungibleToken>() {
@@ -61,7 +62,7 @@ class IssueEvolvableTokenTypeFlow(
         subFlow(CreateEvolvableTokens(listOf(TransactionState(stock, notary = notary))))
         val pointer: TokenPointer<StockTokenType> = stock.toPointer<StockTokenType>()
         val issued = pointer issuedBy ourIdentity
-        val amount: Amount<IssuedTokenType> = Amount.fromDecimal(quantity.toBigDecimal(), issued)
+        val amount: Amount<IssuedTokenType> = Amount.fromDecimal(quantity, issued)
         val token = FungibleToken(amount = amount, holder = ourIdentity)
         subFlow(IssueTokens(listOf(token)))
         return token
