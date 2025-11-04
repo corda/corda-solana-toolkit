@@ -35,6 +35,6 @@ TOKEN_ACCOUNT=$(spl-token create-account \
   --fee-payer $funderKeyFile \
   $MINT_ACCOUNT  | awk '/^Creating account / {print $3}')
 
-echo $TOKEN_ACCOUNT >> ./build/solana-keys/O=WayneCo,L=SF,C=US.pub
+echo $TOKEN_ACCOUNT >> ./build/solana-keys/Shareholder.pub
 
 echo $MINT_ACCOUNT >> ./build/solana-keys/token-mint.pub

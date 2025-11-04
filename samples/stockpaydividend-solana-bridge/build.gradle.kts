@@ -222,7 +222,7 @@ abstract class SetupAccounts : DefaultTask() {
 
 val generateKeys = tasks.register<SetupAccounts>("setupSolanaAccounts") {
     notaryKeyPath.set(solanaNotaryKeyPath)
-    participants.set(listOf("O=WayneCo,L=SF,C=US"))
+    participants.set(listOf("Shareholder"))
     val outputDir = layout.buildDirectory.dir("solana-keys")
 
     participantKeyFiles.setFrom(
@@ -252,7 +252,7 @@ abstract class InstallSolanaBridgeConfig : DefaultTask() {
     abstract val bridgeAuthorityPubkey: Property<String>
 
     @get:Input
-    abstract val cordaTokenTypeId: Property<String> //TODO this will be remove, in the future generated at runtime
+    abstract val cordaTokenTypeId: Property<String> //TODO this will be removed, in the future generated at runtime
 
     @get:OutputFile
     abstract val configFile: RegularFileProperty
@@ -281,7 +281,7 @@ tasks.register<InstallSolanaBridgeConfig>("installSolanaBridgeConfig") {
 
     val node = project.findProperty("nodeName") as String? ?: "BridgingAuthority"
     inputDir.set(layout.buildDirectory.dir("solana-keys"))
-    participants.set(listOf("O=WayneCo,L=SF,C=US"))
+    participants.set(listOf("Shareholder")) //TODO this could be output from previous task
 
     participantKeyFiles.from(
         generateKeys.map { it.participantKeyFiles }
