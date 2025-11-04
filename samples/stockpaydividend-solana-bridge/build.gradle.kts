@@ -29,8 +29,8 @@ dependencies {
 }
 
 val solanaNotaryKeyFileName = "Dev7chG99tLCAny3PNYmBdyhaKEVcZnSTp3p1mKVb5m5.json"
-val solanaNotaryKeyPath = "${layout.buildDirectory.get()}/solana-keys/dev-key/$solanaNotaryKeyFileName"
-val custodiedKeysDirectory = "${layout.buildDirectory.get()}/custodied-keys"
+val solanaNotaryKeyPath = "${layout.buildDirectory.get()}/solana-keys/dev-key/$solanaNotaryKeyFileName" // TODO this should be an input field (output from installSolanaNotaryDevKey task)
+val custodiedKeysDirectory = "${layout.buildDirectory.get()}/custodied-keys"  // TODO if this should be output from Solana keys generation task this would flip the dependency, which is fine
 
 tasks.register<Cordform>("deployNodes") {
     dependsOn(
@@ -137,7 +137,7 @@ tasks.register<Cordform>("deployNodes") {
 
 // After adding second Notary (Solana Notary) the stock issuance flow may use a wrong notary,
 // set the original notary as the default one for the cordapp for WayneCo node.
-tasks.register("writeCordappConfig") {// TODO should work for list of nodes
+tasks.register("writeCordappConfig") {// TODO should work for list of nodes, add Gradle output fields
     doLast {
             val dir = layout.buildDirectory.dir("nodes/WayneCo/cordapps/config").get().asFile
             dir.mkdirs()

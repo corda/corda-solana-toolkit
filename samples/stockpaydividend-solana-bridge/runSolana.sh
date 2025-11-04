@@ -1,7 +1,7 @@
 #!/bin/bash
 
 cd "$1"
-#./gradlew solana-aggregator:admin-cli:build
+./gradlew solana-aggregator:admin-cli:build
 cd solana-aggregator/notary-program
 anchor build
 
