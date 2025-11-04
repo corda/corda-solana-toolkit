@@ -37,6 +37,29 @@ Then type: (to run the nodes)
 ./samples/stockpaydividend-solana-bridge/build/nodes/runnodes
 ```
 
+### Running with Solana Local Validator
+
+Start a local solana validator with the notary program deployed you need to have access to Corda Enteprise `admin-cli` JAR and Notary key.
+The below script assumes you have checked out Corda Enterprise source code.
+Run `./runSolana.sh` script.
+The script starts a local solana validator, creates the new network and adds notary key to the Corda program.
+You can list the authorized notaries with:
+
+```bash
+java -jar $ADMIN_CLI list-notaries -u http://localhost:8899 -v -k solana-aggregator/notary-program/dev-keys/DevAD5S5AFhTTCmrD8Jg58bDhbZabSzth7Bu6rG4HFYo.json
+```
+
+The expected output is:
+```
+Network ID: 0
+   1. Notary: Dev7chG99tLCAny3PNYmBdyhaKEVcZnSTp3p1mKVb5m5
+```
+
+Follow the steps from Running on Solana Dev Net.
+The only change is to replace Solana Dev Net url with local validator url `http://localhost:8899` in notary config in
+`depolyNodes` task.
+
+
 ## Interacting with the nodes
 
 When started via the command line, each node will display an interactive shell:

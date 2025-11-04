@@ -254,6 +254,12 @@ val generateKeys = tasks.register<GenerateMockSolanaKeys>("generateMockSolanaKey
     bridgeAuthorityKeyFile.set(layout.buildDirectory.file("solana-keys/bridge.pub"))
 }
 
+// TODO replacement for generateMockSolanaKeys
+tasks.register<Exec>("setupSolanaAccounts") {
+    dependsOn("installSolanaNotaryDevKey")
+    commandLine( "bash", "-x", "$projectDir/setupSolanaAccounts.sh", solanaNotaryKeyPath)
+}
+
 abstract class InstallSolanaBridgeConfig : DefaultTask() {
     @get:Internal
     abstract val inputDir: DirectoryProperty
@@ -314,11 +320,6 @@ tasks.register<InstallSolanaBridgeConfig>("installSolanaBridgeConfig") {
 
     cordaTokenTypeId.set(project.findProperty("cordaTokenTypeId") as String? ?: "TEST")
     configFile.set(layout.buildDirectory.file("nodes/$node/cordapps/config/bridging-flows-1.0.conf"))
-}
-
-tasks.register<Exec>("setupSolanaAccounts") {
-    dependsOn("installSolanaNotaryDevKey")
-    commandLine( "bash", "-x", "$projectDir/setupSolanaAccounts.sh", solanaNotaryKeyPath)
 }
 
 // Adds passing TOML references for Cordform.nodeDefaults.cordapp property
