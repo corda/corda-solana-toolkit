@@ -23,7 +23,7 @@ New network participants:
 
 Open a terminal and go to the project root directory and type: (to deploy the nodes using bootstrapper)
 ```bash
-./gradlew clean samples:stockpaydividend-solana-bridge:installSolanaNotaryDevKey samples:stockpaydividend-solana-bridge:installSolanaBridgeConfig
+./gradlew samples:stockpaydividend-solana-bridge:deployNodes samples:stockpaydividend-solana-bridge:installSolanaNotaryDevKey  samples:stockpaydividend-solana-bridge:setupSolanaAccounts samples:stockpaydividend-solana-bridge:installSolanaBridgeConfig
 ```
 
 Create and fund Solana accounts for `Wayne Company` and the `Bridge Authority`, create `Mint` and `TokenAccount`:
@@ -39,20 +39,33 @@ Then type: (to run the nodes)
 
 ### Running with Solana Local Validator
 
-Start a local solana validator with the notary program deployed you need to have access to Corda Enteprise `admin-cli` JAR and Notary key.
-The below script assumes you have checked out Corda Enterprise source code.
-Run `./runSolana.sh` script.
-The script starts a local solana validator, creates the new network and adds notary key to the Corda program.
-You can list the authorized notaries with:
+TODO the guide requires access to Corda Enterprise source code (to build and access Corda Solana Aggregator jar and key) - this will change.
 
+Start a local solana validator with the notary program deployed you need to have access to Corda Enterprise `admin-cli` JAR and Notary key.
+Run `./runSolana.sh <PATH_TO_CORDA_ENTERPRISE>` script. Below scripts invocations assume you have source code of Corda Enterprise as sibling directory:
+The script build Corda Solana program and starts a local solana validator:
 ```bash
-java -jar $ADMIN_CLI list-notaries -u http://localhost:8899 -v -k solana-aggregator/notary-program/dev-keys/DevAD5S5AFhTTCmrD8Jg58bDhbZabSzth7Bu6rG4HFYo.json
+./runSolana.sh "../../../enterprise"
 ```
-
+The script creates the new network and adds notary key to the Corda program:
+```bash
+./addNotaryToSolana.sh "../../../enterprise"
+```
 The expected output is:
 ```
+Requesting airdrop of 10 SOL
+
+Signature: Qx2tToY7XCMTCNxTUamW74K2G5a3m61deYoZspxYLCKt14UBismHzVu8HgCkus5BZRfBcfP7inzdLe6BnXJsWzr
+
+10 SOL
+Initializing notary program SolanaAccount{'DevPb8sxMzZCzXW3dAKM4BnRSoEJ6PrCrVTF7Pku5KUL'}...
+✓ Notary program initialized successfully with DevAD5S5AFhTTCmrD8Jg58bDhbZabSzth7Bu6rG4HFYo as admin.
+Creating network ...
+✓ Corda network creation successful - network ID: 0
+Authorizing notary Dev7chG99tLCAny3PNYmBdyhaKEVcZnSTp3p1mKVb5m5...
+✓ Notary authorized successfully: Dev7chG99tLCAny3PNYmBdyhaKEVcZnSTp3p1mKVb5m5
 Network ID: 0
-   1. Notary: Dev7chG99tLCAny3PNYmBdyhaKEVcZnSTp3p1mKVb5m5
+  1. Notary: Dev7chG99tLCAny3PNYmBdyhaKEVcZnSTp3p1mKVb5m5
 ```
 
 Follow the steps from Running on Solana Dev Net.
@@ -67,7 +80,7 @@ When started via the command line, each node will display an interactive shell:
     Welcome to the Corda interactive shell.
     Useful commands include 'help' to see what is available, and 'bye' to shut down the node.
 
-    Thu Oct 23 11:54:18 BST 2025>>>
+    Thu Oct 23 11:54:18 BST 2025>
 
 You can use this shell to interact with your node.
 
