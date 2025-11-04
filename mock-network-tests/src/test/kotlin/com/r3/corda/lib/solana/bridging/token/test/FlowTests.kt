@@ -28,6 +28,7 @@ import net.corda.testing.node.StartedMockNode
 import net.corda.testing.node.TestCordapp
 import net.corda.testing.solana.SolanaTestValidator
 import net.corda.testing.solana.randomKeypairFile
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -250,13 +251,11 @@ abstract class FlowsTest {
         val tokenProxyState = bridgeAuthority.queryStates<BridgedFungibleTokenProxy>().firstOrNull()
         assertNotNull(tokenProxyState, "There should be BridgedFungibleTokenProxy state")
 
-        // TODO value from solana has no last trailing zero, however numerically is correct,
-        //  hence trimming 0 from the expected value, investigate
-        assertEquals(
-            MOVE_QUANTITY.stripTrailingZeros(),
-            getSolanaTokenBalance(aliceTokenAccount),
-            "Solana token amount equals Corda bridged amount",
-        )
+        // SPL Token RPC returns decimal strings with trailing zeros trimmed,
+        // BigDecimal.equals is scale-sensitive (1.0 != 1.00), so we compare numeric value instead.
+        assertThat(getSolanaTokenBalance(aliceTokenAccount))
+            .describedAs("Solana token amount numerically equals Corda bridged amount")
+            .isEqualByComparingTo(MOVE_QUANTITY)
 
         assertEquals(
             ISSUING_QUANTITY,
