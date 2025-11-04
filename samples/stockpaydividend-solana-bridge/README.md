@@ -89,7 +89,9 @@ These steps focus on bridging activities and not on dividend as in [Stock Cordap
 
 ##### 1. IssueStock - Stock Issuer
 WayneCo creates a StockState and issues some stock tokens associated to the created StockState.
->On company WayneCo's node, execute <br>`start IssueStock symbol: TEST, name: "Stock, SP500", currency: USD, price: 7.4, issueVol: 500, notary: "O=Notary Service, L=London, C=GB"`
+>On company WayneCo's node, execute <br>`start CreateAndIssueStock symbol: TEST, name: "Test Stock", currency: USD, price: 7.4, issueVol: 2000, notary: "O=Notary Service,L=Zurich,C=CH", linearId: 6116560b-c78e-4e13-871d-d666a5d032a3`
+
+`linearID` `6116560b-c78e-4e13-871d-d666a5d032a3` matches the configuration in Bridge Authority. TODO providing linearID will not be needed soon.
 
 ##### 2. MoveStock - Stock Issuer
 WayneCo transfers some stock tokens to the Shareholder.
@@ -100,9 +102,15 @@ Now at the Shareholder's terminal, we can see that it received 100 stock tokens:
 
 ##### 3. Bridge To Solana - Stock Issuer
 Shareholder transfers some stock tokens to the `Bridge Authority`.
->On company WayneCo's node, execute <br>`start MoveStock symbol: TEST, quantity: 60, recipient: "Bridging Authority"`
+>On company Shareholder's node, execute <br>`start MoveStock symbol: TEST, quantity: 60, recipient: "Bridging Authority"`
 
 Now at the Bridging Authority's terminal, we can see that it received 100 stock tokens:
 >On Bridging Authority node, execute <br>`start GetStockBalance symbol: TEST`
 
-Bridging Authority does not perform asset bridging to Solana yet.
+Bridging Authority performs asset bridging to Solana.
+You can check the current balance on Solana Account has increased:
+
+```bash
+spl-token balance --address $TOKEN_ACCOUNT
+spl-token display $TOKEN_ACCOUNT
+```
