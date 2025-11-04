@@ -190,7 +190,7 @@ abstract class FlowsTest {
         """.trimIndent()
 
     @Test
-    open fun bridgeTest() {
+    fun bridgeTest() {
         val aliceIdentity = alice.info.legalIdentities.first()
         val bridgeAuthorityIdentity = bridgeAuthority.info.legalIdentities.first()
 
