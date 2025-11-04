@@ -316,6 +316,11 @@ tasks.register<InstallSolanaBridgeConfig>("installSolanaBridgeConfig") {
     configFile.set(layout.buildDirectory.file("nodes/$node/cordapps/config/bridging-flows-1.0.conf"))
 }
 
+tasks.register<Exec>("setupSolanaAccounts") {
+    dependsOn("installSolanaNotaryDevKey")
+    commandLine( "bash", "-x", "$projectDir/setupSolanaAccounts.sh", solanaNotaryKeyPath)
+}
+
 // Adds passing TOML references for Cordform.nodeDefaults.cordapp property
 fun Node.cordapp(dep: Provider<MinimalExternalModuleDependency>) {
     val value : MinimalExternalModuleDependency = dep.get()

@@ -18,14 +18,22 @@ New network participants:
 * **Solana Notary** - ensures states are created on Solana Network
 
 ## Usage
-### Running the nodes
+
+### Running the nodes with Solana Dev Net
 
 Open a terminal and go to the project root directory and type: (to deploy the nodes using bootstrapper)
-```
+```bash
 ./gradlew clean samples:stockpaydividend-solana-bridge:installSolanaNotaryDevKey samples:stockpaydividend-solana-bridge:installSolanaBridgeConfig
 ```
-Then type: (to run the nodes)
+
+Create and fund Solana accounts for `Wayne Company` and the `Bridge Authority`, create `Mint` and `TokenAccount`:
+
+```bash
+./gradlew samples:stockpaydividend-solana-bridge:setupSolanaAccounts
 ```
+
+Then type: (to run the nodes)
+```bash
 ./samples/stockpaydividend-solana-bridge/build/nodes/runnodes
 ```
 
@@ -56,7 +64,7 @@ Now at the Shareholder's terminal, we can see that it received 100 stock tokens:
 >On shareholder node, execute <br>`start GetStockBalance symbol: TEST`
 
 ##### 3. Bridge To Solana - Stock Issuer
-Shareholder transfers some stock tokens to the Bridging Authority.
+Shareholder transfers some stock tokens to the `Bridge Authority`.
 >On company WayneCo's node, execute <br>`start MoveStock symbol: TEST, quantity: 60, recipient: "Bridging Authority"`
 
 Now at the Bridging Authority's terminal, we can see that it received 100 stock tokens:
