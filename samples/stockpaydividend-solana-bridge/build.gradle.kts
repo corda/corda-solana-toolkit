@@ -188,76 +188,53 @@ tasks.register<InstallSolanaNotaryDevKeyTask>("installSolanaNotaryDevKey") {
     outputDir.set(layout.buildDirectory.dir("solana-keys/dev-key"))
 }
 
-abstract class GenerateMockSolanaKeys : DefaultTask() {
+abstract class SetupAccounts : DefaultTask() {
+    @get:Input
+    abstract val notaryKeyPath: Property<String>
+
     @get:Input
     abstract val participants: ListProperty<String>
-
-    @get:Internal
-    abstract val outputDir: DirectoryProperty
 
     @get:OutputFiles
     abstract val participantKeyFiles: ConfigurableFileCollection
 
-    @get:OutputFile abstract val tokenMintKeyFile: RegularFileProperty
+    @get:OutputFile
+    abstract val tokenMintKeyFile: RegularFileProperty
 
-    @get:OutputFile abstract val bridgeAuthorityKeyFile: RegularFileProperty
+    @get:OutputFile
+    abstract val bridgeAuthorityKeyFile: RegularFileProperty
 
     @TaskAction
-    fun generate() {
-        val participantKeys = mutableSetOf<String>()
-        val tokenMintKey = generateMockSolanaKey()
-        val bridgeAuthorityKey = generateMockSolanaKey()
-
-        participantKeyFiles.files.forEach { file ->
-            file.parentFile.mkdirs()
-            val key = generateMockSolanaKey()
-            file.writeText(key)
-            participantKeys.add(key)
-        }
-
-        tokenMintKeyFile.get().asFile.apply {
-            parentFile.mkdirs()
-            writeText(tokenMintKey)
-        }
-
-        bridgeAuthorityKeyFile.get().asFile.apply {
-            parentFile.mkdirs()
-            writeText(bridgeAuthorityKey)
+    fun runScript() {
+        project.exec {
+            commandLine(
+                "bash", "-x",
+                project.layout.projectDirectory.file("setupSolanaAccounts.sh").asFile.absolutePath,
+                notaryKeyPath.get()
+            )
         }
 
         println("Generated mock Solana keys:")
-        println("  Participants:     $participantKeys")
-        println("  TokenMint:        $tokenMintKey")
-        println("  BridgeAuthority:  $bridgeAuthorityKey")
-    }
-
-    private fun generateMockSolanaKey(): String {
-        val base58Chars = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
-        return (1..44)
-            .map { base58Chars.random() }
-            .joinToString("")
+        println("  Participants:     $participantKeyFiles")
+        println("  TokenMint:        $tokenMintKeyFile")
+        println("  BridgeAuthority:  $bridgeAuthorityKeyFile")
     }
 }
 
-val generateKeys = tasks.register<GenerateMockSolanaKeys>("generateMockSolanaKeys") {
+val generateKeys = tasks.register<SetupAccounts>("setupSolanaAccounts") {
     dependsOn("deployNodes")
+    notaryKeyPath.set(solanaNotaryKeyPath)
     participants.set(listOf("O=WayneCo,L=SF,C=US"))
-    outputDir.set(layout.buildDirectory.dir("solana-keys"))
+    val outputDir = layout.buildDirectory.dir("solana-keys")
 
     participantKeyFiles.setFrom(
         participants.map { names ->
-            names.map { name -> outputDir.file("$name.pub") }
+            names.map { name -> outputDir.map { it.file("$name.pub") } }
         }
     )
 
     tokenMintKeyFile.set(layout.buildDirectory.file("solana-keys/tokenmint.pub"))
     bridgeAuthorityKeyFile.set(layout.buildDirectory.file("solana-keys/bridge.pub"))
-}
-
-// TODO replacement for generateMockSolanaKeys
-tasks.register<Exec>("setupSolanaAccounts") {
-    dependsOn("installSolanaNotaryDevKey")
-    commandLine( "bash", "-x", "$projectDir/setupSolanaAccounts.sh", solanaNotaryKeyPath)
 }
 
 abstract class InstallSolanaBridgeConfig : DefaultTask() {
