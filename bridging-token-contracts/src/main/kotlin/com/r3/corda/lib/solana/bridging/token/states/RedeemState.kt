@@ -16,7 +16,7 @@ data class RedeemState(
     val tokenTypeId: String,
     val originalOwner: AbstractParty,
     val bridgingAuthority: AbstractParty,
-    val lockId: UUID
+    val lockId: UUID,
 ) : ContractState {
     override val participants: List<AbstractParty>
         get() = listOf(bridgingAuthority)

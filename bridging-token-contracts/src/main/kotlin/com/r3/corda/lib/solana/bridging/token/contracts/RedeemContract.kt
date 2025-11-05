@@ -49,6 +49,7 @@ class RedeemContract : Contract {
 
     sealed interface RedeemCommand : CommandData {
         class IssueRedeemState : RedeemCommand
+
         class BurnOnSolana : RedeemCommand
     }
 }
