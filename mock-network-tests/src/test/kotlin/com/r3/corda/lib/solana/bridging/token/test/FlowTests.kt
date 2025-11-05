@@ -22,7 +22,12 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.TestIdentity
-import net.corda.testing.node.*
+import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.MockNetworkNotarySpec
+import net.corda.testing.node.MockNetworkParameters
+import net.corda.testing.node.MockNodeParameters
+import net.corda.testing.node.StartedMockNode
+import net.corda.testing.node.TestCordapp
 import net.corda.testing.solana.SolanaTestValidator
 import net.corda.testing.solana.randomKeypairFile
 import org.assertj.core.api.Assertions.assertThat
@@ -216,6 +221,7 @@ abstract class FlowTests {
         )
 
     @Test
+    @Suppress("LongMethod")
     fun bridgeTest() {
         val msftTokenType = issuingBank.issue(msftDescriptor, ISSUING_QUANTITY, generalNotaryName)
         val aaplTokenType = issuingBank.issue(aaplDescriptor, ISSUING_QUANTITY, generalNotaryName)
