@@ -59,7 +59,6 @@ class BridgingVerificationTests {
     val mintState = MintState(
         tokenIssuer,
         10000,
-        false,
         tokenAccount,
         mint,
         mintAuthority,
@@ -109,7 +108,7 @@ class BridgingVerificationTests {
                 )
                 output(
                     contractId,
-                    mintState.copy(minted = true, bridgeAuthority = bridgeAuthorityParty)
+                    mintState.copy(bridgeAuthority = bridgeAuthorityParty)
                 )
                 command(
                     listOf(bridgeAuthorityParty.owningKey),
@@ -151,7 +150,7 @@ class BridgingVerificationTests {
                         contractId,
                         mintState.copy(amount = 9999)
                     )
-                    `fails with`("BridgedFungibleTokenProxy must have the same amount as the locked token")
+                    `fails with`("MintState must have the same amount as the locked token")
                 }
 
                 tweak {
@@ -163,7 +162,7 @@ class BridgingVerificationTests {
                         contractId,
                         mintState.copy(amount = 10001)
                     )
-                    `fails with`("BridgedFungibleTokenProxy must have the same amount as the locked token")
+                    `fails with`("MintState must have the same amount as the locked token")
                 }
 
                 tweak {
@@ -222,7 +221,7 @@ class BridgingVerificationTests {
                         listOf(bridgeAuthorityParty.owningKey, confidentialIdentity.owningKey),
                         MoveTokenCommand(cordaIssuedTokenType.token, listOf(0), listOf(0))
                     )
-                    `fails with`("Bridging transactions must have a single bridging command")
+                    `fails with`("Mint transactions must have a single mint command")
                 }
                 tweak {
                     command(
@@ -250,7 +249,7 @@ class BridgingVerificationTests {
                         listOf(bridgeAuthorityParty.owningKey),
                         MintContract.MintCommand.MintToSolana
                     )
-                    `fails with`("Bridging transactions must have a single bridging command")
+                    `fails with`("Mint transactions must have a single mint command")
                 }
                 command(
                     listOf(bridgeAuthorityParty.owningKey, confidentialIdentity.owningKey),
@@ -312,7 +311,7 @@ class BridgingVerificationTests {
                 )
                 output(
                     contractId,
-                    mintState.copy(minted = true)
+                    mintState
                 )
                 command(
                     listOf(bridgeAuthorityParty.owningKey),
@@ -346,7 +345,7 @@ class BridgingVerificationTests {
                 )
                 output(
                     contractId,
-                    mintState.copy(minted = true)
+                    mintState
                 )
                 notaryInstruction(Token2022.mintTo(mint, tokenAccount, mintAuthority, 10000))
 
@@ -365,7 +364,7 @@ class BridgingVerificationTests {
                         listOf(bridgeAuthorityParty.owningKey),
                         MintContract.MintCommand.MintToSolana,
                     )
-                    `fails with`("Bridging transactions must have a single bridging command")
+                    `fails with`("Mint transactions must have a single mint command")
                 }
 
                 // one bridging command, one random command
@@ -375,7 +374,7 @@ class BridgingVerificationTests {
                         listOf(bridgeAuthorityParty.owningKey),
                         IssueTokenCommand(cordaIssuedTokenType.token, emptyList())
                     )
-                    `fails with`("Bridging transaction must only contain a single command")
+                    `fails with`("Mint transaction must only contain a single command")
                 }
 
                 verifies()
@@ -394,7 +393,7 @@ class BridgingVerificationTests {
                 )
                 output(
                     contractId,
-                    mintState.copy(minted = true)
+                    mintState
                 )
                 command(
                     listOf(bridgeAuthorityParty.owningKey),

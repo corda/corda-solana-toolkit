@@ -23,7 +23,7 @@ class MintContract : Contract {
     override fun verify(tx: LedgerTransaction) {
         val mintCommands = tx.commandsOfType<MintCommand>()
         val mintCommand = mintCommands.requireSingle {
-            "Bridging transactions must have a single bridging command"
+            "Mint transactions must have a single mint command"
         }
         when (val cmdData = mintCommand.value) {
             is MintCommand.LockToken -> verifyLockToken(tx, cmdData)
@@ -59,9 +59,8 @@ class MintContract : Contract {
         }
 
         require(outputToken.amount.quantity == tokenProxy.amount) {
-            "BridgedFungibleTokenProxy must have the same amount as the locked token"
+            "MintState must have the same amount as the locked token"
         }
-        require(!tokenProxy.minted) { "BridgedFungibleTokenProxy must not be marked as minted when issuing" }
 
         require(tx.commands.size == 2) {
             // Presence of individual commands had been verified till this point
@@ -77,7 +76,7 @@ class MintContract : Contract {
 
     private fun verifyMintToSolana(tx: LedgerTransaction) {
         val mintState = tx.inputsOfType<MintState>().requireSingle {
-            "Bridging transaction must have exactly one MintState as input"
+            "Mint to Solana transaction must have exactly one MintState as input"
         }
 
         val solanaInstruction = tx.notaryInstructionsOfType<SolanaInstruction>().requireSingle {
@@ -96,7 +95,7 @@ class MintContract : Contract {
         }
 
         require(tx.commands.size == 1) {
-            "Bridging transaction must only contain a single command"
+            "Mint transaction must only contain a single command"
         }
     }
 

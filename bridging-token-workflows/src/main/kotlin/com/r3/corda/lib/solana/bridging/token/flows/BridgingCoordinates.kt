@@ -16,7 +16,8 @@ import java.util.UUID
  * @property mintAuthority Public key that is authorized to mint for [mint] on Solana
  * (address controlled by the bridge).
  * @property mintDestination Token **wallet** public key that should receive the minted tokens on Solana.
- * @property redemptionOwner Public key that will own the redemption wallet on Solana and will be able to burn them during the redemption.
+ * @property bridgeRedemptionWallet Public key that will own the redemption wallet on Solana
+ * and will be able to burn them during the redemption.
  */
 data class BridgingCoordinates(
     val originalOwner: Party,
@@ -35,7 +36,6 @@ data class BridgingCoordinates(
         MintState(
             originalOwner = this.originalOwner,
             amount = token.amount.quantity,
-            minted = false,
             mint = this.mint,
             mintAuthority = this.mintAuthority,
             mintDestination = this.mintDestination,

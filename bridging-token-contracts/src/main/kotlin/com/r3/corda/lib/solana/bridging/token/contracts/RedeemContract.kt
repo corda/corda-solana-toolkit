@@ -7,20 +7,19 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.solana.sdk.instruction.SolanaInstruction
 import net.corda.solana.sdk.internal.Token2022
 
-@Suppress("MaxLineLength", "ArgumentListWrapping", "FunctionLiteral", "Wrapping", "FunctionSignature")
 class RedeemContract : Contract {
     override fun verify(tx: LedgerTransaction) {
         val bridgingCommands = tx.commandsOfType<RedeemCommand>()
 
         require(bridgingCommands.size == 1) { "Bridging transactions must have single bridging command" }
 
-        when (val bridgingCommand = bridgingCommands.single().value) {
+        when (bridgingCommands.single().value) {
             is RedeemCommand.IssueRedeemState -> verifyIssueRedeemState(tx)
-            is RedeemCommand.BurnOnSolana -> verifyBurnOnSolana(tx, bridgingCommand)
+            is RedeemCommand.BurnOnSolana -> verifyBurnOnSolana(tx)
         }
     }
 
-    private fun verifyBurnOnSolana(tx: LedgerTransaction, redeemCommand: RedeemCommand.BurnOnSolana) {
+    private fun verifyBurnOnSolana(tx: LedgerTransaction) {
         val redeemState = tx.inputsOfType<RedeemState>().singleOrNull()
         require(redeemState != null) { "Redemption requires exactly one input RedeemState" }
 

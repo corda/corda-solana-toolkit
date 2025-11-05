@@ -7,10 +7,12 @@ import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.workflows.flows.rpc.MoveFungibleTokens
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.StateAndRef
-import net.corda.core.flows.*
+import net.corda.core.flows.FinalityFlow
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.MoveNotaryFlow
+import net.corda.core.flows.StartableByService
 import net.corda.core.identity.Party
-import net.corda.core.node.services.Vault
-import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.toNonEmptySet
@@ -59,7 +61,9 @@ class RedeemTokenFlow(
         // Change notary to Solana notary
         val unlockLedgerTx = unlockTx.toLedgerTransaction(serviceHub)
         val redeemStateAndRef = unlockLedgerTx.outRefsOfType<RedeemState>().single()
-        val notaryChangeTx = subFlow(MoveNotaryFlow(listOf(redeemStateAndRef), solanaNotary)).single()
+        val notaryChangeTx = subFlow(
+            MoveNotaryFlow(listOf(redeemStateAndRef), solanaNotary)
+        ).single()
         val redeemTxState = notaryChangeTx.state
 
         serviceHub.vaultService
@@ -70,19 +74,6 @@ class RedeemTokenFlow(
                     .map { it.ref }
                     .toNonEmptySet()
             )
-
-        val states = serviceHub.vaultService
-            .queryBy(
-                FungibleToken::class.java,
-                QueryCriteria
-                    .VaultQueryCriteria(
-                        Vault.StateStatus.UNCONSUMED,
-                        softLockingCondition = QueryCriteria
-                            .SoftLockingCondition(
-                                QueryCriteria.SoftLockingType.UNLOCKED_ONLY
-                            )
-                    )
-            ).states
 
         // Return the moved tokens to the original holder
         subFlow(

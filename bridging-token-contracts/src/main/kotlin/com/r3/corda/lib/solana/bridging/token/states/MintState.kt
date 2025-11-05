@@ -28,7 +28,6 @@ import net.corda.solana.sdk.instruction.Pubkey
 data class MintState(
     val originalOwner: AbstractParty,
     val amount: Long,
-    val minted: Boolean,
     val mintDestination: Pubkey,
     val mint: Pubkey,
     val mintAuthority: Pubkey,

@@ -70,7 +70,9 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
                     val cordaOwnerName = checkNotNull(configHandler.redemptionOwners[burnSource]) {
                         "No Corda owner configured for Solana redemption account $burnSource"
                     }
-                    val coraOwner = checkNotNull(appServiceHub.networkMapCache.getPeerByLegalName(cordaOwnerName)) {
+                    val coraOwner = checkNotNull(
+                        appServiceHub.networkMapCache.getPeerByLegalName(cordaOwnerName)
+                    ) {
                         "No Corda owner found for Solana redemption account $burnSource"
                     }
                     onTokenReceivedCallback(
