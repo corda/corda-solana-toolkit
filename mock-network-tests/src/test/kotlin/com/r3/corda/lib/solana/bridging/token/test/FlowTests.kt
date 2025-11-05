@@ -209,19 +209,21 @@ abstract class FlowsTest {
 
         assertEquals(BigDecimal.ZERO, getSolanaTokenBalance(aliceMintTokenAccount), "Nothing on Solana")
 
-        issuingBank.startFlow(
-            MoveFungibleTokens(
-                Amount.fromDecimal(ISSUING_QUANTITY, msftTokenType),
-                aliceIdentity,
-            )
-        ).get()
+        issuingBank
+            .startFlow(
+                MoveFungibleTokens(
+                    Amount.fromDecimal(ISSUING_QUANTITY, msftTokenType),
+                    aliceIdentity,
+                )
+            ).get()
 
-        issuingBank.startFlow(
-            MoveFungibleTokens(
-                Amount.fromDecimal(ISSUING_QUANTITY, aaplTokenType),
-                aliceIdentity,
-            )
-        ).get()
+        issuingBank
+            .startFlow(
+                MoveFungibleTokens(
+                    Amount.fromDecimal(ISSUING_QUANTITY, aaplTokenType),
+                    aliceIdentity,
+                )
+            ).get()
 
         alice
             .startFlow(
@@ -279,7 +281,15 @@ abstract class FlowsTest {
             .isEqualByComparingTo(MOVE_QUANTITY)
 
         // Simulate redemption transfer for Alice account on Solana
-        testValidator.mintTo(aliceSigner, tokenMint, aliceRedemptionTokenAccount, (MOVE_QUANTITY.multiply(BigDecimal(1000L))).toLong(), mintAuthoritySigner)
+        testValidator
+            .mintTo(
+                aliceSigner,
+                tokenMint,
+                aliceRedemptionTokenAccount,
+                (MOVE_QUANTITY.multiply(BigDecimal(1000L)))
+                    .toLong(),
+                mintAuthoritySigner
+            )
         // We need to wait for the Sava listener to process the newly received event
         Thread.sleep(5000)
 

@@ -35,9 +35,8 @@ class RedeemTokenFlow(
     val tokenTypeId: String,
     val amount: Long,
     val solanaNotary: Party,
-    val lockingHolder: Party
+    val lockingHolder: Party,
 ) : FlowLogic<SignedTransaction>() {
-
     @Suspendable
     override fun call(): SignedTransaction {
         val bridgingService = serviceHub.cordaService(BridgingService::class.java)
@@ -63,13 +62,27 @@ class RedeemTokenFlow(
         val notaryChangeTx = subFlow(MoveNotaryFlow(listOf(redeemStateAndRef), solanaNotary)).single()
         val redeemTxState = notaryChangeTx.state
 
-        serviceHub.vaultService.softLockRelease(redeemTxState.data.lockId, unlockLedgerTx.outRefsOfType<FungibleToken>().map { it.ref }.toNonEmptySet())
+        serviceHub.vaultService
+            .softLockRelease(
+                redeemTxState.data.lockId,
+                unlockLedgerTx
+                    .outRefsOfType<FungibleToken>()
+                    .map { it.ref }
+                    .toNonEmptySet()
+            )
 
-        val states = serviceHub.vaultService.queryBy(
-            FungibleToken::class.java,
-            QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED, softLockingCondition = QueryCriteria.SoftLockingCondition(
-                QueryCriteria.SoftLockingType.UNLOCKED_ONLY))
-        ).states
+        val states = serviceHub.vaultService
+            .queryBy(
+                FungibleToken::class.java,
+                QueryCriteria
+                    .VaultQueryCriteria(
+                        Vault.StateStatus.UNCONSUMED,
+                        softLockingCondition = QueryCriteria
+                            .SoftLockingCondition(
+                                QueryCriteria.SoftLockingType.UNLOCKED_ONLY
+                            )
+                    )
+            ).states
 
         // Return the moved tokens to the original holder
         subFlow(

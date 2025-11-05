@@ -1,12 +1,10 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
-import co.paralleluniverse.fibers.Suspendable
 import com.r3.corda.lib.tokens.contracts.internal.schemas.PersistentFungibleToken
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.contracts.types.TokenType
 import com.r3.corda.lib.tokens.workflows.utilities.toParty
 import net.corda.core.contracts.StateAndRef
-import net.corda.core.flows.FlowSession
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.AppServiceHub
@@ -65,7 +63,9 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
                 listenForFungibleTokens(appServiceHub)
 
                 // Redemption initialization
-                val subscribed = socket.onToken2022ByOwner(configHandler.bridgeRedemptionWallet) { _, burnSource, mint, amount ->
+                val subscribed = socket.onToken2022ByOwner(
+                    configHandler.bridgeRedemptionWallet
+                ) { _, burnSource, mint, amount ->
                     val tokenId = configHandler.getTokenIdentifierByMint(mint)
                     val cordaOwnerName = checkNotNull(configHandler.redemptionOwners[burnSource]) {
                         "No Corda owner configured for Solana redemption account $burnSource"
@@ -82,7 +82,10 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
                     )
                 }
                 if (!subscribed) {
-                    logger.error("Failed to subscribe to ${socket.wsUrl} for wallet ${configHandler.bridgeRedemptionWallet}")
+                    logger
+                        .error(
+                            "Failed to subscribe to ${socket.wsUrl} for wallet ${configHandler.bridgeRedemptionWallet}"
+                        )
                 }
             }
 
@@ -95,7 +98,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         cordaOwner: Party,
         amount: Long,
         tokenId: String,
-        burnSource: Pubkey
+        burnSource: Pubkey,
     ) {
         logger.debug { "Web socket event for $solanaOwner amount $amount" }
         if (amount == 0L) {

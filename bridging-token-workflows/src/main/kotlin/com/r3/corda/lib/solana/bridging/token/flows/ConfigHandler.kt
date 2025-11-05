@@ -69,9 +69,10 @@ class ConfigHandler(private val appServiceHub: AppServiceHub) {
         }
     }
 
-    fun getTokenIdentifierByMint(mint: Pubkey) = mints.firstNotNullOf {
-        it.takeIf { it.value == mint }
-    }.key
+    fun getTokenIdentifierByMint(mint: Pubkey) = mints
+        .firstNotNullOf {
+            it.takeIf { it.value == mint }
+        }.key
 
     @Suppress("UNCHECKED_CAST")
     private inline fun <K, V> CordappConfig.getMap(
@@ -110,6 +111,13 @@ class ConfigHandler(private val appServiceHub: AppServiceHub) {
         val mintAuthority = checkNotNull(mintAuthorities[tokenTypeId]) {
             "No mint authority mapping found for token type id $tokenTypeId"
         }
-        return BridgingCoordinates(originalHolder, tokenTypeId, mint, mintAuthority, destination, bridgeRedemptionWallet)
+        return BridgingCoordinates(
+            originalHolder,
+            tokenTypeId,
+            mint,
+            mintAuthority,
+            destination,
+            bridgeRedemptionWallet
+        )
     }
 }

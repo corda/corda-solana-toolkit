@@ -24,7 +24,7 @@ data class BridgingCoordinates(
     val mint: Pubkey,
     val mintAuthority: Pubkey,
     val mintDestination: Pubkey,
-    val bridgeRedemptionWallet: Pubkey
+    val bridgeRedemptionWallet: Pubkey,
 ) {
     /**
      * Creates an unminted [MintState].
@@ -50,7 +50,7 @@ data class BridgingCoordinates(
         burnSource: Pubkey,
         amount: Long,
         bridgeAuthority: Party,
-        lockId: UUID
+        lockId: UUID,
     ) = RedeemState(
         burnSource = burnSource,
         bridgeRedemptionWallet = bridgeRedemptionWallet,

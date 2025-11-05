@@ -42,7 +42,7 @@ class MintTokenFlow(
 ) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
-        val bridgingService= serviceHub.cordaService(BridgingService::class.java)
+        val bridgingService = serviceHub.cordaService(BridgingService::class.java)
         val bridgingCoordinates = bridgingService.configHandler.getBridgingCoordinates(token, originalHolder)
 
         // Move the token from ourIdentity (implied BridgeAuthority) to the lock holder (confidential identity).
