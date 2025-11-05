@@ -43,8 +43,7 @@ class RedeemTokenFlow(
         val bridgingService = serviceHub.cordaService(BridgingService::class.java)
         val bridgingCoordinates = bridgingService.configHandler.getBridgingCoordinates(tokenTypeId, originalHolder)
         val token = bridgingService.findTokenTypeOfFungibleTokenBy(tokenTypeId)
-        val moveAmount = Amount.fromDecimal(BigDecimal.valueOf(amount), token)
-
+        val moveAmount = Amount.fromDecimal(BigDecimal.valueOf(amount).multiply(token.displayTokenSize), token)
         // Move the token from ourIdentity (implied BridgeAuthority) to the lock holder (confidential identity).
         // Also, create a RedeemState that will be later used to mint the tokens on Solana
         val unlockTx =

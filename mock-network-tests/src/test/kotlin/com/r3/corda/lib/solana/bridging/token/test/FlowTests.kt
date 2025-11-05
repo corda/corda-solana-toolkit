@@ -207,7 +207,7 @@ abstract class FlowsTest {
         val msftTokenType = issuingBank.issue(msftDescriptor, ISSUING_QUANTITY, generalNotaryName)
         val aaplTokenType = issuingBank.issue(aaplDescriptor, ISSUING_QUANTITY, generalNotaryName)
 
-        assertEquals(0, getSolanaTokenBalance(aliceMintTokenAccount), "Nothing on Solana")
+        assertEquals(BigDecimal.ZERO, getSolanaTokenBalance(aliceMintTokenAccount), "Nothing on Solana")
 
         issuingBank.startFlow(
             MoveFungibleTokens(
@@ -279,7 +279,7 @@ abstract class FlowsTest {
             .isEqualByComparingTo(MOVE_QUANTITY)
 
         // Simulate redemption transfer for Alice account on Solana
-        testValidator.mintTo(aliceSigner, tokenMint, aliceRedemptionTokenAccount, MOVE_QUANTITY.toLong(), mintAuthoritySigner)
+        testValidator.mintTo(aliceSigner, tokenMint, aliceRedemptionTokenAccount, (MOVE_QUANTITY.multiply(BigDecimal(1000L))).toLong(), mintAuthoritySigner)
         // We need to wait for the Sava listener to process the newly received event
         Thread.sleep(5000)
 
