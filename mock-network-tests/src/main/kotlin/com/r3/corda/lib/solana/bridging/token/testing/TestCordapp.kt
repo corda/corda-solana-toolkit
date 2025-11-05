@@ -17,12 +17,13 @@ import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
+import java.math.BigDecimal
 
 @InitiatingFlow
 @StartableByRPC
 class IssueSimpleTokenFlow(
     private val mint: TokenType,
-    private val quantity: Long,
+    private val quantity: BigDecimal,
     private val notaryName: CordaX500Name,
 ) : FlowLogic<SignedTransaction>() {
     @Suspendable
