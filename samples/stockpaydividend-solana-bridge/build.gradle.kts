@@ -178,7 +178,6 @@ tasks.register<InstallSolanaNotaryDevKeyTask>("installSolanaNotaryDevKey") {
     keyFileName.set(solanaNotaryKeyFileName)
     outputDir.set(layout.buildDirectory.dir("solana-keys/dev-key"))
 }
-tasks.named("deployNodes") { finalizedBy("installSolanaNotaryDevKey") }
 
 abstract class SetupAccounts : DefaultTask() {
     @get:Input
