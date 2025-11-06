@@ -22,10 +22,9 @@ Bridging activities requires additional parties:
 
 Once off you need to build and publish locally 'Stockbuydivided' CordApp:
 ```bash
-cd samples/stockpaydividend-solana-bridge
-./build-stock-pay-dividend-cordapp.sh
-cd ../..
+./samples/stockpaydividend-solana-bridge/build-stock-pay-dividend-cordapp.sh
 ```
+This will check the project into sibling directory 'tmp' (after running the script you can remove it `rm -r -f tmp`)
 
 Open a terminal and go to the project root directory and type: (to deploy the nodes using bootstrapper)
 ```bash

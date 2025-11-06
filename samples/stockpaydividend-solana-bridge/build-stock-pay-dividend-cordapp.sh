@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+cd ..
 mkdir tmp
 cd tmp
 git clone https://github.com/corda/samples-kotlin.git
