@@ -50,8 +50,6 @@ dependencyResolutionManagement {
             url = uri("https://software.r3.com/artifactory/r3-corda-dev")
             credentials { artifactory(this) }
         }
-        // For compiling Cordapp from Github samples-kotlin to use in samples/stockpaydividend-solana-bridge
-        maven { url = uri("https://jitpack.io") }
     }
 }
 

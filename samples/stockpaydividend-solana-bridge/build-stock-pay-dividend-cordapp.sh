@@ -5,11 +5,10 @@ mkdir tmp
 cd tmp
 git clone https://github.com/corda/samples-kotlin.git
 cd samples-kotlin
-git checkout release/4.12
 cd Tokens/stockpaydividend
 
 # Amend build file to publish locally  ~/.m2/repository/com/stockpaydividend/contracts/1.0/contracts-1.0.jar
-cat >> "contracts/build.gradle" << 'EOF'
+cat >> "contracts/build.gradle" << 'EndOfTextToCopy'
 
 apply plugin: 'maven-publish'
 
@@ -21,10 +20,10 @@ publishing {
         }
     }
 }
-EOF
+EndOfTextToCopy
 
 # Amend build file to publish locally  ~/.m2/repository/com/stockpaydividend/workflows/1.0/workflows-1.0.jar
-cat >> "workflows/build.gradle" << 'EOF'
+cat >> "workflows/build.gradle" << 'EndOfTextToCopy'
 
 apply plugin: 'maven-publish'
 
@@ -36,7 +35,7 @@ publishing {
         }
     }
 }
-EOF
+EndOfTextToCopy
 
 ./gradlew publishToMavenLocal
 
