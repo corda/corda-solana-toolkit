@@ -304,6 +304,12 @@ abstract class FlowsTest {
             alice.myTokenBalance(issuingBankIdentity, msftTokenType),
             "Alice received redeemed MSFT shares back",
         )
+        val msftFungibleTokens = bridgeAuthority
+            .getAllFungibleTokens(issuingBankIdentity, msftTokenType)
+        assertTrue(
+            msftFungibleTokens.isEmpty(),
+            "No  MSFT shares left in Bridge Authority vault",
+        )
     }
 
     private inline fun <reified T : ContractState> StartedMockNode.queryStates(): List<StateAndRef<T>> {
@@ -323,13 +329,12 @@ abstract class FlowsTest {
     }
 
     private fun StartedMockNode.getAllFungibleTokens(issuer: Party, stock: TokenType): List<FungibleToken> {
-        val fungibleToken = this
+        val fungibleTokenType = this
             .startFlow(QuerySimpleTokensFlow(issuer, stock))
             .get()
-            .first()
-            .state.data.tokenType
+            .firstOrNull() ?: return emptyList()
         return this.services.vaultService
-            .tokenAmountsByToken(fungibleToken)
+            .tokenAmountsByToken(fungibleTokenType.state.data.tokenType)
             .states
             .map { it.state.data }
     }
