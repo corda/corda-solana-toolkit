@@ -10,7 +10,7 @@ corda-plugin = "5.1.3"
 samples-kotlin = "94f90ceb81cba943f196b9acfba55ade6701f131" # for a sample Corddap deployment refresh to a commit in samples-kotlin repo with amendments for Jitpack
 
 [libraries]
-corda = { module = "net.corda:corda", version.ref = "corda-os" }
+corda-node = { module = "net.corda:corda", version.ref = "corda-os" }
 corda-core = { module = "net.corda:corda-core", version.ref = "corda-os" }
 tokens-contracts = { module = "com.r3.corda.lib.tokens:tokens-contracts", version.ref = "tokens-sdk" }
 tokens-workflows = { module = "com.r3.corda.lib.tokens:tokens-workflows", version.ref = "tokens-sdk" }

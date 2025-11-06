@@ -10,7 +10,7 @@ plugins {
 }
 
 dependencies {
-    corda(libs.corda)
+    corda(libs.corda.node)
     cordaBootstrapper(libs.corda.node.api)
     cordaDriver(libs.corda.shell)
 
@@ -122,7 +122,7 @@ tasks.register<Cordform>("deployNodes") {
         }
         rpcUsers = commonRpcUser
         cordapp(project(":bridging-token-contracts"))
-        //cordapp(project(":bridging-token-workflows")) //TODO endable once there is a cordapp
+        cordapp(project(":bridging-token-workflows"))
     }
 }
 
