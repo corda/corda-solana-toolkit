@@ -66,20 +66,6 @@ class RedeemTokenFlow(
         ).single()
         val redeemTxState = notaryChangeTx.state
 
-        serviceHub.vaultService
-            .softLockRelease(
-                redeemTxState.data.lockId,
-                unlockLedgerTx
-                    .outRefsOfType<FungibleToken>()
-                    .map { it.ref }
-                    .toNonEmptySet()
-            )
-
-        // Return the moved tokens to the original holder
-        subFlow(
-            MoveFungibleTokens(moveAmount, originalHolder)
-        )
-
         // Burn on Solana
         val transactionBuilder = TransactionBuilder(solanaNotary)
         val instruction = with(redeemTxState.data) {
@@ -102,6 +88,23 @@ class RedeemTokenFlow(
         // Verify
         transactionBuilder.verify(serviceHub)
         val bridgingAuthoritySignedTransaction = serviceHub.signInitialTransaction(transactionBuilder)
-        return subFlow(FinalityFlow(bridgingAuthoritySignedTransaction, emptyList()))
+
+        subFlow(FinalityFlow(bridgingAuthoritySignedTransaction, emptyList()))
+
+        // Return the moved tokens to the original holder
+
+        // First, release the soft lock on the moved tokens
+        serviceHub.vaultService
+            .softLockRelease(
+                redeemTxState.data.lockId,
+                unlockLedgerTx
+                    .outRefsOfType<FungibleToken>()
+                    .map { it.ref }
+                    .toNonEmptySet()
+            )
+
+        return subFlow(
+            MoveFungibleTokens(moveAmount, originalHolder)
+        )
     }
 }
