@@ -18,7 +18,6 @@ Bridging activities requires additional parties:
 * **Solana Notary** - ensures tokens are created on Solana Network
 
 ## Usage
-
 ### Running the nodes with Solana Dev Net
 
 Open a terminal and go to the project root directory and type: (to deploy the nodes using bootstrapper)
@@ -79,7 +78,7 @@ When started via the command line, each node will display an interactive shell:
     Welcome to the Corda interactive shell.
     Useful commands include 'help' to see what is available, and 'bye' to shut down the node.
 
-    Thu Oct 23 11:54:18 BST 2025>
+    Thu Oct 23 11:54:18 BST 2025>>>
 
 You can use this shell to interact with your node.
 
