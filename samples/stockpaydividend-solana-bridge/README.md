@@ -20,6 +20,13 @@ Bridging activities requires additional parties:
 ## Usage
 ### Running the nodes
 
+Once off you need to build and publish locally 'Stockbuydivided' CordApp:
+```bash
+cd samples/stockpaydividend-solana-bridge
+./build-stock-pay-dividend-cordapp.sh
+cd ../..
+```
+
 Open a terminal and go to the project root directory and type: (to deploy the nodes using bootstrapper)
 ```bash
 ./gradlew clean samples:stockpaydividend-solana-bridge:deployNodes

@@ -7,7 +7,6 @@ tokens-sdk = "1.3.2"
 artifactory = "6.0.2"
 detekt = "2.0.0-alpha.0"
 corda-plugin = "5.1.3"
-samples-kotlin = "94f90ceb81cba943f196b9acfba55ade6701f131" # for a sample Corddap deployment refresh to a commit in samples-kotlin repo with amendments for Jitpack
 
 [libraries]
 corda-node = { module = "net.corda:corda", version.ref = "corda-os" }
@@ -26,9 +25,6 @@ mockito-core = { module = "org.mockito:mockito-core", version = "5.5.0" } # ledg
 # Libraries for a sample Corddap deployment
 corda-node-api = { module = "net.corda:corda-node-api", version.ref = "corda-os" }
 corda-shell = { module = "net.corda:corda-shell", version.ref = "corda-os-shell" }
-# Expliclty added 'stockpaydividend' to the name to denote which Cordapp from samples it is, Jitpack publishes the cordapp as 'samples-kotlin' only
-samples-kotlin-stockpaydividend-contracts = { module= "com.github.corda.samples-kotlin:contracts", version.ref = "samples-kotlin" }
-samples-kotlin-stockpaydividend-workflows = { module= "com.github.corda.samples-kotlin:workflows", version.ref = "samples-kotlin" }
 
 [plugins]
 cordapp = { id = "net.corda.plugins.cordapp", version = "5.1.3" }
