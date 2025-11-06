@@ -2,7 +2,6 @@ package com.r3.corda.lib.solana.bridging.token.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import com.r3.corda.lib.solana.bridging.token.contracts.RedeemContract
-import com.r3.corda.lib.solana.bridging.token.states.toDecimalAmount
 import com.r3.corda.lib.tokens.contracts.states.AbstractToken
 import com.r3.corda.lib.tokens.contracts.types.IssuedTokenType
 import com.r3.corda.lib.tokens.contracts.types.TokenType
@@ -59,7 +58,7 @@ constructor(
 
         val redeemState = bridgingCoordinates.toRedeemState(
             burnSource = burnSource,
-            amount = amount.toDecimalAmount(),
+            amount = amount.quantity,
             bridgeAuthority = bridgeAuthority,
             transactionBuilder.lockId
         )
