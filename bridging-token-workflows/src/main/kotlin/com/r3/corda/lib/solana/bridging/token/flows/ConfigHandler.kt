@@ -12,7 +12,7 @@ import net.corda.core.node.AppServiceHub
 import net.corda.solana.sdk.instruction.Pubkey
 import java.util.*
 
-class ConfigHandler(private val appServiceHub: AppServiceHub) {
+class ConfigHandler(appServiceHub: AppServiceHub) {
     private val participants: Map<CordaX500Name, Pubkey>
     private val mints: Map<String, Pubkey>
     private val mintAuthorities: Map<String, Pubkey>
