@@ -81,6 +81,10 @@ tasks.register<Cordform>("deployNodes") {
             adminAddress("localhost:10036")
         }
         rpcUsers = commonRpcUser
+        cordapp(libs.tokens.workflows) {
+            // Config to set a default notary to prevent the stock issuance flow to choose the second notary (Solana Notary)
+            config("""notary = "O=Notary Service,L=London,C=GB"""")
+        }
     }
     node {
         name("O=Shareholder,L=New York,C=US")
@@ -122,21 +126,14 @@ tasks.register<Cordform>("deployNodes") {
     }
 }
 
-// After adding second Notary (Solana Notary) the stock issuance flow may use a wrong notary,
-// set the original notary as the default one for the cordapp for WayneCo node.
-tasks.register("writeCordappConfig") {
-    dependsOn("deployNodes")
-    doLast {
-            val dir = layout.buildDirectory.dir("nodes/WayneCo/cordapps/config").get().asFile
-            dir.mkdirs()
-            val cfgFile = File(dir, "tokens-workflows-1.3.2.conf")
-            cfgFile.writeText("\"notary\" = \"O=Notary Service,L=London,C=GB\"\n")
-    }
-}
-tasks.named("deployNodes") { finalizedBy("writeCordappConfig") }
-
-// Adds passing TOML references for Cordform.nodeDefaults.cordapp property
+// Adds Cordform 'cordapp' method override accept TOML reference
 fun Node.cordapp(dep: Provider<MinimalExternalModuleDependency>) {
     val value : MinimalExternalModuleDependency = dep.get()
     cordapp("${value.module.group}:${value.module.name}:${value.versionConstraint.requiredVersion}")
+}
+
+// Adds Cordform 'cordapp' method override accept TOML reference
+fun Node.cordapp(dep: Provider<MinimalExternalModuleDependency>, action: Action<in net.corda.plugins.Cordapp>) {
+    val value : MinimalExternalModuleDependency = dep.get()
+    cordapp("${value.module.group}:${value.module.name}:${value.versionConstraint.requiredVersion}", action)
 }
