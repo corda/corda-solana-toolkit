@@ -22,14 +22,14 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
     val solanaWsUrl: String
     val solanaRpcUrl: String
     val bridgeRedemptionWallet: Pubkey
-    val redemptionOwners: Map<Pubkey, CordaX500Name>
+    val redemptionHolders: Map<Pubkey, CordaX500Name>
 
     init {
         val config = appServiceHub.getAppContext().config
         participants = config.getMap("participants", CordaX500Name::parse, Pubkey::fromBase58)
         mints = config.getMap("mints", { it }, Pubkey::fromBase58)
         mintAuthorities = config.getMap("mintAuthorities", { it }, Pubkey::fromBase58)
-        redemptionOwners = config.getMap("redemptionOwners", Pubkey::fromBase58, CordaX500Name::parse)
+        redemptionHolders = config.getMap("redemptionHolders", Pubkey::fromBase58, CordaX500Name::parse)
         bridgeAuthority = appServiceHub.myInfo.legalIdentitiesAndCerts.first()
         lockingIdentity = getLockingIdentity(config, appServiceHub)
         solanaNotary = getSolanaNotary(config, appServiceHub)

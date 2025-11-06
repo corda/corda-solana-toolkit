@@ -10,7 +10,7 @@ import java.util.UUID
 /**
  * Holds the necessary metadata to bridge a Corda token to Solana Token.
  *
- * @property originalOwner The Corda identity that owns the original fungible token being bridged.
+ * @property redemptionHolder The Corda identity that owns the original fungible token being bridged.
  * @property tokenTypeId The unique identifier for the type of token being bridged.
  * @property mint Token **mint** public key on Solana (the asset definition).
  * @property mintAuthority Public key that is authorized to mint for [mint] on Solana
@@ -20,7 +20,7 @@ import java.util.UUID
  * and will be able to burn them during the redemption.
  */
 data class BridgingCoordinates(
-    val originalOwner: Party,
+    val redemptionHolder: Party,
     val tokenTypeId: String,
     val mint: Pubkey,
     val mintAuthority: Pubkey,
@@ -34,7 +34,7 @@ data class BridgingCoordinates(
      */
     fun toMintState(token: FungibleToken, bridgeAuthority: Party) =
         MintState(
-            originalOwner = this.originalOwner,
+            redemptionHolder = this.redemptionHolder,
             amount = token.amount.quantity,
             mint = this.mint,
             mintAuthority = this.mintAuthority,
@@ -57,7 +57,7 @@ data class BridgingCoordinates(
         mint = mint,
         amount = amount,
         tokenTypeId = tokenTypeId,
-        originalOwner = originalOwner,
+        redemptionHolder = redemptionHolder,
         bridgingAuthority = bridgeAuthority,
         lockId = lockId
     )

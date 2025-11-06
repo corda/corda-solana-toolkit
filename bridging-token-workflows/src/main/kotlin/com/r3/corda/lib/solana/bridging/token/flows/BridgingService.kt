@@ -67,7 +67,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
                     configHandler.bridgeRedemptionWallet
                 ) { _, burnSource, mint, amount ->
                     val tokenId = configHandler.getTokenIdentifierByMint(mint)
-                    val cordaOwnerName = checkNotNull(configHandler.redemptionOwners[burnSource]) {
+                    val cordaOwnerName = checkNotNull(configHandler.redemptionHolders[burnSource]) {
                         "No Corda owner configured for Solana redemption account $burnSource"
                     }
                     val coraOwner = checkNotNull(

@@ -14,7 +14,7 @@ data class RedeemState(
     val mint: Pubkey,
     val amount: Long,
     val tokenTypeId: String,
-    val originalOwner: AbstractParty,
+    val redemptionHolder: AbstractParty,
     val bridgingAuthority: AbstractParty,
     val lockId: UUID,
 ) : ContractState {
