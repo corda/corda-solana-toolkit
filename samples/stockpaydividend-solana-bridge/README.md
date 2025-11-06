@@ -100,7 +100,7 @@ Now at the Shareholder's terminal, we can see that it received 100 stock tokens:
 
 ##### 3. Bridge To Solana - Stock Issuer
 Shareholder transfers some stock tokens to the Bridge Authority.
->On company Shareholder's node, execute <br>`start MoveStock symbol: TEST, quantity: 60, recipient: "Bridging Authority"`
+>On shareholder node, execute <br>`start MoveStock symbol: TEST, quantity: 60, recipient: "Bridge Authority"`
 
 Now at the Bridge Authority's terminal, we can see that it received 100 stock tokens:
 >On Bridge Authority node, execute <br>`start GetStockBalance symbol: TEST`
