@@ -35,7 +35,7 @@ tasks.register<Cordform>("deployNodes") {
     dependsOn(
         project(":bridging-token-contracts").tasks.named("jar"),
         project(":bridging-token-workflows").tasks.named("jar"),
-        "installSolanaNotaryDevKey"
+        "installSolanaNotaryDevKey",
     )
     val commonRpcUser =  listOf(
         mapOf(
@@ -74,8 +74,8 @@ tasks.register<Cordform>("deployNodes") {
             "validating" to "false",
             "serviceLegalName" to "O=Solana Notary Service,L=Washington,C=US",
             "solana" to mapOf(
-                "notaryKeypairFile" to file(solanaNotaryKeyPath).absolutePath,
-                "custodiedKeysDir" to file(custodiedKeysDirectory).absolutePath,
+                "notaryKeypairFile" to installSolanaNotaryDevKey.get().keyFile.asFile.get().absolutePath,
+                // TODO "custodiedKeysDir"
                 "rpcUrl" to "https://api.devnet.solana.com"
             )
         )
@@ -146,36 +146,37 @@ abstract class InstallSolanaNotaryDevKeyTask : DefaultTask() {
     abstract val keyFileName: Property<String>
 
     @get:OutputDirectory
-    abstract val outputDir: DirectoryProperty
+    abstract val keyFile: RegularFileProperty
 
     @TaskAction
     fun install() {
-        val outDirFile = outputDir.get().asFile
-        if (outDirFile.exists()) {
-            outDirFile.setWritable(true, true)
-            outDirFile.deleteRecursively()
+        val dirFile = keyFile.get().asFile.parentFile
+        if (dirFile.exists()) {
+            dirFile.setWritable(true, true)
+            dirFile.deleteRecursively()
         }
-        outDirFile.mkdirs()
+        dirFile.mkdirs()
         cordapps.forEach { jar ->
             project.zipTree(jar).matching {
                 include("dev-key/${keyFileName.get()}")
             }.files.forEach { sourceFile ->
-                val destFile = outDirFile.resolve(sourceFile.name)
+                val destFile = dirFile.resolve(sourceFile.name)
                 sourceFile.copyTo(destFile, overwrite = true)
             }
         }
-        println("Dev Key Extracted to: ${outDirFile.absolutePath}")
+        println("Solana Notary Development Key Dev extracted to: ${keyFile.get().asFile.absolutePath}")
     }
 }
 
-tasks.register<InstallSolanaNotaryDevKeyTask>("installSolanaNotaryDevKey") {
+val installSolanaNotaryDevKey = tasks.register<InstallSolanaNotaryDevKeyTask>("installSolanaNotaryDevKey") {
     val detached = configurations.detachedConfiguration(
         //dependencies.create("com.r3.corda.lib.solana:bridging-token-workflows:0.1.0-SNAPSHOT") // for project outside this repo
         dependencies.create(project(":bridging-token-workflows"))
     )
     cordapps.from(detached)
+    val solanaNotaryKeyFileName = "Dev7chG99tLCAny3PNYmBdyhaKEVcZnSTp3p1mKVb5m5.json"
     keyFileName.set(solanaNotaryKeyFileName)
-    outputDir.set(layout.buildDirectory.dir("solana-keys/dev-key"))
+    keyFile.set(layout.buildDirectory.file("solana-keys/dev-key/$solanaNotaryKeyFileName"))
 }
 
 abstract class SetupAccounts : DefaultTask() {
