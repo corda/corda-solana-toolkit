@@ -1,21 +1,21 @@
 # Stock Bridging To Solana Sample
 
-This demo aims to demonstrate how to bridge Corda states built with [TokenSDK](https://training.corda.net/libraries/tokens-sdk/) to Solana Network via additional participant "Bridging Authority"
-and Solana Notary.
-An unmodified [Stock Cordapp](https://github.com/corda/samples-kotlin/tree/release/4.12/Tokens/stockpaydividend)
-is deployed to several parties (the same as in [Stock Cordapp](https://github.com/corda/samples-kotlin/tree/release/4.12/Tokens/stockpaydividend) demo).
+This demo shows how to bridge Corda states built with [Token SDK]((https://training.corda.net/libraries/tokens-sdk/))
+to the Solana network via an additional participant, the Bridge Authority, and a Solana Notary.
+As a sample application, the unmodified [Stock CorDapp](https://github.com/corda/samples-kotlin/tree/release/4.12/Tokens/stockpaydividend)
+is deployed to several parties (the same party set as in the original Stock CorDapp demo).
 
 ### Parties
 
-[Stock Cordapp](https://github.com/corda/samples-kotlin/tree/release/4.12/Tokens/stockpaydividend) assumes there are 4 parties:
+Stock CorDapp assumes there are 4 parties:
 * **WayneCo** - creates the stock state.
 * **Shareholder** - owns the stock and bridge shares to Solana Network.
 * **Bank** - issues fiat tokens.
 * **Observer** - monitors all the stocks by keeping a copy of transactions whenever a stock is created or updated.
 
-New network participants:
+Bridging activities requires additional parties:
 * **Bridging Authority** - performs bridging by running "Corda-Solana-Toolkit" Cordapp
-* **Solana Notary** - ensures states are created on Solana Network
+* **Solana Notary** - ensures tokens are created on Solana Network
 
 ## Usage
 
