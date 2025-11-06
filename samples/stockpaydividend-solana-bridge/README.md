@@ -20,11 +20,13 @@ Bridging activities requires additional parties:
 ## Usage
 ### Running the nodes with Solana Dev Net
 
-Open a terminal and go to the project root directory and type: (to deploy the nodes using bootstrapper)
+Open a terminal and go to the project root directory and type:
 ```bash
 ./gradlew samples:stockpaydividend-solana-bridge:deployNodes
 ```
-Create and fund Solana accounts for `Wayne Company` and the `Bridge Authority`, create `Mint` and `TokenAccount`:
+This will create Solana keys and accounts (Create and fund Solana accounts for `Wayne Company` and the `Bridge Authority`, create `Mint` and `TokenAccount`)
+and deploy the nodes using bootstrapper.
+To finish configuration, the last task creates Bridge Authority configuration with Solana public keys:
 ```bash
 ./gradlew samples:stockpaydividend-solana-bridge:installSolanaBridgeConfig
 ```

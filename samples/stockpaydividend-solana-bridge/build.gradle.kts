@@ -27,15 +27,12 @@ dependencies {
     cordapp(libs.samples.kotlin.stockpaydividend.workflows)
 }
 
-val solanaNotaryKeyFileName = "Dev7chG99tLCAny3PNYmBdyhaKEVcZnSTp3p1mKVb5m5.json"
-val solanaNotaryKeyPath = "${layout.buildDirectory.get()}/solana-keys/dev-key/$solanaNotaryKeyFileName" // TODO this should be an input field (output from installSolanaNotaryDevKey task)
-val custodiedKeysDirectory = "${layout.buildDirectory.get()}/custodied-keys"  // TODO if this should be output from Solana keys generation task this would flip the dependency, which is fine
-
 tasks.register<Cordform>("deployNodes") {
     dependsOn(
         project(":bridging-token-contracts").tasks.named("jar"),
         project(":bridging-token-workflows").tasks.named("jar"),
         "installSolanaNotaryDevKey",
+        "setupSolanaAccounts"
     )
     val commonRpcUser =  listOf(
         mapOf(
@@ -75,7 +72,7 @@ tasks.register<Cordform>("deployNodes") {
             "serviceLegalName" to "O=Solana Notary Service,L=Washington,C=US",
             "solana" to mapOf(
                 "notaryKeypairFile" to installSolanaNotaryDevKey.get().keyFile.asFile.get().absolutePath,
-                // TODO "custodiedKeysDir"
+                "custodiedKeysDir" to generateKeys.get().custodiedKeysDirectory.asFile.get().absolutePath,
                 "rpcUrl" to "https://api.devnet.solana.com"
             )
         )
@@ -145,7 +142,7 @@ abstract class InstallSolanaNotaryDevKeyTask : DefaultTask() {
     @get:Input
     abstract val keyFileName: Property<String>
 
-    @get:OutputDirectory
+    @get:OutputFile
     abstract val keyFile: RegularFileProperty
 
     @TaskAction
@@ -180,8 +177,8 @@ val installSolanaNotaryDevKey = tasks.register<InstallSolanaNotaryDevKeyTask>("i
 }
 
 abstract class SetupAccounts : DefaultTask() {
-    @get:Input
-    abstract val notaryKeyPath: Property<String>
+    @get:InputFile
+    abstract val notaryKeyFile: RegularFileProperty
 
     @get:Input
     abstract val participants: ListProperty<String>
@@ -195,13 +192,16 @@ abstract class SetupAccounts : DefaultTask() {
     @get:OutputFile
     abstract val bridgeAuthorityKeyFile: RegularFileProperty
 
+    @get:OutputDirectory
+    abstract val custodiedKeysDirectory: DirectoryProperty
+
     @TaskAction
     fun runScript() {
         project.exec {
             commandLine(
                 "bash", "-x",
                 project.layout.projectDirectory.file("setupSolanaAccounts.sh").asFile.absolutePath,
-                notaryKeyPath.get()
+                notaryKeyFile.get().asFile.absolutePath
             )
         }
         println("Generated Solana keys:")
@@ -212,7 +212,8 @@ abstract class SetupAccounts : DefaultTask() {
 }
 
 val generateKeys = tasks.register<SetupAccounts>("setupSolanaAccounts") {
-    notaryKeyPath.set(solanaNotaryKeyPath)
+    dependsOn(installSolanaNotaryDevKey)
+    notaryKeyFile.set(installSolanaNotaryDevKey.get().keyFile)
     participants.set(listOf("Shareholder"))
     val outputDir = layout.buildDirectory.dir("solana-keys")
 
@@ -224,6 +225,7 @@ val generateKeys = tasks.register<SetupAccounts>("setupSolanaAccounts") {
 
     tokenMintKeyFile.set(layout.buildDirectory.file("solana-keys/token-mint.pub"))
     bridgeAuthorityKeyFile.set(layout.buildDirectory.file("solana-keys/bridge-authority.pub"))
+    custodiedKeysDirectory.set(layout.buildDirectory.dir("custodied-keys"))
 }
 
 abstract class InstallSolanaBridgeConfig : DefaultTask() {
@@ -272,7 +274,7 @@ tasks.register<InstallSolanaBridgeConfig>("installSolanaBridgeConfig") {
 
     val node = project.findProperty("nodeName") as String? ?: "BridgingAuthority"
     inputDir.set(layout.buildDirectory.dir("solana-keys"))
-    participants.set(listOf("Shareholder")) //TODO this could be output from previous task
+    participants.set(listOf("Shareholder")) //TODO this could be output from previous task or should be configurable
 
     participantKeyFiles.from(
         generateKeys.map { it.participantKeyFiles }
