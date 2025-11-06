@@ -14,7 +14,7 @@ Stock CorDapp assumes there are 4 parties:
 * **Observer** - monitors all the stocks by keeping a copy of transactions whenever a stock is created or updated.
 
 Bridging activities requires additional parties:
-* **Bridging Authority** - performs bridging by running "Corda-Solana-Toolkit" Cordapp
+* **Bridge Authority** - performs bridging by running "Corda-Solana-Toolkit" Cordapp
 * **Solana Notary** - ensures tokens are created on Solana Network
 
 ## Usage
@@ -29,7 +29,6 @@ Create and fund Solana accounts for `Wayne Company` and the `Bridge Authority`, 
 ```bash
 ./gradlew samples:stockpaydividend-solana-bridge:installSolanaBridgeConfig
 ```
-
 Then type: (to run the nodes)
 ```bash
 ./samples/stockpaydividend-solana-bridge/build/nodes/runnodes
@@ -100,13 +99,13 @@ Now at the Shareholder's terminal, we can see that it received 100 stock tokens:
 >On shareholder node, execute <br>`start GetStockBalance symbol: TEST`
 
 ##### 3. Bridge To Solana - Stock Issuer
-Shareholder transfers some stock tokens to the `Bridge Authority`.
+Shareholder transfers some stock tokens to the Bridge Authority.
 >On company Shareholder's node, execute <br>`start MoveStock symbol: TEST, quantity: 60, recipient: "Bridging Authority"`
 
-Now at the Bridging Authority's terminal, we can see that it received 100 stock tokens:
->On Bridging Authority node, execute <br>`start GetStockBalance symbol: TEST`
+Now at the Bridge Authority's terminal, we can see that it received 100 stock tokens:
+>On Bridge Authority node, execute <br>`start GetStockBalance symbol: TEST`
 
-Bridging Authority performs asset bridging to Solana.
+Bridge Authority performs asset bridging to Solana.
 You can check the current balance on Solana Account has increased:
 
 ```bash
