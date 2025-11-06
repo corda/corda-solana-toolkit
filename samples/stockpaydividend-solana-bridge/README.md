@@ -24,7 +24,6 @@ Open a terminal and go to the project root directory and type: (to deploy the no
 ```bash
 ./gradlew samples:stockpaydividend-solana-bridge:deployNodes
 ```
-
 Create and fund Solana accounts for `Wayne Company` and the `Bridge Authority`, create `Mint` and `TokenAccount`:
 ```bash
 ./gradlew samples:stockpaydividend-solana-bridge:installSolanaBridgeConfig
