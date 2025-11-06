@@ -79,6 +79,10 @@ class MintContract : Contract {
             "Mint to Solana transaction must have exactly one MintState as input"
         }
 
+        require(tx.outputsOfType<MintState>().isEmpty()) {
+            "Mint to Solana transaction must not have any MintState outputs"
+        }
+
         val solanaInstruction = tx.notaryInstructionsOfType<SolanaInstruction>().requireSingle {
             "Exactly one Solana instruction required"
         }
