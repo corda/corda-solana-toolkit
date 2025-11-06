@@ -131,10 +131,6 @@ class MintContract : Contract {
         }
     }
 
-    private inline fun <T> List<T>.requireSingle(errorMessage: () -> Any): T {
-        return requireNotNull(singleOrNull(), errorMessage)
-    }
-
     /**
      * Commands for the Corda to Solana bridging flow:
      * The bridging lifecycle is:
