@@ -45,9 +45,14 @@ dependencyResolutionManagement {
         }
         // For gradle-tooling-api-7.6.4.
         maven { url = uri("https://repo.gradle.org/gradle/libs-releases") }
-        // For Corda SNAPSHOT version
+        // For Corda (OS and Enterprise) SNAPSHOT versions
         maven {
             url = uri("https://software.r3.com/artifactory/r3-corda-dev")
+            credentials { artifactory(this) }
+        }
+        // For corda-node-driver required by com.r3.libs:r3-libs-obfuscator
+        maven {
+            url = uri("https://software.r3.com/artifactory/r3-corda-releases")
             credentials { artifactory(this) }
         }
         // For compiling Cordapp from Github samples-kotlin to use in samples/stockpaydividend-solana-bridge

@@ -3,6 +3,9 @@ import net.corda.plugins.Node
 import org.gradle.api.artifacts.MinimalExternalModuleDependency
 import org.gradle.kotlin.dsl.register
 import org.gradle.api.provider.Provider
+import org.gradle.api.DefaultTask
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.Property
 
 plugins {
     id("default-kotlin")
@@ -27,7 +30,8 @@ dependencies {
 tasks.register<Cordform>("deployNodes") {
     dependsOn(
         project(":bridging-token-contracts").tasks.named("jar"),
-        project(":bridging-token-workflows").tasks.named("jar")
+        project(":bridging-token-workflows").tasks.named("jar"),
+        "installSolanaNotaryDevKey",
     )
     val commonRpcUser =  listOf(
         mapOf(
@@ -64,8 +68,12 @@ tasks.register<Cordform>("deployNodes") {
         name("O=Solana Notary,L=Ashburn,ST=Virginia,C=US")
         notary = mapOf(
             "validating" to "false",
-            "serviceLegalName" to "O=Solana Notary Service,L=Washington,C=US"
-            // TODO add Solana settings
+            "serviceLegalName" to "O=Solana Notary Service,L=Washington,C=US",
+            "solana" to mapOf(
+                "notaryKeypairFile" to installSolanaNotaryDevKey.get().keyFile.asFile.get().absolutePath,
+                // TODO "custodiedKeysDir"
+                "rpcUrl" to "https://api.devnet.solana.com"
+            )
         )
         p2pPort(10019)
         rpcSettings {
@@ -122,8 +130,49 @@ tasks.register<Cordform>("deployNodes") {
         }
         rpcUsers = commonRpcUser
         cordapp(project(":bridging-token-contracts"))
-        //cordapp(project(":bridging-token-workflows")) //TODO endable once there is a cordapp
+        cordapp(project(":bridging-token-workflows"))
     }
+}
+
+abstract class InstallSolanaNotaryDevKeyTask : DefaultTask() {
+    @get:Classpath
+    abstract val cordapps: ConfigurableFileCollection
+
+    @get:Input
+    abstract val keyFileName: Property<String>
+
+    @get:OutputDirectory
+    abstract val keyFile: RegularFileProperty
+
+    @TaskAction
+    fun install() {
+        val dirFile = keyFile.get().asFile.parentFile
+        if (dirFile.exists()) {
+            dirFile.setWritable(true, true)
+            dirFile.deleteRecursively()
+        }
+        dirFile.mkdirs()
+        cordapps.forEach { jar ->
+            project.zipTree(jar).matching {
+                include("dev-key/${keyFileName.get()}")
+            }.files.forEach { sourceFile ->
+                val destFile = dirFile.resolve(sourceFile.name)
+                sourceFile.copyTo(destFile, overwrite = true)
+            }
+        }
+        println("Solana Notary Development Key Dev extracted to: ${keyFile.get().asFile.absolutePath}")
+    }
+}
+
+val installSolanaNotaryDevKey = tasks.register<InstallSolanaNotaryDevKeyTask>("installSolanaNotaryDevKey") {
+    val detached = configurations.detachedConfiguration(
+        //dependencies.create("com.r3.corda.lib.solana:bridging-token-workflows:0.1.0-SNAPSHOT") // for project outside this repo
+        dependencies.create(project(":bridging-token-workflows"))
+    )
+    cordapps.from(detached)
+    val solanaNotaryKeyFileName = "Dev7chG99tLCAny3PNYmBdyhaKEVcZnSTp3p1mKVb5m5.json"
+    keyFileName.set(solanaNotaryKeyFileName)
+    keyFile.set(layout.buildDirectory.file("solana-keys/dev-key/$solanaNotaryKeyFileName"))
 }
 
 // Adds Cordform 'cordapp' method override accept TOML reference
