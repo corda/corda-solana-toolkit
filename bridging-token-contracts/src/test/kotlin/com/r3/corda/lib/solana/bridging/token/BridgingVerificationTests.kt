@@ -221,7 +221,7 @@ class BridgingVerificationTests {
                         listOf(bridgeAuthorityParty.owningKey, confidentialIdentity.owningKey),
                         MoveTokenCommand(cordaIssuedTokenType.token, listOf(0), listOf(0))
                     )
-                    `fails with`("Mint transactions must have a single mint command")
+                    `fails with`("Mint transactions must have a single bridge command")
                 }
                 tweak {
                     command(
@@ -249,7 +249,7 @@ class BridgingVerificationTests {
                         listOf(bridgeAuthorityParty.owningKey),
                         FungibleTokenBridgingContract.BridgeCommand.MintToSolana
                     )
-                    `fails with`("Mint transactions must have a single mint command")
+                    `fails with`("Mint transactions must have a single bridge command")
                 }
                 command(
                     listOf(bridgeAuthorityParty.owningKey, confidentialIdentity.owningKey),
@@ -364,7 +364,7 @@ class BridgingVerificationTests {
                         listOf(bridgeAuthorityParty.owningKey),
                         FungibleTokenBridgingContract.BridgeCommand.MintToSolana,
                     )
-                    `fails with`("Mint transactions must have a single mint command")
+                    `fails with`("Mint transactions must have a single bridge command")
                 }
 
                 // one bridging command, one random command
@@ -374,7 +374,7 @@ class BridgingVerificationTests {
                         listOf(bridgeAuthorityParty.owningKey),
                         IssueTokenCommand(cordaIssuedTokenType.token, emptyList())
                     )
-                    `fails with`("Mint transaction must only contain a single command")
+                    `fails with`("Bridging transaction must only contain a single command")
                 }
 
                 verifies()
