@@ -19,11 +19,11 @@ import net.corda.solana.sdk.internal.Token2022
  * every input and output must be a Tokens SDK **fungible** token state.
  * Any other state types/contracts are not permitted in the same transaction.
  */
-class FungibleTokenBridgingContract : Contract {
+class FungibleTokenBridgeContract : Contract {
     override fun verify(tx: LedgerTransaction) {
         val bridgeCommands = tx.commandsOfType<BridgeCommand>()
         val bridgeCommand = bridgeCommands.requireSingle {
-            "Mint transactions must have a single bridge command"
+            "Bridging transactions must have a single bridge command"
         }
         when (val cmdData = bridgeCommand.value) {
             is BridgeCommand.LockToken -> verifyLockToken(tx, cmdData)
@@ -139,6 +139,6 @@ class FungibleTokenBridgingContract : Contract {
     }
 
     companion object {
-        const val CONTRACT_ID = "com.r3.corda.lib.solana.bridging.token.contracts.FungibleTokenBridgingContract"
+        const val CONTRACT_ID = "com.r3.corda.lib.solana.bridging.token.contracts.FungibleTokenBridgeContract"
     }
 }

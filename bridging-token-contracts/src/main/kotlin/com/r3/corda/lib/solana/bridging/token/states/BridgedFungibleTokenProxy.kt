@@ -1,6 +1,6 @@
 package com.r3.corda.lib.solana.bridging.token.states
 
-import com.r3.corda.lib.solana.bridging.token.contracts.FungibleTokenBridgingContract
+import com.r3.corda.lib.solana.bridging.token.contracts.FungibleTokenBridgeContract
 import net.corda.core.contracts.BelongsToContract
 import net.corda.core.contracts.ContractState
 import net.corda.core.identity.AbstractParty
@@ -24,7 +24,7 @@ import net.corda.solana.sdk.instruction.Pubkey
  * (address controlled by the bridge).
  * @property bridgeAuthority The party performing the bridge onto Solana.
  */
-@BelongsToContract(FungibleTokenBridgingContract::class)
+@BelongsToContract(FungibleTokenBridgeContract::class)
 data class BridgedFungibleTokenProxy(
     val originalHolder: AbstractParty,
     val amount: Long,

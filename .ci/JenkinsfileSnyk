@@ -92,7 +92,7 @@ pipeline {
             script {
                 if (gitUtils.isMainBranch() && generateJiraIssues) {
                     // Create Jira issues for the main branch
-                    snykJiraSync(SnykOrganisation.R3_PRODUCT_ENGINEERING)
+                    snykJiraSync(SnykOrganisation.CORDA_4_ENT)
                 }
                 def gitRepoName = env.GIT_URL.replace('.git', '').split('/').last()
                 def fileName = "_snyk_report_${gitRepoName}_${new Date().format("dd-MM-yyyy")}.html"
