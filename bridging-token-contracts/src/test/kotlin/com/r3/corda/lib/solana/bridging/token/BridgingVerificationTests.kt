@@ -107,7 +107,7 @@ class BridgingVerificationTests {
                 )
                 output(
                     FungibleTokenBridgeContract.CONTRACT_ID,
-                    bbridgedFungibleTokenProxy.copy(bridgeAuthority = bridgeAuthorityParty)
+                    bridgedFungibleTokenProxy.copy(bridgeAuthority = bridgeAuthorityParty)
                 )
                 command(
                     listOf(bridgeAuthorityParty.owningKey),
@@ -308,10 +308,6 @@ class BridgingVerificationTests {
                     FungibleTokenBridgeContract.CONTRACT_ID,
                     bridgedFungibleTokenProxy
                 )
-                output(
-                    FungibleTokenBridgeContract.CONTRACT_ID,
-                    bridgedFungibleTokenProxy.copy(minted = true)
-                )
                 command(
                     listOf(bridgeAuthorityParty.owningKey),
                     FungibleTokenBridgeContract.BridgeCommand.MintToSolana
@@ -389,10 +385,6 @@ class BridgingVerificationTests {
                 input(
                     FungibleTokenBridgeContract.CONTRACT_ID,
                     bridgedFungibleTokenProxy
-                )
-                output(
-                    FungibleTokenBridgeContract.CONTRACT_ID,
-                    bridgedFungibleTokenProxy.copy(minted = true)
                 )
                 command(
                     listOf(bridgeAuthorityParty.owningKey),
