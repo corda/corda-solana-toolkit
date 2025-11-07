@@ -20,8 +20,8 @@ dependencies {
     cordapp(libs.tokens.contracts)
     cordapp(libs.tokens.workflows)
 
-    cordapp(libs.samples.kotlin.stockpaydividend.contracts)
-    cordapp(libs.samples.kotlin.stockpaydividend.workflows)
+    cordapp("com.stockpaydividend:contracts:1.0")
+    cordapp("com.stockpaydividend:workflows:1.0")
 }
 
 tasks.register<Cordform>("deployNodes") {
@@ -43,8 +43,8 @@ tasks.register<Cordform>("deployNodes") {
         cordapp(libs.tokens.contracts)
         cordapp(libs.tokens.workflows)
 
-        cordapp(libs.samples.kotlin.stockpaydividend.contracts)
-        cordapp(libs.samples.kotlin.stockpaydividend.workflows)
+        cordapp("com.stockpaydividend:contracts:1.0")
+        cordapp("com.stockpaydividend:workflows:1.0")
 
         runSchemaMigration = true
     }

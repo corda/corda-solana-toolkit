@@ -20,6 +20,15 @@ Bridging activities requires additional parties:
 ## Usage
 ### Running the nodes
 
+Note below commands need to be run from within the project root directory ('corda-solana-toolkit'),
+and not form withing sample directory ('corda-solana-toolkit/samples/stockpaydividend-solana-bridge').
+
+Once off you need to build and publish locally 'Stockbuydivided' CordApp:
+```bash
+./samples/stockpaydividend-solana-bridge/build-stock-pay-dividend-cordapp.sh
+```
+This will check the project into 'build/tmp', it will be deleted whenever you run Gradle `clean` task.
+
 Open a terminal and go to the project root directory and type: (to deploy the nodes using bootstrapper)
 ```bash
 ./gradlew clean samples:stockpaydividend-solana-bridge:deployNodes
