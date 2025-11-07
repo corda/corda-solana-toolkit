@@ -1,8 +1,8 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import com.r3.corda.lib.solana.bridging.token.contracts.MintContract
-import com.r3.corda.lib.solana.bridging.token.states.MintState
+import com.r3.corda.lib.solana.bridging.token.contracts.FungibleTokenBridgingContract
+import com.r3.corda.lib.solana.bridging.token.states.BridgedFungibleTokenProxy
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.workflows.utilities.sessionsForParties
 import net.corda.core.contracts.StateAndRef
@@ -37,7 +37,7 @@ import net.corda.solana.sdk.internal.Token2022
  */
 @StartableByService
 @InitiatingFlow
-class MintTokenFlow(
+class BridgeFungibleTokenFlow(
     val lockingHolder: Party,
     val originalHolder: Party,
     val token: StateAndRef<FungibleToken>,
@@ -62,9 +62,12 @@ class MintTokenFlow(
         )
 
         // Change notary to Solana notary
-        val mintState = moveTx.toLedgerTransaction(serviceHub).outRefsOfType<MintState>().single()
+        val bridgedFungibleTokenProxy = moveTx
+            .toLedgerTransaction(serviceHub)
+            .outRefsOfType<BridgedFungibleTokenProxy>()
+            .single()
         // TODO This needs to use the new MoveNotaryFlow
-        val tokenProxyOnSolanaNotary = subFlow(NotaryChangeFlow(mintState, solanaNotary))
+        val tokenProxyOnSolanaNotary = subFlow(NotaryChangeFlow(bridgedFungibleTokenProxy, solanaNotary))
 
         // Mint on Solana
         val mintTx = createMintTransaction(tokenProxyOnSolanaNotary)
@@ -73,18 +76,18 @@ class MintTokenFlow(
         return subFlow(FinalityFlow(mintTx, emptyList()))
     }
 
-    private fun createMintTransaction(tokenProxyRef: StateAndRef<MintState>): SignedTransaction {
-        val mintState = tokenProxyRef.state.data
+    private fun createMintTransaction(tokenProxyRef: StateAndRef<BridgedFungibleTokenProxy>): SignedTransaction {
+        val bridgedFungibleTokenProxy = tokenProxyRef.state.data
         val transactionBuilder = TransactionBuilder(solanaNotary)
         val instruction = Token2022.mintTo(
-            mintState.mint,
-            mintState.mintDestination,
-            mintState.mintAuthority,
-            mintState.amount,
+            bridgedFungibleTokenProxy.mint,
+            bridgedFungibleTokenProxy.mintDestination,
+            bridgedFungibleTokenProxy.mintAuthority,
+            bridgedFungibleTokenProxy.amount,
         )
         transactionBuilder.addNotaryInstruction(instruction)
         transactionBuilder.addCommand(
-            MintContract.MintCommand.MintToSolana,
+            FungibleTokenBridgingContract.BridgeCommand.MintToSolana,
             listOf(ourIdentity.owningKey),
         )
         transactionBuilder.addInputState(tokenProxyRef)

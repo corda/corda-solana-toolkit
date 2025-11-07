@@ -1,7 +1,7 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import com.r3.corda.lib.solana.bridging.token.contracts.MintContract
+import com.r3.corda.lib.solana.bridging.token.contracts.FungibleTokenBridgingContract
 import com.r3.corda.lib.tokens.contracts.states.AbstractToken
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.contracts.types.IssuedTokenType
@@ -52,18 +52,19 @@ constructor(
             "When bridging a fungible token, only one token type can be moved at a time."
         }
 
-        val mintState: ContractState = bridgingCoordinates.toMintState(token.state.data, ourIdentity)
+        val bridgedFungibleTokenProxy: ContractState = bridgingCoordinates
+            .toBridgedFungibleTokenProxy(token.state.data, ourIdentity)
 
-        transactionBuilder.addOutputState(mintState)
+        transactionBuilder.addOutputState(bridgedFungibleTokenProxy)
 
-        val mintCommand = MintContract.MintCommand.LockToken(ourIdentity, lockingHolder)
+        val bridgeCommand = FungibleTokenBridgingContract.BridgeCommand.LockToken(ourIdentity, lockingHolder)
 
         for (issuedTokenType in outputGroups.keys) {
             val inputGroup = requireNotNull(inputGroups[issuedTokenType]) {
                 "No corresponding inputs for the outputs issued token type: $issuedTokenType"
             }
             val keys = inputGroup.map { it.state.data.holder.owningKey }
-            transactionBuilder.addCommand(mintCommand, keys)
+            transactionBuilder.addCommand(bridgeCommand, keys)
         }
     }
 }

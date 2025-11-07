@@ -1,7 +1,7 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
-import com.r3.corda.lib.solana.bridging.token.states.MintState
-import com.r3.corda.lib.solana.bridging.token.states.RedeemState
+import com.r3.corda.lib.solana.bridging.token.states.BridgedFungibleTokenProxy
+import com.r3.corda.lib.solana.bridging.token.states.RedeemedFungibleTokenProxy
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import net.corda.core.identity.Party
 import net.corda.solana.sdk.instruction.Pubkey
@@ -28,13 +28,13 @@ data class BridgingCoordinates(
     val bridgeRedemptionWallet: Pubkey,
 ) {
     /**
-     * Creates an unminted [MintState].
+     * Creates an unminted [BridgedFungibleTokenProxy].
      * Converts the Fungible Token amount to Solana token amount in 1:1 ration.
      * @param token the source of amount to bridge
      */
-    fun toMintState(token: FungibleToken, bridgeAuthority: Party) =
-        MintState(
-            redemptionHolder = this.redemptionHolder,
+    fun toBridgedFungibleTokenProxy(token: FungibleToken, bridgeAuthority: Party) =
+        BridgedFungibleTokenProxy(
+            originalHolder = this.redemptionHolder,
             amount = token.amount.quantity,
             mint = this.mint,
             mintAuthority = this.mintAuthority,
@@ -43,22 +43,25 @@ data class BridgingCoordinates(
         )
 
     /**
-     * Creates a [RedeemState].
-     * @param burnSource the Solana public key where the redeemed tokens will be sent
-     * @param amount the amount of tokens to redeem*/
+     * Creates a [RedeemedFungibleTokenProxy].
+     * @param burnAccount the Solana public key where the redeemed tokens will be sent
+     * @param amount the amount of tokens to redeem
+     * @param bridgeAuthority the Corda party operating the bridge
+     * @param lockId the unique identifier of lock used to soft-lock the fungible tokens on Corda
+     * */
     fun toRedeemState(
-        burnSource: Pubkey,
+        burnAccount: Pubkey,
         amount: Long,
         bridgeAuthority: Party,
         lockId: UUID,
-    ) = RedeemState(
-        burnSource = burnSource,
+    ) = RedeemedFungibleTokenProxy(
+        burnAccount = burnAccount,
         bridgeRedemptionWallet = bridgeRedemptionWallet,
         mint = mint,
         amount = amount,
         tokenTypeId = tokenTypeId,
         redemptionHolder = redemptionHolder,
-        bridgingAuthority = bridgeAuthority,
+        bridgeAuthority = bridgeAuthority,
         lockId = lockId
     )
 }

@@ -1,7 +1,7 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import com.r3.corda.lib.solana.bridging.token.contracts.RedeemContract
+import com.r3.corda.lib.solana.bridging.token.contracts.FungibleTokenRedemptionContract
 import com.r3.corda.lib.tokens.contracts.states.AbstractToken
 import com.r3.corda.lib.tokens.contracts.types.IssuedTokenType
 import com.r3.corda.lib.tokens.contracts.types.TokenType
@@ -21,7 +21,7 @@ constructor(
     val bridgeAuthority: Party,
     val lockingHolder: Party,
     val amount: Amount<TokenType>,
-    val burnSource: Pubkey,
+    val burnAccount: Pubkey,
     override val participantSessions: List<FlowSession> = emptyList(),
     override val observerSessions: List<FlowSession> = emptyList(),
 ) : AbstractMoveTokensFlow() {
@@ -57,7 +57,7 @@ constructor(
         }
 
         val redeemState = bridgingCoordinates.toRedeemState(
-            burnSource = burnSource,
+            burnAccount = burnAccount,
             amount = amount.quantity,
             bridgeAuthority = bridgeAuthority,
             transactionBuilder.lockId
@@ -65,7 +65,7 @@ constructor(
 
         transactionBuilder.addOutputState(redeemState)
 
-        val issueRedeemStateCommand = RedeemContract.RedeemCommand.IssueRedeemState()
+        val unlockTokenCommand = FungibleTokenRedemptionContract.RedeemingCommand.UnlockToken()
 
         outputGroups.forEach { (issuedTokenType: IssuedTokenType, _: List<AbstractToken>) ->
             val inputGroup =
@@ -75,7 +75,7 @@ constructor(
                             "$issuedTokenType",
                     )
             val keys = inputGroup.map { it.state.data.holder.owningKey }
-            transactionBuilder.addCommand(issueRedeemStateCommand, keys)
+            transactionBuilder.addCommand(unlockTokenCommand, keys)
         }
     }
 }

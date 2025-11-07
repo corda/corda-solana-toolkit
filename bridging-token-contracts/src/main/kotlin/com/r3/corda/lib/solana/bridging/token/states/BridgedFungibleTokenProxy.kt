@@ -1,6 +1,6 @@
 package com.r3.corda.lib.solana.bridging.token.states
 
-import com.r3.corda.lib.solana.bridging.token.contracts.MintContract
+import com.r3.corda.lib.solana.bridging.token.contracts.FungibleTokenBridgingContract
 import net.corda.core.contracts.BelongsToContract
 import net.corda.core.contracts.ContractState
 import net.corda.core.identity.AbstractParty
@@ -15,7 +15,7 @@ import net.corda.solana.sdk.instruction.Pubkey
  * instead of moving the original token state across notaries,
  * flows can operate on this proxy and keep the Solana-bridging data alongside the fungible quantity.
  *
- * @property redemptionHolder The Corda identity that will receive the redeemed tokens.
+ * @property originalHolder The Corda identity that will receive the redeemed tokens.
  * @property amount Quantity of fungible tokens represented by this proxy.
  * been minted on Solana for [mintDestination].
  * @property mintDestination Token **wallet** public key that should receive the minted tokens on Solana.
@@ -24,9 +24,9 @@ import net.corda.solana.sdk.instruction.Pubkey
  * (address controlled by the bridge).
  * @property bridgeAuthority The party performing the bridge onto Solana.
  */
-@BelongsToContract(MintContract::class)
-data class MintState(
-    val redemptionHolder: AbstractParty,
+@BelongsToContract(FungibleTokenBridgingContract::class)
+data class BridgedFungibleTokenProxy(
+    val originalHolder: AbstractParty,
     val amount: Long,
     val mintDestination: Pubkey,
     val mint: Pubkey,

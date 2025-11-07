@@ -65,22 +65,22 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
                 // Redemption initialization
                 val subscribed = socket.onToken2022ByOwner(
                     configHandler.bridgeRedemptionWallet
-                ) { _, burnSource, mint, amount ->
+                ) { _, burnAccount, mint, amount ->
                     val tokenId = configHandler.getTokenIdentifierByMint(mint)
-                    val cordaOwnerName = checkNotNull(configHandler.redemptionHolders[burnSource]) {
-                        "No Corda owner configured for Solana redemption account $burnSource"
+                    val cordaOwnerName = checkNotNull(configHandler.redemptionHolders[burnAccount]) {
+                        "No Corda owner configured for Solana redemption account $burnAccount"
                     }
                     val coraOwner = checkNotNull(
                         appServiceHub.networkMapCache.getPeerByLegalName(cordaOwnerName)
                     ) {
-                        "No Corda owner found for Solana redemption account $burnSource"
+                        "No Corda owner found for Solana redemption account $burnAccount"
                     }
                     onTokenReceivedCallback(
                         configHandler.bridgeRedemptionWallet,
                         coraOwner,
                         amount,
                         tokenId,
-                        burnSource
+                        burnAccount
                     )
                 }
                 if (!subscribed) {
@@ -100,7 +100,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         cordaOwner: Party,
         amount: Long,
         tokenId: String,
-        burnSource: Pubkey,
+        burnAccount: Pubkey,
     ) {
         logger.debug { "Web socket event for $solanaOwner amount $amount" }
         if (amount == 0L) {
@@ -108,8 +108,8 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         }
         val flowHandle = with(configHandler) {
             appServiceHub.startFlow(
-                RedeemTokenFlow(
-                    burnSource,
+                RedeemFungibleTokenFlow(
+                    burnAccount,
                     cordaOwner,
                     tokenId,
                     amount,
@@ -144,7 +144,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
             executor.submit {
                 try {
                     appServiceHub.startFlow(
-                        MintTokenFlow(
+                        BridgeFungibleTokenFlow(
                             lockingIdentity,
                             previousHolder.toParty(appServiceHub),
                             token,
