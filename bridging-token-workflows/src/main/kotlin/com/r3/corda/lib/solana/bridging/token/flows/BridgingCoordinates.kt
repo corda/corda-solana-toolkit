@@ -24,7 +24,7 @@ data class BridgingCoordinates(
      * Converts the Fungible Token amount to Solana token amount in 1:1 ration.
      * @param token the source of amount to bridge
      */
-    fun toFungibleTokenProxy(token: FungibleToken, bridgeAuthority: Party) =
+    fun toBridgedFungibleTokenProxy(token: FungibleToken, bridgeAuthority: Party) =
         BridgedFungibleTokenProxy(
             amount = token.amount.quantity,
             minted = false,
