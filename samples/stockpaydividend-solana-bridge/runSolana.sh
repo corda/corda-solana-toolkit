@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euxo pipefail
 
 cd "$1"
 ./gradlew solana-aggregator:admin-cli:build

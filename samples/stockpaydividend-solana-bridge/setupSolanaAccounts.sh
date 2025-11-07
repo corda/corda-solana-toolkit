@@ -1,4 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euxo pipefail
+
 solana config set --url localhost
 
 NOTARY_ACCOUNT=`solana address -k $1`
