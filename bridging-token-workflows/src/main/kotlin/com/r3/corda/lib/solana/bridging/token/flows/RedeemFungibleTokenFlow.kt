@@ -3,7 +3,9 @@ package com.r3.corda.lib.solana.bridging.token.flows
 import co.paralleluniverse.fibers.Suspendable
 import com.r3.corda.lib.solana.bridging.token.contracts.FungibleTokenRedemptionContract
 import com.r3.corda.lib.solana.bridging.token.states.RedeemedFungibleTokenProxy
+import com.r3.corda.lib.tokens.contracts.internal.schemas.PersistentFungibleToken
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
+import com.r3.corda.lib.tokens.contracts.types.TokenType
 import com.r3.corda.lib.tokens.workflows.flows.rpc.MoveFungibleTokens
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.StateAndRef
@@ -13,6 +15,8 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.MoveNotaryFlow
 import net.corda.core.flows.StartableByService
 import net.corda.core.identity.Party
+import net.corda.core.node.services.vault.Builder.equal
+import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.toNonEmptySet
@@ -44,7 +48,7 @@ class RedeemFungibleTokenFlow(
     override fun call(): SignedTransaction {
         val bridgingService = serviceHub.cordaService(BridgingService::class.java)
         val bridgingCoordinates = bridgingService.configHandler.getBridgingCoordinates(tokenTypeId, originalHolder)
-        val token = bridgingService.findTokenTypeOfFungibleTokenBy(tokenTypeId)
+        val token = findTokenTypeOfFungibleTokenBy(tokenTypeId)
         val moveAmount = Amount.fromDecimal(BigDecimal.valueOf(amount).multiply(token.displayTokenSize), token)
         // Move the token from ourIdentity (implied BridgeAuthority) to the lock holder (confidential identity).
         // Also, create a RedeemState that will be later used to mint the tokens on Solana
@@ -107,5 +111,17 @@ class RedeemFungibleTokenFlow(
         return subFlow(
             MoveFungibleTokens(moveAmount, originalHolder)
         )
+    }
+
+    private fun findTokenTypeOfFungibleTokenBy(tokenTypeIdentifier: String): TokenType {
+        val predicate = PersistentFungibleToken::tokenIdentifier.equal(tokenTypeIdentifier)
+        val custom = QueryCriteria.VaultCustomQueryCriteria(predicate)
+        val matches = serviceHub.vaultService.queryBy(FungibleToken::class.java, custom).states
+
+        val matched = requireNotNull(matches.firstOrNull()) {
+            "No fungible token with type identifier '$tokenTypeIdentifier' found in the vault"
+        }
+        // This must be the IssuedTokenType as this is from the fungible token
+        return matched.state.data.amount.token
     }
 }

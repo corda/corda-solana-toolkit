@@ -1,8 +1,6 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
-import com.r3.corda.lib.tokens.contracts.internal.schemas.PersistentFungibleToken
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
-import com.r3.corda.lib.tokens.contracts.types.TokenType
 import com.r3.corda.lib.tokens.workflows.utilities.toParty
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.identity.AbstractParty
@@ -10,8 +8,6 @@ import net.corda.core.identity.Party
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.ServiceLifecycleEvent
-import net.corda.core.node.services.vault.Builder.equal
-import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.debug
 import net.corda.solana.aggregator.common.sava.SavaFactory
@@ -33,18 +29,6 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         socket = SavaFactory.WebSocketWrapper(configHandler.solanaRpcUrl, configHandler.solanaWsUrl)
         appServiceHub.registerUnloadHandler { onStop() }
         appServiceHub.register { onStartup(it) }
-    }
-
-    fun findTokenTypeOfFungibleTokenBy(tokenTypeIdentifier: String): TokenType {
-        val predicate = PersistentFungibleToken::tokenIdentifier.equal(tokenTypeIdentifier)
-        val custom = QueryCriteria.VaultCustomQueryCriteria(predicate)
-        val matches = appServiceHub.vaultService.queryBy(FungibleToken::class.java, custom).states
-
-        val matched = requireNotNull(matches.firstOrNull()) {
-            "No fungible token with type identifier '$tokenTypeIdentifier' found in the vault"
-        }
-        // This must be the IssuedTokenType as this is from the fungible token
-        return matched.state.data.amount.token
     }
 
     private fun onStop() {
