@@ -221,7 +221,6 @@ abstract class FlowTests {
         )
 
     @Test
-    @Suppress("LongMethod")
     fun bridgeTest() {
         val msftTokenType = issuingBank.issue(msftDescriptor, ISSUING_QUANTITY, generalNotaryName)
         val aaplTokenType = issuingBank.issue(aaplDescriptor, ISSUING_QUANTITY, generalNotaryName)
