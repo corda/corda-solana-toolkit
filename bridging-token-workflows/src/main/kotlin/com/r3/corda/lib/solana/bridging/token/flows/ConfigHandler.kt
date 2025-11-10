@@ -70,9 +70,9 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
     }
 
     fun getTokenIdentifierByMint(mint: Pubkey) = mints
-        .firstNotNullOf {
+        .firstNotNullOfOrNull {
             it.takeIf { it.value == mint }
-        }.key
+        }?.key
 
     @Suppress("UNCHECKED_CAST")
     private inline fun <K, V> CordappConfig.getMap(
