@@ -15,7 +15,6 @@ import net.corda.solana.sdk.instruction.Pubkey
  * instead of moving the original token state across notaries,
  * flows can operate on this proxy and keep the Solana-bridging data alongside the fungible quantity.
  *
- * @property originalHolder The Corda identity that will receive the redeemed tokens.
  * @property amount Quantity of fungible tokens represented by this proxy.
  * been minted on Solana for [mintDestination].
  * @property mintDestination Token **wallet** public key that should receive the minted tokens on Solana.
@@ -26,7 +25,6 @@ import net.corda.solana.sdk.instruction.Pubkey
  */
 @BelongsToContract(FungibleTokenBridgeContract::class)
 data class BridgedFungibleTokenProxy(
-    val originalHolder: AbstractParty,
     val amount: Long,
     val mintDestination: Pubkey,
     val mint: Pubkey,

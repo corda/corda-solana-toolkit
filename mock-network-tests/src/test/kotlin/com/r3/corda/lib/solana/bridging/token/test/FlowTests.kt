@@ -54,6 +54,9 @@ abstract class FlowsTest {
     private lateinit var issuingBank: StartedMockNode
     private lateinit var alice: StartedMockNode
     private lateinit var bridgeAuthority: StartedMockNode
+    private lateinit var aliceParty: Party
+    private lateinit var issuingBankParty: Party
+    private lateinit var bridgeAuthorityParty: Party
 
     private lateinit var solanaNotary: StartedMockNode
     private lateinit var generalNotary: StartedMockNode
@@ -168,7 +171,9 @@ abstract class FlowsTest {
         )
 
         alice = network.createPartyNode(aliceIdentity.name)
+        aliceParty = alice.info.legalIdentities.first()
         issuingBank = network.createPartyNode(issuingBankIdentity.name)
+        issuingBankParty = issuingBank.info.legalIdentities.first()
         solanaNotary = network.notaryNodes[1]
         generalNotary = network.notaryNodes[0]
         solanaNotaryParty = solanaNotary.info.legalIdentities[0]
@@ -179,6 +184,7 @@ abstract class FlowsTest {
                 additionalCordapps = listOf(bridgingFlowsCordapp.withConfig(baConfig), bridgingContractsCordapp),
             ),
         )
+        bridgeAuthorityParty = bridgeAuthority.info.legalIdentities.first()
     }
 
     fun stopCordaNetwork() {
@@ -203,51 +209,34 @@ abstract class FlowsTest {
         notaryLegalIdentity = "$generalNotaryName"
         """.trimIndent()
 
-    @Test
-    @Suppress("LongMethod")
-    fun bridgeTest() {
-        val aliceIdentity = alice.info.legalIdentities.first()
-        val issuingBankIdentity = issuingBank.info.legalIdentities.first()
-        val bridgeAuthorityIdentity = bridgeAuthority.info.legalIdentities.first()
+    private fun move(fromParty: StartedMockNode, toParty: Party, quantity: BigDecimal, tokenType: TokenType) = fromParty
+        .startFlow(
+            MoveFungibleTokens(
+                Amount.fromDecimal(quantity, tokenType),
+                toParty,
+            )
+        )
 
+    @Test
+    fun bridgeTest() {
         val msftTokenType = issuingBank.issue(msftDescriptor, ISSUING_QUANTITY, generalNotaryName)
         val aaplTokenType = issuingBank.issue(aaplDescriptor, ISSUING_QUANTITY, generalNotaryName)
 
         assertEquals(BigDecimal.ZERO, getSolanaTokenBalance(aliceMintTokenAccount), "Nothing on Solana")
 
-        issuingBank
-            .startFlow(
-                MoveFungibleTokens(
-                    Amount.fromDecimal(ISSUING_QUANTITY, msftTokenType),
-                    aliceIdentity,
-                )
-            ).get()
-
-        issuingBank
-            .startFlow(
-                MoveFungibleTokens(
-                    Amount.fromDecimal(ISSUING_QUANTITY, aaplTokenType),
-                    aliceIdentity,
-                )
-            ).get()
-
-        alice
-            .startFlow(
-                MoveFungibleTokens(
-                    Amount.fromDecimal(MOVE_QUANTITY, msftTokenType),
-                    bridgeAuthorityIdentity,
-                )
-            ).get()
+        move(issuingBank, aliceParty, ISSUING_QUANTITY, msftTokenType).get()
+        move(issuingBank, aliceParty, ISSUING_QUANTITY, aaplTokenType).get()
+        move(alice, bridgeAuthorityParty, MOVE_QUANTITY, msftTokenType).get()
 
         assertEquals(
             ISSUING_QUANTITY - MOVE_QUANTITY,
-            alice.myTokenBalance(issuingBankIdentity, msftTokenType),
+            alice.myTokenBalance(issuingBankParty, msftTokenType),
             "Alice transferred some of MSFT shares",
         )
 
         assertEquals(
             MOVE_QUANTITY,
-            bridgeAuthority.myTokenBalance(issuingBankIdentity, msftTokenType),
+            bridgeAuthority.myTokenBalance(issuingBankParty, msftTokenType),
             "Bridge Authority received MSFT shares",
         )
 
@@ -256,16 +245,16 @@ abstract class FlowsTest {
 
         assertEquals(
             BigDecimal.ZERO,
-            bridgeAuthority.myTokenBalance(issuingBankIdentity, msftTokenType),
+            bridgeAuthority.myTokenBalance(issuingBankParty, msftTokenType),
             "Bridge Authority has no longer MSFT shares, they are under Locking Identity"
         )
 
         val msftFungibleToken = bridgeAuthority
-            .getAllFungibleTokens(issuingBankIdentity, msftTokenType)
+            .getAllFungibleTokens(issuingBankParty, msftTokenType)
             .singleOrNull()
         assertNotNull(msftFungibleToken, "There should be single MSFT fungible token in Bridge Authority vault")
         assertTrue(
-            msftFungibleToken.holder !in setOf(aliceIdentity, bridgeAuthorityIdentity),
+            msftFungibleToken.holder !in setOf(aliceParty, bridgeAuthorityParty),
             "Bridge Authority moved MSFT under Lock Identity (CI) ownership as neither BA nor Alice holds the token",
         ) // Locking Identity is Confidential Identity, and we don't know its identity upfront,
         // so indirect check to by proving no knows participant owns the token
@@ -287,29 +276,23 @@ abstract class FlowsTest {
             .isEqualByComparingTo(MOVE_QUANTITY)
 
         // Simulate redemption transfer for Alice account on Solana
-        testValidator
-            .mintTo(
-                aliceSigner,
-                tokenMint,
-                aliceRedemptionTokenAccount,
-                (MOVE_QUANTITY.multiply(BigDecimal(1000L)))
-                    .toLong(),
-                mintAuthoritySigner
-            )
+        testValidator.mintTo(
+            aliceSigner,
+            tokenMint,
+            aliceRedemptionTokenAccount,
+            (MOVE_QUANTITY.multiply(BigDecimal(1000L))).toLong(),
+            mintAuthoritySigner
+        )
         // We need to wait for the Sava listener to process the newly received event
         Thread.sleep(5000)
 
         assertEquals(
             ISSUING_QUANTITY,
-            alice.myTokenBalance(issuingBankIdentity, msftTokenType),
+            alice.myTokenBalance(issuingBankParty, msftTokenType),
             "Alice received redeemed MSFT shares back",
         )
-        val msftFungibleTokens = bridgeAuthority
-            .getAllFungibleTokens(issuingBankIdentity, msftTokenType)
-        assertTrue(
-            msftFungibleTokens.isEmpty(),
-            "No  MSFT shares left in Bridge Authority vault",
-        )
+        val msftFungibleTokens = bridgeAuthority.getAllFungibleTokens(issuingBankParty, msftTokenType)
+        assertTrue(msftFungibleTokens.isEmpty(), "No  MSFT shares left in Bridge Authority vault")
     }
 
     private inline fun <reified T : ContractState> StartedMockNode.queryStates(): List<StateAndRef<T>> {

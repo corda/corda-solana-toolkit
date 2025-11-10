@@ -56,7 +56,6 @@ class BridgingVerificationTests {
     val tokenAccount = Pubkey(Signer.random().account.bytes())
 
     val bridgedFungibleTokenProxy = BridgedFungibleTokenProxy(
-        tokenIssuer,
         10000,
         tokenAccount,
         mint,
@@ -335,10 +334,6 @@ class BridgingVerificationTests {
             transaction {
                 attachment(FungibleTokenBridgeContract.CONTRACT_ID)
                 input(
-                    FungibleTokenBridgeContract.CONTRACT_ID,
-                    bridgedFungibleTokenProxy
-                )
-                output(
                     FungibleTokenBridgeContract.CONTRACT_ID,
                     bridgedFungibleTokenProxy
                 )

@@ -34,7 +34,6 @@ data class BridgingCoordinates(
      */
     fun toBridgedFungibleTokenProxy(token: FungibleToken, bridgeAuthority: Party) =
         BridgedFungibleTokenProxy(
-            originalHolder = this.redemptionHolder,
             amount = token.amount.quantity,
             mint = this.mint,
             mintAuthority = this.mintAuthority,
