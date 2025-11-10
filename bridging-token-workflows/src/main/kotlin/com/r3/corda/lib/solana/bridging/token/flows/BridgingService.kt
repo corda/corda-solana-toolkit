@@ -50,6 +50,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
                 val subscribed = socket.onToken2022ByOwner(
                     configHandler.bridgeRedemptionWallet
                 ) { _, burnAccount, mint, amount ->
+                    //TODO perhaps move those to the flow so it can be tracked by the flow hospital
                     val tokenId = checkNotNull(configHandler.getTokenIdentifierByMint(mint)) {
                         "No token configured for mint $mint"
                     }
