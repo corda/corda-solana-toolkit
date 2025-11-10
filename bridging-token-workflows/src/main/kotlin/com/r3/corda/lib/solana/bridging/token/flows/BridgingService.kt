@@ -23,7 +23,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
 
     private val socket: SavaFactory.WebSocketWrapper
     private val executor = Executors.newSingleThreadExecutor()
-    val configHandler = ConfigHandler(appServiceHub)
+    private val configHandler = ConfigHandler(appServiceHub)
 
     init {
         socket = SavaFactory.WebSocketWrapper(configHandler.solanaRpcUrl, configHandler.solanaWsUrl)
@@ -78,6 +78,14 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
             else -> return
         }
     }
+
+    fun getBridgingCoordinates(tokenTypeId: String, originalHolder: Party) =
+        configHandler.getBridgingCoordinates(tokenTypeId, originalHolder)
+
+    fun getBridgingCoordinates(
+        token: StateAndRef<FungibleToken>,
+        originalHolder: Party,
+    ) = configHandler.getBridgingCoordinates(token, originalHolder)
 
     private fun onTokenReceivedCallback(
         solanaOwner: Pubkey,

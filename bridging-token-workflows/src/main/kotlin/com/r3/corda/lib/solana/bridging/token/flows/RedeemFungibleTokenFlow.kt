@@ -47,7 +47,7 @@ class RedeemFungibleTokenFlow(
     @Suspendable
     override fun call(): SignedTransaction {
         val bridgingService = serviceHub.cordaService(BridgingService::class.java)
-        val bridgingCoordinates = bridgingService.configHandler.getBridgingCoordinates(tokenTypeId, originalHolder)
+        val bridgingCoordinates = bridgingService.getBridgingCoordinates(tokenTypeId, originalHolder)
         val token = findTokenTypeOfFungibleTokenBy(tokenTypeId)
         val moveAmount = Amount.fromDecimal(BigDecimal.valueOf(amount).multiply(token.displayTokenSize), token)
         // Move the token from ourIdentity (implied BridgeAuthority) to the lock holder (confidential identity).

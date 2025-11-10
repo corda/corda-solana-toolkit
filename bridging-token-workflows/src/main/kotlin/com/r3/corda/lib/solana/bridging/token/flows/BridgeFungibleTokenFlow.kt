@@ -47,7 +47,7 @@ class BridgeFungibleTokenFlow(
     @Suspendable
     override fun call(): SignedTransaction {
         val bridgingService = serviceHub.cordaService(BridgingService::class.java)
-        val bridgingCoordinates = bridgingService.configHandler.getBridgingCoordinates(token, originalHolder)
+        val bridgingCoordinates = bridgingService.getBridgingCoordinates(token, originalHolder)
 
         // Move the token from ourIdentity (implied BridgeAuthority) to the lock holder (confidential identity).
         // Also, create a proxy of Fungible Token that will be later used to mint a token on Solana
