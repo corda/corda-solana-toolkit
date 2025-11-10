@@ -22,7 +22,6 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.solana.sdk.instruction.Pubkey
 import net.corda.solana.sdk.internal.Token2022
-import java.math.BigDecimal
 
 /**
  * Flows bridges a fungible token redemption to Solana token burn.
@@ -49,7 +48,7 @@ class RedeemFungibleTokenFlow(
         val bridgingService = serviceHub.cordaService(BridgingService::class.java)
         val bridgingCoordinates = bridgingService.getBridgingCoordinates(tokenTypeId, originalHolder)
         val token = findTokenTypeOfFungibleTokenBy(tokenTypeId)
-        val moveAmount = Amount.fromDecimal(BigDecimal.valueOf(amount).multiply(token.displayTokenSize), token)
+        val moveAmount = Amount(amount, token)
         // Move the token from ourIdentity (implied BridgeAuthority) to the lock holder (confidential identity).
         // Also, create a RedeemState that will be later used to mint the tokens on Solana
         val unlockTx =
