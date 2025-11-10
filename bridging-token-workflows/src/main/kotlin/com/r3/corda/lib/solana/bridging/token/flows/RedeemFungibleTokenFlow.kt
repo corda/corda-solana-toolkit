@@ -125,4 +125,16 @@ class RedeemFungibleTokenFlow(
         }
         return matched.state.data.amount.token
     }
+
+    private fun findTokenTypeOfFungibleTokenBy(tokenTypeIdentifier: String): TokenType {
+        val predicate = PersistentFungibleToken::tokenIdentifier.equal(tokenTypeIdentifier)
+        val custom = QueryCriteria.VaultCustomQueryCriteria(predicate)
+        val matches = serviceHub.vaultService.queryBy(FungibleToken::class.java, custom).states
+
+        val matched = requireNotNull(matches.firstOrNull()) {
+            "No fungible token with type identifier '$tokenTypeIdentifier' found in the vault"
+        }
+        // This must be the IssuedTokenType as this is from the fungible token
+        return matched.state.data.amount.token
+    }
 }
