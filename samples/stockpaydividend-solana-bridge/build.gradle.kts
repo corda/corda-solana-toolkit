@@ -72,8 +72,8 @@ tasks.register<Cordform>("deployNodes") {
             "serviceLegalName" to "O=Solana Notary Service,L=Washington,C=US",
             "solana" to mapOf(
                 "notaryKeypairFile" to installSolanaNotaryDevKey.get().keyFile.asFile.get().absolutePath,
-                "custodiedKeysDir" to generateKeys.get().custodiedKeysDirectory.asFile.get().absolutePath,
-                "rpcUrl" to "https://api.devnet.solana.com"
+                "custodiedKeysDir" to generatedKeys.get().custodiedKeysDirectory.asFile.get().absolutePath,
+                "rpcUrl" to "http://localhost:8899"
             )
         )
         p2pPort(10019)
@@ -176,7 +176,7 @@ val installSolanaNotaryDevKey = tasks.register<InstallSolanaNotaryDevKeyTask>("i
     keyFile.set(layout.buildDirectory.file("solana-keys/dev-key/$solanaNotaryKeyFileName"))
 }
 
-abstract class SetupAccounts : DefaultTask() {
+abstract class SetupSolanaAccounts : DefaultTask() {
     @get:InputFile
     abstract val notaryKeyFile: RegularFileProperty
 
@@ -211,7 +211,7 @@ abstract class SetupAccounts : DefaultTask() {
     }
 }
 
-val generateKeys = tasks.register<SetupAccounts>("setupSolanaAccounts") {
+val generatedKeys = tasks.register<SetupSolanaAccounts>("setupSolanaAccounts") {
     dependsOn(installSolanaNotaryDevKey)
     notaryKeyFile.set(installSolanaNotaryDevKey.get().keyFile)
     participants.set(listOf("Shareholder"))
@@ -228,7 +228,7 @@ val generateKeys = tasks.register<SetupAccounts>("setupSolanaAccounts") {
     custodiedKeysDirectory.set(layout.buildDirectory.dir("custodied-keys"))
 }
 
-abstract class InstallSolanaBridgeConfig : DefaultTask() {
+abstract class InstallBridgeAuthorityConfig : DefaultTask() {
     @get:Internal
     abstract val inputDir: DirectoryProperty
 
@@ -260,6 +260,8 @@ abstract class InstallSolanaBridgeConfig : DefaultTask() {
             participants = { $text }
             mints = { "${cordaTokenTypeId.get()}" = "${tokenMintPubkey.get()}" }
             mintAuthorities = { "${cordaTokenTypeId.get()}" = "${bridgeAuthorityPubkey.get()}" }
+            lockingIdentityLabel = "517f0dd1-f907-4aee-a554-070117f0d141"
+            solanaNotaryName = "O=Solana Notary Service,L=Washington,C=US"
         """.trimIndent()
         val outputFile = configFile.get().asFile
         outputFile.parentFile.mkdirs()
@@ -269,25 +271,25 @@ abstract class InstallSolanaBridgeConfig : DefaultTask() {
     }
 }
 
-tasks.register<InstallSolanaBridgeConfig>("installSolanaBridgeConfig") {
-    dependsOn(generateKeys)
+tasks.register<InstallBridgeAuthorityConfig>("installBridgeAuthorityConfig") {
+    dependsOn(generatedKeys)
 
     val node = project.findProperty("nodeName") as String? ?: "BridgingAuthority"
     inputDir.set(layout.buildDirectory.dir("solana-keys"))
-    participants.set(listOf("Shareholder")) //TODO this could be output from previous task or should be configurable
+    participants.set(listOf("O=Shareholder,L=New York,C=US")) //TODO this could be output from previous task or should be configurable
 
     participantKeyFiles.from(
-        generateKeys.map { it.participantKeyFiles }
+        generatedKeys.map { it.participantKeyFiles }
     )
-    tokenMintPubkey.set(generateKeys.flatMap {
+    tokenMintPubkey.set(generatedKeys.flatMap {
         providers.fileContents(it.tokenMintKeyFile).asText.map { it.trim() }
     })
-    bridgeAuthorityPubkey.set(generateKeys.flatMap {
+    bridgeAuthorityPubkey.set(generatedKeys.flatMap {
         providers.fileContents(it.bridgeAuthorityKeyFile).asText.map { it.trim() }
     })
 
-    cordaTokenTypeId.set(project.findProperty("cordaTokenTypeId") as String? ?: "TEST")
-    configFile.set(layout.buildDirectory.file("nodes/$node/cordapps/config/bridging-flows-1.0.conf"))
+    cordaTokenTypeId.set(project.findProperty("cordaTokenTypeId") as String? ?: "6116560b-c78e-4e13-871d-d666a5d032a3")
+    configFile.set(layout.buildDirectory.file("nodes/$node/cordapps/config/bridging-token-workflows-0.1.0-SNAPSHOT.conf"))
 }
 
 // Adds Cordform 'cordapp' method override accept TOML reference

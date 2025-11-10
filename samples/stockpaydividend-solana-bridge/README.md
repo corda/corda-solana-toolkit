@@ -18,7 +18,6 @@ Bridging activities requires additional parties:
 * **Solana Notary** - ensures tokens are created on Solana Network
 
 ## Usage
-### Running the nodes
 
 Note below commands need to be run from within the project root directory ('corda-solana-toolkit'),
 and not form withing sample directory ('corda-solana-toolkit/samples/stockpaydividend-solana-bridge').
@@ -29,6 +28,8 @@ Once off you need to build and publish locally 'Stockbuydivided' CordApp:
 ```
 This will check the project into 'build/tmp', it will be deleted whenever you run Gradle `clean` task.
 
+### Running the nodes with Solana DevNet
+
 Open a terminal and go to the project root directory and type: (to deploy the nodes using bootstrapper)
 ```bash
 ./gradlew samples:stockpaydividend-solana-bridge:deployNodes
@@ -37,7 +38,7 @@ This will create Solana keys and accounts (Create and fund Solana accounts for `
 and deploy the nodes using bootstrapper.
 To finish configuration, the last task creates Bridge Authority configuration with Solana public keys:
 ```bash
-./gradlew samples:stockpaydividend-solana-bridge:installSolanaBridgeConfig
+./gradlew samples:stockpaydividend-solana-bridge:installBridgeAuthorityConfig
 ```
 Then type: (to run the nodes)
 ```bash
@@ -52,11 +53,11 @@ Start a local solana validator with the notary program deployed you need to have
 Run `./runSolana.sh <PATH_TO_CORDA_ENTERPRISE>` script. Below scripts invocations assume you have source code of Corda Enterprise as sibling directory:
 The script build Corda Solana program and starts a local solana validator:
 ```bash
-./runSolana.sh "../../../enterprise"
+./samples/stockpaydividend-solana-bridge/runSolana.sh "../enterprise"
 ```
-The script creates the new network and adds notary key to the Corda program:
+The script creates the new network and adds notary key to the Corda program (open new terminal windows):
 ```bash
-./addNotaryToSolana.sh "../../../enterprise"
+./samples/stockpaydividend-solana-bridge/addNotaryToSolana.sh "../enterprise"
 ```
 The expected output is:
 ```
@@ -75,10 +76,9 @@ Network ID: 0
   1. Notary: Dev7chG99tLCAny3PNYmBdyhaKEVcZnSTp3p1mKVb5m5
 ```
 
-Follow the steps from Running on Solana Dev Net.
+Follow the steps from [Running the nodes with Solana DevNet](#running-the-nodes-with-solana-devnet).
 The only change is to replace Solana DevNet URL with the local validator url ( `"rpcUrl" = "http://localhost:8899"`)
 in the notary config entry of `depolyNodes` task.
-
 
 ## Interacting with the nodes
 
@@ -97,9 +97,7 @@ These steps focus on bridging activities and not on dividend as in [Stock Cordap
 
 ##### 1. IssueStock - Stock Issuer
 WayneCo creates a StockState and issues some stock tokens associated to the created StockState.
->On company WayneCo's node, execute <br>`start CreateAndIssueStock symbol: TEST, name: "Test Stock", currency: USD, price: 7.4, issueVol: 2000, notary: "O=Notary Service,L=Zurich,C=CH", linearId: 6116560b-c78e-4e13-871d-d666a5d032a3`
-
-`linearID` `6116560b-c78e-4e13-871d-d666a5d032a3` matches the configuration in Bridge Authority. TODO providing linearID will not be needed soon.
+>On company WayneCo's node, execute <br>`start CreateAndIssueStock symbol: TEST, name: "Test Stock", currency: USD, price: 7.4, issueVol: 2000`
 
 ##### 2. MoveStock - Stock Issuer
 WayneCo transfers some stock tokens to the Shareholder.
