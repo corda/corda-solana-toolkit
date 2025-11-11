@@ -85,7 +85,7 @@ class FungibleTokenRedemptionContract : Contract {
     sealed interface RedeemCommand : CommandData {
         data class UnlockToken(val lockingIdentity: AbstractParty) : RedeemCommand
 
-        class BurnOnSolana : RedeemCommand
+        object BurnOnSolana : RedeemCommand
     }
 
     companion object {

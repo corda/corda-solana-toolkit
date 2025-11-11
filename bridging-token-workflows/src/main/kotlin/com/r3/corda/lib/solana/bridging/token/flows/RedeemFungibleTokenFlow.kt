@@ -99,7 +99,7 @@ class RedeemFungibleTokenFlow(
         }
         transactionBuilder.addNotaryInstruction(instruction)
         transactionBuilder.addCommand(
-            FungibleTokenRedemptionContract.RedeemCommand.BurnOnSolana(),
+            FungibleTokenRedemptionContract.RedeemCommand.BurnOnSolana,
             listOf(ourIdentity.owningKey),
         )
         // We consume the RedeemState to mark the token is burnt on Solana

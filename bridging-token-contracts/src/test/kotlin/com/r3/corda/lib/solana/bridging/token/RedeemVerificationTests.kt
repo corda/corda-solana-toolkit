@@ -67,7 +67,7 @@ class RedeemVerificationTests {
                 )
                 command(
                     listOf(bridgeAuthority.owningKey),
-                    FungibleTokenRedemptionContract.RedeemCommand.BurnOnSolana()
+                    FungibleTokenRedemptionContract.RedeemCommand.BurnOnSolana
                 )
                 notaryInstruction(
                     Token2022.burn(mint, tokenAccount, bridgeAuthorityWallet, 10000)
@@ -162,7 +162,7 @@ class RedeemVerificationTests {
                     )
                     command(
                         listOf(bridgeAuthority.owningKey),
-                        FungibleTokenRedemptionContract.RedeemCommand.BurnOnSolana()
+                        FungibleTokenRedemptionContract.RedeemCommand.BurnOnSolana
                     )
                     `fails with`("Redeem transactions must have single redeem command")
                 }
@@ -217,7 +217,7 @@ class RedeemVerificationTests {
                 input(CONTRACT_ID, redeemState)
                 command(
                     listOf(bridgeAuthority.owningKey),
-                    FungibleTokenRedemptionContract.RedeemCommand.BurnOnSolana()
+                    FungibleTokenRedemptionContract.RedeemCommand.BurnOnSolana
                 )
 
                 tweak {
@@ -250,12 +250,12 @@ class RedeemVerificationTests {
                 // two bridging commands
                 command(
                     listOf(bridgeAuthority.owningKey),
-                    FungibleTokenRedemptionContract.RedeemCommand.BurnOnSolana(),
+                    FungibleTokenRedemptionContract.RedeemCommand.BurnOnSolana,
                 )
                 tweak {
                     command(
                         listOf(bridgeAuthority.owningKey),
-                        FungibleTokenRedemptionContract.RedeemCommand.BurnOnSolana(),
+                        FungibleTokenRedemptionContract.RedeemCommand.BurnOnSolana,
                     )
                     `fails with`("Redeem transactions must have single redeem command")
                 }
@@ -283,7 +283,7 @@ class RedeemVerificationTests {
                 input(CONTRACT_ID, redeemState)
                 command(
                     listOf(bridgeAuthority.owningKey),
-                    FungibleTokenRedemptionContract.RedeemCommand.BurnOnSolana(),
+                    FungibleTokenRedemptionContract.RedeemCommand.BurnOnSolana,
                 )
 
                 tweak {
