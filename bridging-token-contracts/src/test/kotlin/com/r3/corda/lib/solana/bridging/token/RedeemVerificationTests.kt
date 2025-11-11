@@ -77,17 +77,13 @@ class RedeemVerificationTests {
         }
     }
 
-    @Suppress("LongMethod")
     @Test
     fun issueRedeemStateAmountErrors() {
         services.ledger {
             transaction {
                 attachment(TOKEN_PROGRAM_ID)
                 attachment(CONTRACT_ID)
-                input(
-                    TOKEN_PROGRAM_ID,
-                    FungibleToken(cordaTokenAmount, confidentialIdentity)
-                )
+                input(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
                 command(
                     listOf(bridgeAuthority.owningKey, confidentialIdentity.owningKey),
                     MoveTokenCommand(cordaTokenAmount.token, listOf(0), listOf(0))
@@ -97,14 +93,8 @@ class RedeemVerificationTests {
                     FungibleTokenRedemptionContract.RedeemCommand.UnlockToken(confidentialIdentity)
                 )
                 tweak {
-                    output(
-                        TOKEN_PROGRAM_ID,
-                        FungibleToken(cordaTokenAmount, bridgeAuthority)
-                    )
-                    output(
-                        CONTRACT_ID,
-                        redeemState.copy(amount = 9999)
-                    )
+                    output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
+                    output(CONTRACT_ID, redeemState.copy(amount = 9999))
                     `fails with`("The amount in the RedeemState must match the amount in the FungibleToken state")
                 }
                 tweak {
@@ -112,10 +102,7 @@ class RedeemVerificationTests {
                         TOKEN_PROGRAM_ID,
                         FungibleToken(cordaTokenAmount, bridgeAuthority)
                     )
-                    output(
-                        CONTRACT_ID,
-                        redeemState.copy(amount = 10001)
-                    )
+                    output(CONTRACT_ID, redeemState.copy(amount = 10001))
                     `fails with`("The amount in the RedeemState must match the amount in the FungibleToken state")
                 }
                 tweak {
@@ -124,10 +111,7 @@ class RedeemVerificationTests {
                         TOKEN_PROGRAM_ID,
                         FungibleToken(overspendCordaIssuedTokenType, bridgeAuthority)
                     )
-                    output(
-                        CONTRACT_ID,
-                        redeemState
-                    )
+                    output(CONTRACT_ID, redeemState)
                     `fails with`("In move groups the amount of input tokens MUST EQUAL the amount of output tokens")
                 }
                 tweak {
@@ -136,38 +120,23 @@ class RedeemVerificationTests {
                         TOKEN_PROGRAM_ID,
                         FungibleToken(underspendCordaIssuedTokenType, bridgeAuthority)
                     )
-                    output(
-                        CONTRACT_ID,
-                        redeemState
-                    )
+                    output(CONTRACT_ID, redeemState)
                     `fails with`("In move groups the amount of input tokens MUST EQUAL the amount of output tokens")
                 }
             }
         }
     }
 
-    @Suppress("LongMethod")
     @Test
     fun issueRedeemStateCommandErrors() {
         services.ledger {
             transaction {
                 attachment(TOKEN_PROGRAM_ID)
                 attachment(CONTRACT_ID)
-                input(
-                    TOKEN_PROGRAM_ID,
-                    FungibleToken(cordaTokenAmount, confidentialIdentity)
-                )
-                output(
-                    TOKEN_PROGRAM_ID,
-                    FungibleToken(cordaTokenAmount, bridgeAuthority)
-                )
-                output(
-                    CONTRACT_ID,
-                    redeemState
-                )
-                tweak {
-                    `fails with`("A transaction must contain at least one command")
-                }
+                input(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
+                output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
+                output(CONTRACT_ID, redeemState)
+                tweak { `fails with`("A transaction must contain at least one command") }
                 tweak {
                     command(
                         listOf(bridgeAuthority.owningKey, confidentialIdentity.owningKey),
@@ -220,14 +189,8 @@ class RedeemVerificationTests {
                     TOKEN_PROGRAM_ID,
                     FungibleToken(cordaTokenAmount, confidentialIdentity)
                 )
-                output(
-                    TOKEN_PROGRAM_ID,
-                    FungibleToken(cordaTokenAmount, bridgeAuthority)
-                )
-                output(
-                    CONTRACT_ID,
-                    redeemState
-                )
+                output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
+                output(CONTRACT_ID, redeemState)
                 command(
                     listOf(bridgeAuthority.owningKey, confidentialIdentity.owningKey),
                     MoveTokenCommand(cordaTokenAmount.token, listOf(0), listOf(0))
@@ -251,10 +214,7 @@ class RedeemVerificationTests {
         services.ledger {
             transaction {
                 attachment(CONTRACT_ID)
-                input(
-                    CONTRACT_ID,
-                    redeemState
-                )
+                input(CONTRACT_ID, redeemState)
                 command(
                     listOf(bridgeAuthority.owningKey),
                     FungibleTokenRedemptionContract.RedeemCommand.BurnOnSolana()
@@ -281,16 +241,11 @@ class RedeemVerificationTests {
         services.ledger {
             transaction {
                 attachment(CONTRACT_ID)
-                input(
-                    CONTRACT_ID,
-                    redeemState
-                )
+                input(CONTRACT_ID, redeemState)
                 notaryInstruction(Token2022.burn(mint, tokenAccount, bridgeAuthorityWallet, 10000))
 
                 // no commands
-                tweak {
-                    `fails with`("A transaction must contain at least one command")
-                }
+                tweak { `fails with`("A transaction must contain at least one command") }
 
                 // two bridging commands
                 command(
@@ -325,10 +280,7 @@ class RedeemVerificationTests {
         services.ledger {
             transaction {
                 attachment(CONTRACT_ID)
-                input(
-                    CONTRACT_ID,
-                    redeemState
-                )
+                input(CONTRACT_ID, redeemState)
                 command(
                     listOf(bridgeAuthority.owningKey),
                     FungibleTokenRedemptionContract.RedeemCommand.BurnOnSolana(),
@@ -339,9 +291,7 @@ class RedeemVerificationTests {
                     `fails with`("The Solana instruction in the transaction not the expected burn instruction:")
                 }
 
-                tweak {
-                    `fails with`("Exactly one Solana instruction required")
-                }
+                tweak { `fails with`("Exactly one Solana instruction required") }
 
                 tweak {
                     notaryInstruction(Token2022.burn(mint, tokenAccount, bridgeAuthorityWallet, 10000))

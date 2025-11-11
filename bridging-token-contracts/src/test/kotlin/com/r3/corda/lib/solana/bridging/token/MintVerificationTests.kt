@@ -72,17 +72,13 @@ class MintVerificationTests {
         }
     }
 
-    @Suppress("LongMethod")
     @Test
     fun lockAmountErrors() {
         services.ledger {
             transaction {
                 attachment(TOKEN_PROGRAM_ID)
                 attachment(FungibleTokenBridgeContract.CONTRACT_ID)
-                input(
-                    TOKEN_PROGRAM_ID,
-                    FungibleToken(cordaTokenAmount, bridgeAuthority)
-                )
+                input(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
                 command(
                     listOf(bridgeAuthority.owningKey, confidentialIdentity.owningKey),
                     MoveTokenCommand(cordaTokenAmount.token, listOf(0), listOf(0))
@@ -93,10 +89,7 @@ class MintVerificationTests {
                 )
 
                 tweak {
-                    output(
-                        TOKEN_PROGRAM_ID,
-                        FungibleToken(cordaTokenAmount, confidentialIdentity)
-                    )
+                    output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
                     output(
                         FungibleTokenBridgeContract.CONTRACT_ID,
                         bridgedFungibleTokenProxy.copy(amount = 9999)
@@ -105,14 +98,8 @@ class MintVerificationTests {
                 }
 
                 tweak {
-                    output(
-                        TOKEN_PROGRAM_ID,
-                        FungibleToken(cordaTokenAmount, confidentialIdentity)
-                    )
-                    output(
-                        FungibleTokenBridgeContract.CONTRACT_ID,
-                        bridgedFungibleTokenProxy.copy(amount = 10001)
-                    )
+                    output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
+                    output(FungibleTokenBridgeContract.CONTRACT_ID, bridgedFungibleTokenProxy.copy(amount = 10001))
                     `fails with`("BridgedFungibleTokenProxy must have the same amount as the locked token")
                 }
 
@@ -122,10 +109,7 @@ class MintVerificationTests {
                         TOKEN_PROGRAM_ID,
                         FungibleToken(overspendCordaIssuedTokenType, confidentialIdentity)
                     )
-                    output(
-                        FungibleTokenBridgeContract.CONTRACT_ID,
-                        bridgedFungibleTokenProxy
-                    )
+                    output(FungibleTokenBridgeContract.CONTRACT_ID, bridgedFungibleTokenProxy)
                     `fails with`("In move groups the amount of input tokens MUST EQUAL the amount of output tokens")
                 }
 
@@ -135,38 +119,26 @@ class MintVerificationTests {
                         TOKEN_PROGRAM_ID,
                         FungibleToken(underspendCordaIssuedTokenType, confidentialIdentity)
                     )
-                    output(
-                        FungibleTokenBridgeContract.CONTRACT_ID,
-                        bridgedFungibleTokenProxy
-                    )
+                    output(FungibleTokenBridgeContract.CONTRACT_ID, bridgedFungibleTokenProxy)
                     `fails with`("In move groups the amount of input tokens MUST EQUAL the amount of output tokens")
                 }
             }
         }
     }
 
-    @Suppress("LongMethod")
     @Test
     fun lockCommandErrors() {
         services.ledger {
             transaction {
                 attachment(TOKEN_PROGRAM_ID)
                 attachment(FungibleTokenBridgeContract.CONTRACT_ID)
-                input(
-                    TOKEN_PROGRAM_ID,
-                    FungibleToken(cordaTokenAmount, bridgeAuthority)
-                )
+                input(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
                 output(
                     TOKEN_PROGRAM_ID,
                     FungibleToken(cordaTokenAmount, confidentialIdentity)
                 )
-                output(
-                    FungibleTokenBridgeContract.CONTRACT_ID,
-                    bridgedFungibleTokenProxy
-                )
-                tweak {
-                    `fails with`("A transaction must contain at least one command")
-                }
+                output(FungibleTokenBridgeContract.CONTRACT_ID, bridgedFungibleTokenProxy)
+                tweak { `fails with`("A transaction must contain at least one command") }
                 tweak {
                     command(
                         listOf(bridgeAuthority.owningKey, confidentialIdentity.owningKey),
@@ -223,18 +195,12 @@ class MintVerificationTests {
             transaction {
                 attachment(TOKEN_PROGRAM_ID)
                 attachment(FungibleTokenBridgeContract.CONTRACT_ID)
-                input(
-                    TOKEN_PROGRAM_ID,
-                    FungibleToken(cordaTokenAmount, bridgeAuthority)
-                )
+                input(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
                 output(
                     TOKEN_PROGRAM_ID,
                     FungibleToken(cordaTokenAmount, confidentialIdentity)
                 )
-                output(
-                    FungibleTokenBridgeContract.CONTRACT_ID,
-                    bridgedFungibleTokenProxy
-                )
+                output(FungibleTokenBridgeContract.CONTRACT_ID, bridgedFungibleTokenProxy)
                 command(
                     listOf(bridgeAuthority.owningKey, confidentialIdentity.owningKey),
                     MoveTokenCommand(cordaTokenAmount.token, listOf(0), listOf(0))
@@ -256,10 +222,7 @@ class MintVerificationTests {
         services.ledger {
             transaction {
                 attachment(FungibleTokenBridgeContract.CONTRACT_ID)
-                input(
-                    FungibleTokenBridgeContract.CONTRACT_ID,
-                    bridgedFungibleTokenProxy
-                )
+                input(FungibleTokenBridgeContract.CONTRACT_ID, bridgedFungibleTokenProxy)
                 command(
                     listOf(bridgeAuthority.owningKey),
                     FungibleTokenBridgeContract.BridgeCommand.MintToSolana
@@ -286,10 +249,7 @@ class MintVerificationTests {
         services.ledger {
             transaction {
                 attachment(FungibleTokenBridgeContract.CONTRACT_ID)
-                input(
-                    FungibleTokenBridgeContract.CONTRACT_ID,
-                    bridgedFungibleTokenProxy
-                )
+                input(FungibleTokenBridgeContract.CONTRACT_ID, bridgedFungibleTokenProxy)
                 notaryInstruction(Token2022.mintTo(mint, tokenAccount, mintAuthority, 10000))
 
                 // no commands
@@ -330,10 +290,7 @@ class MintVerificationTests {
         services.ledger {
             transaction {
                 attachment(FungibleTokenBridgeContract.CONTRACT_ID)
-                input(
-                    FungibleTokenBridgeContract.CONTRACT_ID,
-                    bridgedFungibleTokenProxy
-                )
+                input(FungibleTokenBridgeContract.CONTRACT_ID, bridgedFungibleTokenProxy)
                 command(
                     listOf(bridgeAuthority.owningKey),
                     FungibleTokenBridgeContract.BridgeCommand.MintToSolana,
@@ -344,9 +301,7 @@ class MintVerificationTests {
                     `fails with`("Solana instruction in the transaction not the expected mint instruction:")
                 }
 
-                tweak {
-                    `fails with`("Exactly one Solana instruction required")
-                }
+                tweak { `fails with`("Exactly one Solana instruction required") }
 
                 tweak {
                     notaryInstruction(Token2022.mintTo(mint, tokenAccount, mintAuthority, 10000))
