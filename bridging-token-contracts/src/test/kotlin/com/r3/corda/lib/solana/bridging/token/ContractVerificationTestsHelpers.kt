@@ -41,10 +41,9 @@ val cordaTokenAmount = (10000 of TokenType("TEST", 0)).issuedBy(alice)
 
 val mint = Pubkey(Signer.random().account.bytes())
 val mintAuthority = Pubkey(Signer.random().account.bytes())
-val aliceMintTokenAccount = Pubkey(Signer.random().account.bytes())
+val tokenAccount = Pubkey(Signer.random().account.bytes())
 
 val bridgeAuthorityWallet = Pubkey(Signer.random().account.bytes())
-val aliceRedemptionTokenAccount = Pubkey(Signer.random().account.bytes())
 
 fun instructionWithWrongOperation(programId: Pubkey): SolanaInstruction {
     val operation = 6

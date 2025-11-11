@@ -16,14 +16,12 @@ import java.util.*
 
 class RedeemVerificationTests {
     val redeemState = RedeemedFungibleTokenProxy(
-        aliceRedemptionTokenAccount,
+        tokenAccount,
         bridgeAuthorityWallet,
         mint,
         10000,
-        cordaTokenAmount.token.tokenIdentifier,
-        alice,
-        bridgeAuthority,
-        UUID.randomUUID()
+        UUID.randomUUID(),
+        listOf(bridgeAuthority)
     )
 
     @Test
@@ -72,7 +70,7 @@ class RedeemVerificationTests {
                     FungibleTokenRedemptionContract.RedeemCommand.BurnOnSolana()
                 )
                 notaryInstruction(
-                    Token2022.burn(mint, aliceRedemptionTokenAccount, bridgeAuthorityWallet, 10000)
+                    Token2022.burn(mint, tokenAccount, bridgeAuthorityWallet, 10000)
                 )
                 verifies()
             }
@@ -240,7 +238,7 @@ class RedeemVerificationTests {
                 )
                 tweak {
                     notaryInstruction(
-                        Token2022.burn(mint, aliceRedemptionTokenAccount, bridgeAuthorityWallet, 10000)
+                        Token2022.burn(mint, tokenAccount, bridgeAuthorityWallet, 10000)
                     )
                     `fails with`("No Solana instructions allowed")
                 }
@@ -263,15 +261,15 @@ class RedeemVerificationTests {
                 )
 
                 tweak {
-                    notaryInstruction(Token2022.burn(mint, aliceRedemptionTokenAccount, bridgeAuthorityWallet, 10001))
+                    notaryInstruction(Token2022.burn(mint, tokenAccount, bridgeAuthorityWallet, 10001))
                     `fails with`("The Solana instruction in the transaction not the expected burn instruction:")
                 }
                 tweak {
-                    notaryInstruction(Token2022.burn(mint, aliceRedemptionTokenAccount, bridgeAuthorityWallet, 9999))
+                    notaryInstruction(Token2022.burn(mint, tokenAccount, bridgeAuthorityWallet, 9999))
                     `fails with`("The Solana instruction in the transaction not the expected burn instruction:")
                 }
 
-                notaryInstruction(Token2022.burn(mint, aliceRedemptionTokenAccount, bridgeAuthorityWallet, 10000))
+                notaryInstruction(Token2022.burn(mint, tokenAccount, bridgeAuthorityWallet, 10000))
 
                 verifies()
             }
@@ -287,7 +285,7 @@ class RedeemVerificationTests {
                     CONTRACT_ID,
                     redeemState
                 )
-                notaryInstruction(Token2022.burn(mint, aliceRedemptionTokenAccount, bridgeAuthorityWallet, 10000))
+                notaryInstruction(Token2022.burn(mint, tokenAccount, bridgeAuthorityWallet, 10000))
 
                 // no commands
                 tweak {
@@ -346,27 +344,27 @@ class RedeemVerificationTests {
                 }
 
                 tweak {
-                    notaryInstruction(Token2022.burn(mint, aliceRedemptionTokenAccount, bridgeAuthorityWallet, 10000))
-                    notaryInstruction(Token2022.burn(mint, aliceRedemptionTokenAccount, bridgeAuthorityWallet, 10000))
+                    notaryInstruction(Token2022.burn(mint, tokenAccount, bridgeAuthorityWallet, 10000))
+                    notaryInstruction(Token2022.burn(mint, tokenAccount, bridgeAuthorityWallet, 10000))
                     `fails with`("Exactly one Solana instruction required")
                 }
 
                 tweak {
-                    notaryInstruction(instructionWithWrongOperation(aliceMintTokenAccount))
+                    notaryInstruction(instructionWithWrongOperation(tokenAccount))
                     `fails with`("The Solana instruction in the transaction not the expected burn instruction:")
                 }
                 // wrong destination
                 tweak {
-                    Token2022.burn(mint, aliceMintTokenAccount, bridgeAuthorityWallet, 10000)
+                    Token2022.burn(mint, tokenAccount, bridgeAuthorityWallet, 10000)
                     `fails with`("Exactly one Solana instruction required")
                 }
                 // wrong amount
                 tweak {
-                    notaryInstruction(Token2022.burn(mint, aliceMintTokenAccount, bridgeAuthorityWallet, 9999))
+                    notaryInstruction(Token2022.burn(mint, tokenAccount, bridgeAuthorityWallet, 9999))
                     `fails with`("The Solana instruction in the transaction not the expected burn instruction:")
                 }
 
-                notaryInstruction(Token2022.burn(mint, aliceRedemptionTokenAccount, bridgeAuthorityWallet, 10000))
+                notaryInstruction(Token2022.burn(mint, tokenAccount, bridgeAuthorityWallet, 10000))
 
                 verifies()
             }

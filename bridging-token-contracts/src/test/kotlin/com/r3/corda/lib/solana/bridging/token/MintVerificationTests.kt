@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test
 class MintVerificationTests {
     val bridgedFungibleTokenProxy = BridgedFungibleTokenProxy(
         10000,
-        aliceMintTokenAccount,
+        tokenAccount,
         mint,
         mintAuthority,
         bridgeAuthority
@@ -65,7 +65,7 @@ class MintVerificationTests {
                     listOf(bridgeAuthority.owningKey),
                     FungibleTokenBridgeContract.BridgeCommand.MintToSolana
                 )
-                notaryInstruction(Token2022.mintTo(mint, aliceMintTokenAccount, mintAuthority, 10000))
+                notaryInstruction(Token2022.mintTo(mint, tokenAccount, mintAuthority, 10000))
 
                 verifies()
             }
@@ -266,15 +266,15 @@ class MintVerificationTests {
                 )
 
                 tweak {
-                    notaryInstruction(Token2022.mintTo(mint, aliceMintTokenAccount, mintAuthority, 10001))
+                    notaryInstruction(Token2022.mintTo(mint, tokenAccount, mintAuthority, 10001))
                     `fails with`("Solana instruction in the transaction not the expected mint instruction:")
                 }
                 tweak {
-                    notaryInstruction(Token2022.mintTo(mint, aliceMintTokenAccount, mintAuthority, 9999))
+                    notaryInstruction(Token2022.mintTo(mint, tokenAccount, mintAuthority, 9999))
                     `fails with`("Solana instruction in the transaction not the expected mint instruction:")
                 }
 
-                notaryInstruction(Token2022.mintTo(mint, aliceMintTokenAccount, mintAuthority, 10000))
+                notaryInstruction(Token2022.mintTo(mint, tokenAccount, mintAuthority, 10000))
 
                 verifies()
             }
@@ -290,7 +290,7 @@ class MintVerificationTests {
                     FungibleTokenBridgeContract.CONTRACT_ID,
                     bridgedFungibleTokenProxy
                 )
-                notaryInstruction(Token2022.mintTo(mint, aliceMintTokenAccount, mintAuthority, 10000))
+                notaryInstruction(Token2022.mintTo(mint, tokenAccount, mintAuthority, 10000))
 
                 // no commands
                 tweak {
@@ -349,27 +349,27 @@ class MintVerificationTests {
                 }
 
                 tweak {
-                    notaryInstruction(Token2022.mintTo(mint, aliceMintTokenAccount, mintAuthority, 10000))
-                    notaryInstruction(Token2022.mintTo(mint, aliceMintTokenAccount, mintAuthority, 10000))
+                    notaryInstruction(Token2022.mintTo(mint, tokenAccount, mintAuthority, 10000))
+                    notaryInstruction(Token2022.mintTo(mint, tokenAccount, mintAuthority, 10000))
                     `fails with`("Exactly one Solana instruction required")
                 }
 
                 tweak {
-                    notaryInstruction(instructionWithWrongOperation(aliceMintTokenAccount))
+                    notaryInstruction(instructionWithWrongOperation(tokenAccount))
                     `fails with`("Solana instruction in the transaction not the expected mint instruction:")
                 }
                 // wrong destination
                 tweak {
-                    Token2022.mintTo(mint, aliceMintTokenAccount, aliceMintTokenAccount, 10000)
+                    Token2022.mintTo(mint, tokenAccount, tokenAccount, 10000)
                     `fails with`("Exactly one Solana instruction required")
                 }
                 // wrong amount
                 tweak {
-                    notaryInstruction(Token2022.mintTo(mint, aliceMintTokenAccount, mintAuthority, 1000))
+                    notaryInstruction(Token2022.mintTo(mint, tokenAccount, mintAuthority, 1000))
                     `fails with`("Solana instruction in the transaction not the expected mint instruction:")
                 }
 
-                notaryInstruction(Token2022.mintTo(mint, aliceMintTokenAccount, mintAuthority, 10000))
+                notaryInstruction(Token2022.mintTo(mint, tokenAccount, mintAuthority, 10000))
 
                 verifies()
             }
