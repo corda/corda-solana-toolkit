@@ -4,7 +4,6 @@ import com.r3.corda.lib.solana.bridging.token.contracts.FungibleTokenRedemptionC
 import net.corda.core.contracts.BelongsToContract
 import net.corda.core.contracts.ContractState
 import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.Party
 import net.corda.solana.sdk.instruction.Pubkey
 import java.util.*
 
@@ -14,11 +13,6 @@ data class RedeemedFungibleTokenProxy(
     val bridgeRedemptionWallet: Pubkey,
     val mint: Pubkey,
     val amount: Long,
-    val tokenTypeId: String,
-    val redemptionHolder: Party,
-    val bridgeAuthority: Party,
     val lockId: UUID,
-) : ContractState {
-    override val participants: List<AbstractParty>
-        get() = listOf(bridgeAuthority)
-}
+    override val participants: List<AbstractParty>,
+) : ContractState

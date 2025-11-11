@@ -93,7 +93,7 @@ abstract class FlowsTest {
 
     private lateinit var tokenMint: PublicKey
     private lateinit var aliceSigner: Signer
-    private lateinit var aliceMintTokenAccount: PublicKey
+    private lateinit var aliceBridgeTokenAccoount: PublicKey
     private lateinit var aliceRedemptionTokenAccount: PublicKey
 
     @BeforeEach
@@ -124,7 +124,7 @@ abstract class FlowsTest {
         testValidator.fundAccount(10, aliceSigner)
 
         tokenMint = testValidator.createToken(mintAuthoritySigner, decimals = TOKEN_DECIMALS.toByte())
-        aliceMintTokenAccount = testValidator.createTokenAccount(aliceSigner, tokenMint)
+        aliceBridgeTokenAccoount = testValidator.createTokenAccount(aliceSigner, tokenMint)
         aliceRedemptionTokenAccount = testValidator.createTokenAccount(bridgeAuthoritySigner, tokenMint)
     }
 
@@ -138,7 +138,7 @@ abstract class FlowsTest {
         val bridgingContractsCordapp = TestCordapp.findCordapp("com.r3.corda.lib.solana.bridging.token.contracts")
         val bridgingFlowsCordapp = TestCordapp.findCordapp("com.r3.corda.lib.solana.bridging.token.flows")
         val baConfig = mapOf(
-            "participants" to mapOf(aliceIdentity.name.toString() to aliceMintTokenAccount.base58()),
+            "participants" to mapOf(aliceIdentity.name.toString() to aliceBridgeTokenAccoount.base58()),
             "redemptionHolders" to mapOf(aliceRedemptionTokenAccount.base58() to aliceIdentity.name.toString()),
             "bridgeRedemptionWallet" to bridgeAuthoritySigner.account.base58(),
             "mints" to mapOf(msftDescriptor.tokenTypeIdentifier to tokenMint.base58()),
@@ -222,7 +222,7 @@ abstract class FlowsTest {
         val msftTokenType = issuingBank.issue(msftDescriptor, ISSUING_QUANTITY, generalNotaryName)
         val aaplTokenType = issuingBank.issue(aaplDescriptor, ISSUING_QUANTITY, generalNotaryName)
 
-        assertEquals(BigDecimal.ZERO, getSolanaTokenBalance(aliceMintTokenAccount), "Nothing on Solana")
+        assertEquals(BigDecimal.ZERO, getSolanaTokenBalance(aliceBridgeTokenAccoount), "Nothing on Solana")
 
         move(issuingBank, aliceParty, ISSUING_QUANTITY, msftTokenType).get()
         move(issuingBank, aliceParty, ISSUING_QUANTITY, aaplTokenType).get()
@@ -271,7 +271,7 @@ abstract class FlowsTest {
 
         // SPL Token RPC returns decimal strings with trailing zeros trimmed,
         // BigDecimal.equals is scale-sensitive (1.0 != 1.00), so we compare numeric value instead.
-        assertThat(getSolanaTokenBalance(aliceMintTokenAccount))
+        assertThat(getSolanaTokenBalance(aliceBridgeTokenAccoount))
             .describedAs("Solana token amount numerically equals Corda bridged amount")
             .isEqualByComparingTo(MOVE_QUANTITY)
 

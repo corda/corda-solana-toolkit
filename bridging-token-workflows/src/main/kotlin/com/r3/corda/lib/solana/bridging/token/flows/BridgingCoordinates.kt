@@ -58,9 +58,7 @@ data class BridgingCoordinates(
         bridgeRedemptionWallet = bridgeRedemptionWallet,
         mint = mint,
         amount = amount,
-        tokenTypeId = tokenTypeId,
-        redemptionHolder = redemptionHolder,
-        bridgeAuthority = bridgeAuthority,
-        lockId = lockId
+        lockId = lockId,
+        participants = listOf(bridgeAuthority)
     )
 }
