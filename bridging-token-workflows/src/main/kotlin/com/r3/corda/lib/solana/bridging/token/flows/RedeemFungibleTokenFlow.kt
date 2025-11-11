@@ -27,7 +27,7 @@ import net.corda.solana.sdk.internal.Token2022
  * Flows bridges a fungible token redemption to Solana token burn.
  *
  * @param burnAccount the Solana account where the tokens will be burnt
- * @param originalHolder the owner of the token before it was moved to Bridging Authority
+ * @param redemptionHolder the Corda party to send the redeemed tokens to
  * @param tokenTypeId the identifier of the token being redeemed
  * @param amount the amount of tokens to redeem
  * @param solanaNotary notary to perform bridging
@@ -37,7 +37,7 @@ import net.corda.solana.sdk.internal.Token2022
 @InitiatingFlow
 class RedeemFungibleTokenFlow(
     val burnAccount: Pubkey,
-    val originalHolder: Party,
+    val redemptionHolder: Party,
     val tokenTypeId: String,
     val amount: Long,
     val solanaNotary: Party,
@@ -46,7 +46,7 @@ class RedeemFungibleTokenFlow(
     @Suspendable
     override fun call(): SignedTransaction {
         val bridgingService = serviceHub.cordaService(BridgingService::class.java)
-        val bridgingCoordinates = bridgingService.getBridgingCoordinates(tokenTypeId, originalHolder)
+        val bridgingCoordinates = bridgingService.getBridgingCoordinates(tokenTypeId, redemptionHolder)
         val token = findTokenTypeOfFungibleTokenBy(tokenTypeId)
         val moveAmount = Amount(amount, token)
         // Move the token from ourIdentity (implied BridgeAuthority) to the lock holder (confidential identity).
@@ -68,11 +68,27 @@ class RedeemFungibleTokenFlow(
         val notaryChangeTx = subFlow(
             MoveNotaryFlow(listOf(redeemStateAndRef), solanaNotary)
         ).single()
-        val redeemTxState = notaryChangeTx.state
 
-        // Burn on Solana
+        val bridgeAuthoritySignedTransaction = createBurnTransaction(notaryChangeTx)
+
+        subFlow(FinalityFlow(bridgeAuthoritySignedTransaction, emptyList()))
+
+        // First, release the soft lock on the moved tokens
+        serviceHub.vaultService
+            .softLockRelease(
+                notaryChangeTx.state.data.lockId,
+                unlockLedgerTx
+                    .outRefsOfType<FungibleToken>()
+                    .map { it.ref }
+                    .toNonEmptySet()
+            )
+
+        return subFlow(MoveFungibleTokens(moveAmount, redemptionHolder))
+    }
+
+    private fun createBurnTransaction(redeemStateAndRef: StateAndRef<RedeemedFungibleTokenProxy>): SignedTransaction {
         val transactionBuilder = TransactionBuilder(solanaNotary)
-        val instruction = with(redeemTxState.data) {
+        val instruction = with(redeemStateAndRef.state.data) {
             Token2022.burn(
                 mint = mint,
                 owner = bridgeRedemptionWallet,
@@ -80,36 +96,17 @@ class RedeemFungibleTokenFlow(
                 amount = amount,
             )
         }
-
         transactionBuilder.addNotaryInstruction(instruction)
         transactionBuilder.addCommand(
-            FungibleTokenRedemptionContract.RedeemingCommand.BurnOnSolana(),
+            FungibleTokenRedemptionContract.RedeemCommand.BurnOnSolana(),
             listOf(ourIdentity.owningKey),
         )
         // We consume the RedeemState to mark the token is burnt on Solana
-        transactionBuilder.addInputState(StateAndRef(redeemTxState, notaryChangeTx.ref))
+        transactionBuilder.addInputState(redeemStateAndRef)
 
         // Verify
         transactionBuilder.verify(serviceHub)
-        val bridgeAuthoritySignedTransaction = serviceHub.signInitialTransaction(transactionBuilder)
-
-        subFlow(FinalityFlow(bridgeAuthoritySignedTransaction, emptyList()))
-
-        // Return the moved tokens to the original holder
-
-        // First, release the soft lock on the moved tokens
-        serviceHub.vaultService
-            .softLockRelease(
-                redeemTxState.data.lockId,
-                unlockLedgerTx
-                    .outRefsOfType<FungibleToken>()
-                    .map { it.ref }
-                    .toNonEmptySet()
-            )
-
-        return subFlow(
-            MoveFungibleTokens(moveAmount, originalHolder)
-        )
+        return serviceHub.signInitialTransaction(transactionBuilder)
     }
 
     private fun findTokenTypeOfFungibleTokenBy(tokenTypeIdentifier: String): TokenType {

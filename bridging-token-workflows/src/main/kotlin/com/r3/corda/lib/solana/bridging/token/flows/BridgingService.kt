@@ -36,49 +36,41 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
     }
 
     private fun onStartup(event: ServiceLifecycleEvent) {
-        when (event) {
-            ServiceLifecycleEvent.STATE_MACHINE_STARTED -> {
-                // Retrieve unprocessed fungible tokens received while the node was offline
-                val receivedStates = appServiceHub.vaultService.queryBy(FungibleToken::class.java).states
+        if (event != ServiceLifecycleEvent.STATE_MACHINE_STARTED) return
+        // Retrieve unprocessed fungible tokens received while the node was offline
+        val receivedStates = appServiceHub.vaultService.queryBy(FungibleToken::class.java).states
 
-                receivedStates.forEach { token ->
-                    callBridgeFlow(appServiceHub, token)
-                }
-                listenForFungibleTokens(appServiceHub)
+        receivedStates.forEach { token ->
+            callBridgeFlow(appServiceHub, token)
+        }
+        listenForFungibleTokens(appServiceHub)
 
-                // Redemption initialization
-                val subscribed = socket.onToken2022ByOwner(
-                    configHandler.bridgeRedemptionWallet
-                ) { _, burnAccount, mint, amount ->
-                    //TODO perhaps move those to the flow so it can be tracked by the flow hospital
-                    val tokenId = checkNotNull(configHandler.getTokenIdentifierByMint(mint)) {
-                        "No token configured for mint $mint"
-                    }
-                    val cordaOwnerName = checkNotNull(configHandler.redemptionHolders[burnAccount]) {
-                        "No Corda owner configured for Solana redemption account $burnAccount"
-                    }
-                    val coraOwner = checkNotNull(
-                        appServiceHub.networkMapCache.getPeerByLegalName(cordaOwnerName)
-                    ) {
-                        "No Corda owner found for Solana redemption account $burnAccount"
-                    }
-                    onTokenReceivedCallback(
-                        configHandler.bridgeRedemptionWallet,
-                        coraOwner,
-                        amount,
-                        tokenId,
-                        burnAccount
-                    )
-                }
-                if (!subscribed) {
-                    logger
-                        .error(
-                            "Failed to subscribe to ${socket.wsUrl} for wallet ${configHandler.bridgeRedemptionWallet}"
-                        )
-                }
+        // Redemption initialization
+        val subscribed = socket.onToken2022ByOwner(
+            configHandler.bridgeRedemptionWallet
+        ) { _, burnAccount, mint, amount ->
+            // TODO perhaps move those to the flow so it can be tracked by the flow hospital
+            val tokenId = checkNotNull(configHandler.getTokenIdentifierByMint(mint)) {
+                "No token configured for mint $mint"
             }
-
-            else -> return
+            val cordaOwnerName = checkNotNull(configHandler.redemptionHolders[burnAccount]) {
+                "No Corda owner configured for Solana redemption account $burnAccount"
+            }
+            val coraOwner = checkNotNull(appServiceHub.networkMapCache.getPeerByLegalName(cordaOwnerName)) {
+                "No Corda owner found for Solana redemption account $burnAccount"
+            }
+            onTokenReceivedCallback(
+                configHandler.bridgeRedemptionWallet,
+                coraOwner,
+                amount,
+                tokenId,
+                burnAccount
+            )
+        }
+        if (!subscribed) {
+            logger.error(
+                "Failed to subscribe to ${socket.wsUrl} for wallet ${configHandler.bridgeRedemptionWallet}"
+            )
         }
     }
 

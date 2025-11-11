@@ -5,12 +5,12 @@ import com.r3.corda.lib.solana.bridging.token.states.RedeemedFungibleTokenProxy
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import net.corda.core.identity.Party
 import net.corda.solana.sdk.instruction.Pubkey
-import java.util.UUID
+import java.util.*
 
 /**
  * Holds the necessary metadata to bridge a Corda token to Solana Token.
  *
- * @property redemptionHolder The Corda identity that owns the original fungible token being bridged.
+ * @property redemptionHolder The Corda party to send the redeemed tokens to.
  * @property tokenTypeId The unique identifier for the type of token being bridged.
  * @property mint Token **mint** public key on Solana (the asset definition).
  * @property mintAuthority Public key that is authorized to mint for [mint] on Solana

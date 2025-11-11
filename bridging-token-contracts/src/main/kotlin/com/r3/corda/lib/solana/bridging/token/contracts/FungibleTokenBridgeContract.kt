@@ -78,7 +78,9 @@ class FungibleTokenBridgeContract : Contract {
         val bridgedFungibleTokenProxy = tx.inputsOfType<BridgedFungibleTokenProxy>().requireSingle {
             "Bridge to Solana transaction must have exactly one BridgedFungibleTokenProxy as input"
         }
-
+        require(tx.outputsOfType<BridgedFungibleTokenProxy>().isEmpty()) {
+            "Bridge to Solana transaction must not have any BridgedFungibleTokenProxy outputs"
+        }
         val solanaInstruction = tx.notaryInstructionsOfType<SolanaInstruction>().requireSingle {
             "Exactly one Solana instruction required"
         }

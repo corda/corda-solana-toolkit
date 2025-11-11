@@ -65,7 +65,7 @@ constructor(
 
         transactionBuilder.addOutputState(redeemState)
 
-        val unlockTokenCommand = FungibleTokenRedemptionContract.RedeemingCommand.UnlockToken()
+        val unlockTokenCommand = FungibleTokenRedemptionContract.RedeemCommand.UnlockToken()
 
         outputGroups.forEach { (issuedTokenType: IssuedTokenType, _: List<AbstractToken>) ->
             val inputGroup =

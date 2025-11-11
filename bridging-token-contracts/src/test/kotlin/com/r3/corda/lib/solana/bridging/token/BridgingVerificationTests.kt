@@ -104,10 +104,6 @@ class BridgingVerificationTests {
                     FungibleTokenBridgeContract.CONTRACT_ID,
                     bridgedFungibleTokenProxy
                 )
-                output(
-                    FungibleTokenBridgeContract.CONTRACT_ID,
-                    bridgedFungibleTokenProxy.copy(bridgeAuthority = bridgeAuthorityParty)
-                )
                 command(
                     listOf(bridgeAuthorityParty.owningKey),
                     FungibleTokenBridgeContract.BridgeCommand.MintToSolana

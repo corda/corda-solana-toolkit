@@ -9,13 +9,13 @@ import net.corda.solana.sdk.internal.Token2022
 
 class FungibleTokenRedemptionContract : Contract {
     override fun verify(tx: LedgerTransaction) {
-        val bridgingCommands = tx.commandsOfType<RedeemingCommand>()
+        val bridgingCommands = tx.commandsOfType<RedeemCommand>()
 
         require(bridgingCommands.size == 1) { "Redemption transactions must have single redeeming command" }
 
         when (bridgingCommands.single().value) {
-            is RedeemingCommand.UnlockToken -> verifyIssueRedeemState(tx)
-            is RedeemingCommand.BurnOnSolana -> verifyBurnOnSolana(tx)
+            is RedeemCommand.UnlockToken -> verifyIssueRedeemState(tx)
+            is RedeemCommand.BurnOnSolana -> verifyBurnOnSolana(tx)
         }
     }
 
@@ -46,10 +46,10 @@ class FungibleTokenRedemptionContract : Contract {
         require(redeemState != null) { "Redemption requires exactly one output state for a RedeemedFungibleTokenProxy" }
     }
 
-    sealed interface RedeemingCommand : CommandData {
-        class UnlockToken : RedeemingCommand
+    sealed interface RedeemCommand : CommandData {
+        class UnlockToken : RedeemCommand
 
-        class BurnOnSolana : RedeemingCommand
+        class BurnOnSolana : RedeemCommand
     }
 
     companion object {
