@@ -10,8 +10,6 @@ import java.util.*
 /**
  * Holds the necessary metadata to bridge a Corda token to Solana Token.
  *
- * @property redemptionHolder The Corda party to send the redeemed tokens to.
- * @property tokenTypeId The unique identifier for the type of token being bridged.
  * @property mint Token **mint** public key on Solana (the asset definition).
  * @property mintAuthority Public key that is authorized to mint for [mint] on Solana
  * (address controlled by the bridge).
@@ -20,8 +18,6 @@ import java.util.*
  * and will be able to burn them during the redemption.
  */
 data class BridgingCoordinates(
-    val redemptionHolder: Party,
-    val tokenTypeId: String,
     val mint: Pubkey,
     val mintAuthority: Pubkey,
     val mintDestination: Pubkey,

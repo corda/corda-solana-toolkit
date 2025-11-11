@@ -112,8 +112,6 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
             "No mint authority mapping found for token type id $tokenTypeId"
         }
         return BridgingCoordinates(
-            originalHolder,
-            tokenTypeId,
             mint,
             mintAuthority,
             destination,
