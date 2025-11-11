@@ -21,8 +21,8 @@ class RedeemVerificationTests {
         mint,
         10000,
         cordaTokenAmount.token.tokenIdentifier,
-        aliceParty,
-        bridgeAuthorityParty,
+        alice,
+        bridgeAuthority,
         UUID.randomUUID()
     )
 
@@ -34,23 +34,23 @@ class RedeemVerificationTests {
                 attachment(CONTRACT_ID)
                 input(
                     TOKEN_PROGRAM_ID,
-                    FungibleToken(cordaTokenAmount, confidentialIdentityParty)
+                    FungibleToken(cordaTokenAmount, confidentialIdentity)
                 )
                 output(
                     TOKEN_PROGRAM_ID,
-                    FungibleToken(cordaTokenAmount, bridgeAuthorityParty)
+                    FungibleToken(cordaTokenAmount, bridgeAuthority)
                 )
                 output(
                     CONTRACT_ID,
                     redeemState
                 )
                 command(
-                    listOf(bridgeAuthorityParty.owningKey, confidentialIdentityParty.owningKey),
+                    listOf(bridgeAuthority.owningKey, confidentialIdentity.owningKey),
                     MoveTokenCommand(cordaTokenAmount.token, listOf(0), listOf(0))
                 )
                 command(
-                    listOf(bridgeAuthorityParty.owningKey),
-                    FungibleTokenRedemptionContract.RedeemCommand.UnlockToken(confidentialIdentityParty)
+                    listOf(bridgeAuthority.owningKey),
+                    FungibleTokenRedemptionContract.RedeemCommand.UnlockToken(confidentialIdentity)
                 )
                 verifies()
             }
@@ -68,7 +68,7 @@ class RedeemVerificationTests {
                     redeemState
                 )
                 command(
-                    listOf(bridgeAuthorityParty.owningKey),
+                    listOf(bridgeAuthority.owningKey),
                     FungibleTokenRedemptionContract.RedeemCommand.BurnOnSolana()
                 )
                 notaryInstruction(
@@ -88,20 +88,20 @@ class RedeemVerificationTests {
                 attachment(CONTRACT_ID)
                 input(
                     TOKEN_PROGRAM_ID,
-                    FungibleToken(cordaTokenAmount, confidentialIdentityParty)
+                    FungibleToken(cordaTokenAmount, confidentialIdentity)
                 )
                 command(
-                    listOf(bridgeAuthorityParty.owningKey, confidentialIdentityParty.owningKey),
+                    listOf(bridgeAuthority.owningKey, confidentialIdentity.owningKey),
                     MoveTokenCommand(cordaTokenAmount.token, listOf(0), listOf(0))
                 )
                 command(
-                    listOf(bridgeAuthorityParty.owningKey),
-                    FungibleTokenRedemptionContract.RedeemCommand.UnlockToken(confidentialIdentityParty)
+                    listOf(bridgeAuthority.owningKey),
+                    FungibleTokenRedemptionContract.RedeemCommand.UnlockToken(confidentialIdentity)
                 )
                 tweak {
                     output(
                         TOKEN_PROGRAM_ID,
-                        FungibleToken(cordaTokenAmount, bridgeAuthorityParty)
+                        FungibleToken(cordaTokenAmount, bridgeAuthority)
                     )
                     output(
                         CONTRACT_ID,
@@ -112,7 +112,7 @@ class RedeemVerificationTests {
                 tweak {
                     output(
                         TOKEN_PROGRAM_ID,
-                        FungibleToken(cordaTokenAmount, bridgeAuthorityParty)
+                        FungibleToken(cordaTokenAmount, bridgeAuthority)
                     )
                     output(
                         CONTRACT_ID,
@@ -121,10 +121,10 @@ class RedeemVerificationTests {
                     `fails with`("The amount in the RedeemState must match the amount in the FungibleToken state")
                 }
                 tweak {
-                    val overspendCordaIssuedTokenType = (10001 of TokenType("TEST", 0)).issuedBy(aliceParty)
+                    val overspendCordaIssuedTokenType = (10001 of TokenType("TEST", 0)).issuedBy(alice)
                     output(
                         TOKEN_PROGRAM_ID,
-                        FungibleToken(overspendCordaIssuedTokenType, bridgeAuthorityParty)
+                        FungibleToken(overspendCordaIssuedTokenType, bridgeAuthority)
                     )
                     output(
                         CONTRACT_ID,
@@ -133,10 +133,10 @@ class RedeemVerificationTests {
                     `fails with`("In move groups the amount of input tokens MUST EQUAL the amount of output tokens")
                 }
                 tweak {
-                    val underspendCordaIssuedTokenType = (9999 of TokenType("TEST", 0)).issuedBy(aliceParty)
+                    val underspendCordaIssuedTokenType = (9999 of TokenType("TEST", 0)).issuedBy(alice)
                     output(
                         TOKEN_PROGRAM_ID,
-                        FungibleToken(underspendCordaIssuedTokenType, bridgeAuthorityParty)
+                        FungibleToken(underspendCordaIssuedTokenType, bridgeAuthority)
                     )
                     output(
                         CONTRACT_ID,
@@ -157,11 +157,11 @@ class RedeemVerificationTests {
                 attachment(CONTRACT_ID)
                 input(
                     TOKEN_PROGRAM_ID,
-                    FungibleToken(cordaTokenAmount, confidentialIdentityParty)
+                    FungibleToken(cordaTokenAmount, confidentialIdentity)
                 )
                 output(
                     TOKEN_PROGRAM_ID,
-                    FungibleToken(cordaTokenAmount, bridgeAuthorityParty)
+                    FungibleToken(cordaTokenAmount, bridgeAuthority)
                 )
                 output(
                     CONTRACT_ID,
@@ -172,40 +172,40 @@ class RedeemVerificationTests {
                 }
                 tweak {
                     command(
-                        listOf(bridgeAuthorityParty.owningKey, confidentialIdentityParty.owningKey),
+                        listOf(bridgeAuthority.owningKey, confidentialIdentity.owningKey),
                         MoveTokenCommand(cordaTokenAmount.token, listOf(0), listOf(0))
                     )
                     `fails with`("Redeem transactions must have single redeem command")
                 }
                 tweak {
                     command(
-                        listOf(confidentialIdentityParty.owningKey),
-                        FungibleTokenRedemptionContract.RedeemCommand.UnlockToken(confidentialIdentityParty)
+                        listOf(confidentialIdentity.owningKey),
+                        FungibleTokenRedemptionContract.RedeemCommand.UnlockToken(confidentialIdentity)
                     )
                     `fails with`("There must be at least one token command in this transaction.")
                 }
                 tweak {
                     command(
-                        listOf(bridgeAuthorityParty.owningKey, confidentialIdentityParty.owningKey),
+                        listOf(bridgeAuthority.owningKey, confidentialIdentity.owningKey),
                         MoveTokenCommand(cordaTokenAmount.token, listOf(0), listOf(0))
                     )
                     command(
-                        listOf(bridgeAuthorityParty.owningKey),
-                        FungibleTokenRedemptionContract.RedeemCommand.UnlockToken(confidentialIdentityParty)
+                        listOf(bridgeAuthority.owningKey),
+                        FungibleTokenRedemptionContract.RedeemCommand.UnlockToken(confidentialIdentity)
                     )
                     command(
-                        listOf(bridgeAuthorityParty.owningKey),
+                        listOf(bridgeAuthority.owningKey),
                         FungibleTokenRedemptionContract.RedeemCommand.BurnOnSolana()
                     )
                     `fails with`("Redeem transactions must have single redeem command")
                 }
                 command(
-                    listOf(bridgeAuthorityParty.owningKey, confidentialIdentityParty.owningKey),
+                    listOf(bridgeAuthority.owningKey, confidentialIdentity.owningKey),
                     MoveTokenCommand(cordaTokenAmount.token, listOf(0), listOf(0))
                 )
                 command(
-                    listOf(bridgeAuthorityParty.owningKey),
-                    FungibleTokenRedemptionContract.RedeemCommand.UnlockToken(confidentialIdentityParty)
+                    listOf(bridgeAuthority.owningKey),
+                    FungibleTokenRedemptionContract.RedeemCommand.UnlockToken(confidentialIdentity)
                 )
                 verifies()
             }
@@ -220,23 +220,23 @@ class RedeemVerificationTests {
                 attachment(CONTRACT_ID)
                 input(
                     TOKEN_PROGRAM_ID,
-                    FungibleToken(cordaTokenAmount, confidentialIdentityParty)
+                    FungibleToken(cordaTokenAmount, confidentialIdentity)
                 )
                 output(
                     TOKEN_PROGRAM_ID,
-                    FungibleToken(cordaTokenAmount, bridgeAuthorityParty)
+                    FungibleToken(cordaTokenAmount, bridgeAuthority)
                 )
                 output(
                     CONTRACT_ID,
                     redeemState
                 )
                 command(
-                    listOf(bridgeAuthorityParty.owningKey, confidentialIdentityParty.owningKey),
+                    listOf(bridgeAuthority.owningKey, confidentialIdentity.owningKey),
                     MoveTokenCommand(cordaTokenAmount.token, listOf(0), listOf(0))
                 )
                 command(
-                    listOf(bridgeAuthorityParty.owningKey),
-                    FungibleTokenRedemptionContract.RedeemCommand.UnlockToken(confidentialIdentityParty)
+                    listOf(bridgeAuthority.owningKey),
+                    FungibleTokenRedemptionContract.RedeemCommand.UnlockToken(confidentialIdentity)
                 )
                 tweak {
                     notaryInstruction(
@@ -258,7 +258,7 @@ class RedeemVerificationTests {
                     redeemState
                 )
                 command(
-                    listOf(bridgeAuthorityParty.owningKey),
+                    listOf(bridgeAuthority.owningKey),
                     FungibleTokenRedemptionContract.RedeemCommand.BurnOnSolana()
                 )
 
@@ -296,12 +296,12 @@ class RedeemVerificationTests {
 
                 // two bridging commands
                 command(
-                    listOf(bridgeAuthorityParty.owningKey),
+                    listOf(bridgeAuthority.owningKey),
                     FungibleTokenRedemptionContract.RedeemCommand.BurnOnSolana(),
                 )
                 tweak {
                     command(
-                        listOf(bridgeAuthorityParty.owningKey),
+                        listOf(bridgeAuthority.owningKey),
                         FungibleTokenRedemptionContract.RedeemCommand.BurnOnSolana(),
                     )
                     `fails with`("Redeem transactions must have single redeem command")
@@ -311,7 +311,7 @@ class RedeemVerificationTests {
                 tweak {
                     attachment(TOKEN_PROGRAM_ID)
                     command(
-                        listOf(bridgeAuthorityParty.owningKey),
+                        listOf(bridgeAuthority.owningKey),
                         IssueTokenCommand(cordaTokenAmount.token, emptyList())
                     )
                     `fails with`("BurnOnSolana transaction must only contain a single command")
@@ -332,7 +332,7 @@ class RedeemVerificationTests {
                     redeemState
                 )
                 command(
-                    listOf(bridgeAuthorityParty.owningKey),
+                    listOf(bridgeAuthority.owningKey),
                     FungibleTokenRedemptionContract.RedeemCommand.BurnOnSolana(),
                 )
 

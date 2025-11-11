@@ -21,23 +21,23 @@ import org.mockito.Mockito.mock
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-val aliceParty = Party(
+val alice = Party(
     CordaX500Name("Alice", "Lodz", "PL"),
     Crypto.generateKeyPair().public
 )
-val bridgeAuthorityParty = Party(
+val bridgeAuthority = Party(
     CordaX500Name("Bridge Authority", "Frankfurt", "DE"),
     Crypto.generateKeyPair().public
 )
-val confidentialIdentityParty = AnonymousParty(Crypto.generateKeyPair().public)
+val confidentialIdentity = AnonymousParty(Crypto.generateKeyPair().public)
 val services = MockServices(
     cordappPackages = listOf("com.r3.corda.lib.solana.bridging.token"),
-    initialIdentity = TestIdentity(bridgeAuthorityParty.name),
+    initialIdentity = TestIdentity(bridgeAuthority.name),
     identityService = mock(),
     networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
 )
 val TOKEN_PROGRAM_ID: String = FungibleTokenContract.contractId
-val cordaTokenAmount = (10000 of TokenType("TEST", 0)).issuedBy(aliceParty)
+val cordaTokenAmount = (10000 of TokenType("TEST", 0)).issuedBy(alice)
 
 val mint = Pubkey(Signer.random().account.bytes())
 val mintAuthority = Pubkey(Signer.random().account.bytes())

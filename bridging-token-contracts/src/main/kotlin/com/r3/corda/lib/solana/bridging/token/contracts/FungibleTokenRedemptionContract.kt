@@ -27,20 +27,20 @@ class FungibleTokenRedemptionContract : Contract {
         val redeemState = tx.outputsOfType<RedeemedFungibleTokenProxy>().requireSingle {
             "Redemption requires exactly one output state for a RedeemedFungibleTokenProxy"
         }
-        val outputFungibleState = tx.outputsOfType<FungibleToken>().requireSingle {
-            "UnlockToken requires exactly one output FungibleToken state"
-        }
         val inputFungibleState = tx.inputsOfType<FungibleToken>().requireSingle {
             "UnlockToken requires exactly one input FungibleToken state"
         }
         require(tx.commandsOfType<TokenCommand>().singleOrNull()?.value is MoveTokenCommand) {
             "UnlockToken must have a single token command (Move Token)"
         }
+        require(inputFungibleState.holder == redeemCommand.lockingIdentity) {
+            "Only the identity that locked the fungible token may unlock it"
+        }
+        val outputFungibleState = tx.outputsOfType<FungibleToken>().requireSingle {
+            "UnlockToken requires exactly one output FungibleToken state"
+        }
         require(redeemState.amount == outputFungibleState.amount.quantity) {
             "The amount in the RedeemState must match the amount in the FungibleToken state"
-        }
-        require(inputFungibleState.holder == redeemCommand.lockingIdentity) {
-            "The holder of the input token must be the locking identity"
         }
         require(tx.commands.size == 2) {
             // Presence of individual commands had been verified till this point
@@ -60,7 +60,6 @@ class FungibleTokenRedemptionContract : Contract {
             "BurnOnSolana transaction must not have any RedeemedFungibleTokenProxy outputs"
         }
 
-        // Check that there is exactly one solana instruction
         val solanaInstruction = tx.notaryInstructionsOfType<SolanaInstruction>().requireSingle {
             "Exactly one Solana instruction required"
         }
