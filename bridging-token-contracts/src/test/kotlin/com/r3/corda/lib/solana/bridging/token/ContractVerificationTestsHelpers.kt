@@ -15,6 +15,7 @@ import net.corda.solana.sdk.instruction.Pubkey
 import net.corda.solana.sdk.instruction.SolanaInstruction
 import net.corda.solana.sdk.internal.Token2022
 import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.node.MockServices
 import org.mockito.Mockito.mock
@@ -22,7 +23,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 val alice = Party(
-    CordaX500Name("Alice", "Lodz", "PL"),
+    DUMMY_BANK_A_NAME,
     Crypto.generateKeyPair().public
 )
 val bridgeAuthority = Party(
