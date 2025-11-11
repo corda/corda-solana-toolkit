@@ -6,8 +6,11 @@ plugins {
 }
 
 dependencies {
+    implementation(libs.solana4j.json.rpc)
+
     cordaProvided(libs.corda.core)
     cordaProvided(libs.corda.solana.sdk)
+    cordaProvided(libs.corda.solana.common)
 
     cordapp(project(":bridging-token-contracts"))
     cordapp(libs.tokens.contracts)

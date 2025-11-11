@@ -21,6 +21,7 @@ corda-core-test-utils = { module = "net.corda:corda-core-test-utils", version.re
 corda-node-driver = { module = "com.r3.corda:corda-node-driver", version.ref = "corda-ent" }
 quasar-core = { module = "co.paralleluniverse:quasar-core", version = "0.7.6" }
 mockito-core = { module = "org.mockito:mockito-core", version = "5.5.0" } # ledger unit tests
+solana4j-json-rpc = { module = "com.lmax:solana4j-json-rpc", version = "1.2.0" }
 
 # Libraries for a sample Corddap deployment
 corda-node-api = { module = "net.corda:corda-node-api", version.ref = "corda-os" }
