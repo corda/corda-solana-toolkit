@@ -1,7 +1,6 @@
 package com.r3.corda.lib.solana.bridging.token
 
 import com.r3.corda.lib.solana.bridging.token.contracts.FungibleTokenRedemptionContract
-import com.r3.corda.lib.solana.bridging.token.contracts.FungibleTokenRedemptionContract.Companion.CONTRACT_ID
 import com.r3.corda.lib.solana.bridging.token.states.RedeemedFungibleTokenProxy
 import com.r3.corda.lib.tokens.contracts.commands.IssueTokenCommand
 import com.r3.corda.lib.tokens.contracts.commands.MoveTokenCommand
@@ -29,7 +28,7 @@ class RedeemVerificationTests {
         services.ledger {
             transaction {
                 attachment(TOKEN_PROGRAM_ID)
-                attachment(CONTRACT_ID)
+                attachment(FungibleTokenRedemptionContract.CONTRACT_ID)
                 input(
                     TOKEN_PROGRAM_ID,
                     FungibleToken(cordaTokenAmount, confidentialIdentity)
@@ -39,7 +38,7 @@ class RedeemVerificationTests {
                     FungibleToken(cordaTokenAmount, bridgeAuthority)
                 )
                 output(
-                    CONTRACT_ID,
+                    FungibleTokenRedemptionContract.CONTRACT_ID,
                     redeemState
                 )
                 command(
@@ -60,9 +59,9 @@ class RedeemVerificationTests {
         services.ledger {
             transaction {
                 attachment(TOKEN_PROGRAM_ID)
-                attachment(CONTRACT_ID)
+                attachment(FungibleTokenRedemptionContract.CONTRACT_ID)
                 input(
-                    CONTRACT_ID,
+                    FungibleTokenRedemptionContract.CONTRACT_ID,
                     redeemState
                 )
                 command(
@@ -82,7 +81,7 @@ class RedeemVerificationTests {
         services.ledger {
             transaction {
                 attachment(TOKEN_PROGRAM_ID)
-                attachment(CONTRACT_ID)
+                attachment(FungibleTokenRedemptionContract.CONTRACT_ID)
                 input(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
                 command(
                     listOf(bridgeAuthority.owningKey, confidentialIdentity.owningKey),
@@ -94,7 +93,7 @@ class RedeemVerificationTests {
                 )
                 tweak {
                     output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
-                    output(CONTRACT_ID, redeemState.copy(amount = 9999))
+                    output(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState.copy(amount = 9999))
                     `fails with`("The amount in the RedeemState must match the amount in the FungibleToken state")
                 }
                 tweak {
@@ -102,7 +101,7 @@ class RedeemVerificationTests {
                         TOKEN_PROGRAM_ID,
                         FungibleToken(cordaTokenAmount, bridgeAuthority)
                     )
-                    output(CONTRACT_ID, redeemState.copy(amount = 10001))
+                    output(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState.copy(amount = 10001))
                     `fails with`("The amount in the RedeemState must match the amount in the FungibleToken state")
                 }
                 tweak {
@@ -111,7 +110,7 @@ class RedeemVerificationTests {
                         TOKEN_PROGRAM_ID,
                         FungibleToken(overspendCordaIssuedTokenType, bridgeAuthority)
                     )
-                    output(CONTRACT_ID, redeemState)
+                    output(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState)
                     `fails with`("In move groups the amount of input tokens MUST EQUAL the amount of output tokens")
                 }
                 tweak {
@@ -120,7 +119,7 @@ class RedeemVerificationTests {
                         TOKEN_PROGRAM_ID,
                         FungibleToken(underspendCordaIssuedTokenType, bridgeAuthority)
                     )
-                    output(CONTRACT_ID, redeemState)
+                    output(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState)
                     `fails with`("In move groups the amount of input tokens MUST EQUAL the amount of output tokens")
                 }
             }
@@ -132,10 +131,10 @@ class RedeemVerificationTests {
         services.ledger {
             transaction {
                 attachment(TOKEN_PROGRAM_ID)
-                attachment(CONTRACT_ID)
+                attachment(FungibleTokenRedemptionContract.CONTRACT_ID)
                 input(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
                 output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
-                output(CONTRACT_ID, redeemState)
+                output(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState)
                 tweak { `fails with`("A transaction must contain at least one command") }
                 tweak {
                     command(
@@ -184,13 +183,13 @@ class RedeemVerificationTests {
         services.ledger {
             transaction {
                 attachment(TOKEN_PROGRAM_ID)
-                attachment(CONTRACT_ID)
+                attachment(FungibleTokenRedemptionContract.CONTRACT_ID)
                 input(
                     TOKEN_PROGRAM_ID,
                     FungibleToken(cordaTokenAmount, confidentialIdentity)
                 )
                 output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
-                output(CONTRACT_ID, redeemState)
+                output(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState)
                 command(
                     listOf(bridgeAuthority.owningKey, confidentialIdentity.owningKey),
                     MoveTokenCommand(cordaTokenAmount.token, listOf(0), listOf(0))
@@ -213,8 +212,8 @@ class RedeemVerificationTests {
     fun burnAmountErrors() {
         services.ledger {
             transaction {
-                attachment(CONTRACT_ID)
-                input(CONTRACT_ID, redeemState)
+                attachment(FungibleTokenRedemptionContract.CONTRACT_ID)
+                input(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState)
                 command(
                     listOf(bridgeAuthority.owningKey),
                     FungibleTokenRedemptionContract.RedeemCommand.BurnOnSolana
@@ -240,8 +239,8 @@ class RedeemVerificationTests {
     fun burnCommandErrors() {
         services.ledger {
             transaction {
-                attachment(CONTRACT_ID)
-                input(CONTRACT_ID, redeemState)
+                attachment(FungibleTokenRedemptionContract.CONTRACT_ID)
+                input(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState)
                 notaryInstruction(Token2022.burn(mint, tokenAccount, bridgeAuthorityWallet, 10000))
 
                 // no commands
@@ -279,8 +278,8 @@ class RedeemVerificationTests {
     fun burnInstructionErrors() {
         services.ledger {
             transaction {
-                attachment(CONTRACT_ID)
-                input(CONTRACT_ID, redeemState)
+                attachment(FungibleTokenRedemptionContract.CONTRACT_ID)
+                input(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState)
                 command(
                     listOf(bridgeAuthority.owningKey),
                     FungibleTokenRedemptionContract.RedeemCommand.BurnOnSolana,
@@ -303,10 +302,10 @@ class RedeemVerificationTests {
                     notaryInstruction(instructionWithWrongOperation(tokenAccount))
                     `fails with`("The Solana instruction in the transaction not the expected burn instruction:")
                 }
-                // wrong destination
+                // wrong owner
                 tweak {
-                    Token2022.burn(mint, tokenAccount, bridgeAuthorityWallet, 10000)
-                    `fails with`("Exactly one Solana instruction required")
+                    notaryInstruction(Token2022.burn(mint, tokenAccount, tokenAccount, 10000))
+                    `fails with`("The Solana instruction in the transaction not the expected burn instruction:")
                 }
                 // wrong amount
                 tweak {

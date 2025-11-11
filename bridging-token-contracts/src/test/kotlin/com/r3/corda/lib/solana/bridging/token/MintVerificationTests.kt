@@ -315,8 +315,8 @@ class MintVerificationTests {
                 }
                 // wrong destination
                 tweak {
-                    Token2022.mintTo(mint, tokenAccount, tokenAccount, 10000)
-                    `fails with`("Exactly one Solana instruction required")
+                    notaryInstruction(Token2022.mintTo(mint, tokenAccount, tokenAccount, 10000))
+                    `fails with`("Solana instruction in the transaction not the expected mint instruction")
                 }
                 // wrong amount
                 tweak {
