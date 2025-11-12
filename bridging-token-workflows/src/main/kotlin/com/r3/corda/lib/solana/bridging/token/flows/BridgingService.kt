@@ -1,6 +1,7 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
 import com.lmax.solana4j.client.jsonrpc.SolanaJsonRpcClient
+import com.lmax.solana4j.client.jsonrpc.SolanaJsonRpcClient
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.workflows.utilities.toParty
 import net.corda.core.contracts.StateAndRef
@@ -25,8 +26,8 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
 
     private val socket: SavaFactory.WebSocketWrapper
     private val executor = Executors.newSingleThreadExecutor()
-    private val rpcClient: SolanaJsonRpcClient
     private val configHandler = ConfigHandler(appServiceHub)
+    private val rpcClient: SolanaJsonRpcClient
     private val accountService: AccountService
 
     init {
