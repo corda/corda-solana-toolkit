@@ -281,9 +281,9 @@ abstract class FlowsTest {
             aliceSigner,
             aliceBridgeTokenAccoount,
             aliceRedemptionTokenAccount,
-            (MOVE_QUANTITY.multiply(BigDecimal(1000L))).toLong()
+            MOVE_QUANTITY.toRawAmount()
         )
-        // We need to wait for the Sava listener to process the newly received event
+        // We need to wait for the websocket listener to process the newly received event
         Thread.sleep(5000)
 
         assertEquals(
@@ -337,6 +337,10 @@ abstract class FlowsTest {
             emptyList(),
             RpcParams()
         )
+    }
+
+    private fun BigDecimal.toRawAmount(): Long {
+        return (this * BigDecimal(1000L)).toLong()
     }
 
     private fun getSolanaTokenBalance(publicKey: PublicKey): BigDecimal {
