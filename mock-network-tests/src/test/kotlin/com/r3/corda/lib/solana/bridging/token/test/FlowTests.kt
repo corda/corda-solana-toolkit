@@ -340,7 +340,7 @@ abstract class FlowsTest {
     }
 
     private fun BigDecimal.toRawAmount(): Long {
-        return (this * BigDecimal(10L).pow(TOKEN_DECIMALS)).toLong()
+        return (this * BigDecimal(10L).pow(TOKEN_DECIMALS)).longValueExact()
     }
 
     private fun getSolanaTokenBalance(publicKey: PublicKey): BigDecimal {
