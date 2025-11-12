@@ -11,7 +11,6 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.NotaryChangeFlow
 import net.corda.core.flows.StartableByService
-import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -39,16 +38,16 @@ import net.corda.solana.sdk.internal.Token2022
 @StartableByService
 @InitiatingFlow
 class BridgeFungibleTokenFlow(
-    val lockingHolder: AbstractParty,
-    val originalHolder: AbstractParty,
+    val lockingHolder: Party,
+    val originalHolder: Party,
     val token: StateAndRef<FungibleToken>,
     val solanaNotary: Party,
     val observers: List<Party>,
 ) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
-        val solanaMapping: SolanaAccountsMapping = serviceHub.cordaService(BridgingService::class.java)
-        val bridgingCoordinates = solanaMapping.getBridgingCoordinates(token, originalHolder)
+        val bridgingService = serviceHub.cordaService(BridgingService::class.java)
+        val bridgingCoordinates = bridgingService.getBridgingCoordinates(token, originalHolder)
 
         // Move the token from ourIdentity (implied BridgeAuthority) to the lock holder (confidential identity).
         // Also, create a proxy of Fungible Token that will be later used to mint a token on Solana
@@ -90,10 +89,6 @@ class BridgeFungibleTokenFlow(
             listOf(ourIdentity.owningKey),
         )
         transactionBuilder.addInputState(tokenProxyRef)
-        transactionBuilder.addOutputState(
-            state = bridgedFungibleTokenProxy.copy(minted = true),
-            contract = FungibleTokenBridgeContract::class.qualifiedName!!,
-        )
         transactionBuilder.verify(serviceHub)
         return serviceHub.signInitialTransaction(transactionBuilder)
     }

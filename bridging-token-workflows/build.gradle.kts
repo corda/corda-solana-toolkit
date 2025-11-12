@@ -8,6 +8,7 @@ plugins {
 dependencies {
     cordaProvided(libs.corda.core)
     cordaProvided(libs.corda.solana.sdk)
+    cordaProvided(libs.corda.solana.common)
 
     cordapp(project(":bridging-token-contracts"))
     cordapp(libs.tokens.contracts)
