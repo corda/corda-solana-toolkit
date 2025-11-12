@@ -5,6 +5,7 @@ import com.lmax.solana4j.client.api.SimulateTransactionResponse
 import com.lmax.solana4j.client.api.SolanaClientResponse
 import com.lmax.solana4j.client.api.TransactionResponse
 import com.lmax.solana4j.client.jsonrpc.SolanaJsonRpcClient
+import com.lmax.solana4j.encoding.SolanaEncoding
 import com.r3.corda.lib.solana.bridging.token.flows.AccountService
 import io.mockk.every
 import io.mockk.mockk
@@ -15,17 +16,16 @@ import net.corda.solana.aggregator.common.Signer
 import net.corda.solana.aggregator.common.sendAndConfirm
 import net.corda.solana.aggregator.common.serialiseToTransaction
 import net.corda.solana.aggregator.common.simulate
+import net.corda.solana.sdk.instruction.Pubkey
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class AccountServiceTest {
     private val rpcClient = mockk<SolanaJsonRpcClient>()
-    private val feeSigner = mockk<Signer>()
     private lateinit var service: AccountService
-
-    private val mint = "4Nd1mYQKMnHkBc7FAuoRdNff7kwh28ykVZCENKxw7d9X"
-    private val owner = "7z7N2fHcQ6FqLwV8pK7Kqs6QZtqv4sZgQ8Q3jL2xG4nQ"
-    private val payer = "9w9kL7JH2Brw39i2e3D9o1bT2PukUq3FkSmQnG8Yx1aP"
+    private val mint = Pubkey.fromBase58("4Nd1mYQKMnHkBc7FAuoRdNff7kwh28ykVZCENKxw7d9X")
+    private val owner = Pubkey.fromBase58("7z7N2fHcQ6FqLwV8pK7Kqs6QZtqv4sZgQ8Q3jL2xG4nQ")
+    private val feeSigner = mockk<Signer>()
 
     private val blockhash = mockk<Blockhash>()
     private val result = mockk<SolanaClientResponse<Blockhash>>()
@@ -35,6 +35,7 @@ class AccountServiceTest {
     fun setUp() {
         service = AccountService(rpcClient, feeSigner)
         mockkStatic("net.corda.solana.aggregator.common.Solana4jUtilsKt")
+        every { feeSigner.account } returns SolanaEncoding.account("9w9kL7JH2Brw39i2e3D9o1bT2PukUq3FkSmQnG8Yx1aP")
         every { blockhash.lastValidBlockHeight } returns 123
         every { result.error } returns null
         every { result.response } returns blockhash
@@ -57,7 +58,7 @@ class AccountServiceTest {
             )
         } returns sendAndConfirmResponse
 
-        service.createAta(mint, owner, payer)
+        service.createAta(mint, owner)
 
         verifyOrder {
             rpcClient.getLatestBlockhash(AccountService.RPC_PARAMS)
@@ -70,7 +71,7 @@ class AccountServiceTest {
     fun `createAta calls Solana RPC with correct transaction but ATA already exists`() {
         every { simulatedResult.err } returns "Associated token account already in use"
 
-        service.createAta(mint, owner, payer)
+        service.createAta(mint, owner)
 
         verifyOrder {
             rpcClient.getLatestBlockhash(AccountService.RPC_PARAMS)

@@ -6,7 +6,6 @@ import com.lmax.solana4j.api.TransactionInstruction
 import com.lmax.solana4j.client.api.Blockhash
 import com.lmax.solana4j.client.api.SimulateTransactionResponse
 import com.lmax.solana4j.client.jsonrpc.SolanaJsonRpcClient
-import com.lmax.solana4j.encoding.SolanaEncoding
 import com.lmax.solana4j.programs.AssociatedTokenProgram
 import net.corda.solana.aggregator.common.RpcParams
 import net.corda.solana.aggregator.common.Signer
@@ -16,11 +15,17 @@ import net.corda.solana.aggregator.common.sendAndConfirm
 import net.corda.solana.aggregator.common.serialiseToTransaction
 import net.corda.solana.aggregator.common.simulate
 import net.corda.solana.aggregator.common.toPublicKey
+import net.corda.solana.sdk.instruction.Pubkey
 import net.corda.solana.sdk.internal.Token2022
 import java.nio.BufferOverflowException
 import java.nio.ByteBuffer
 
-class AccountService(private val rpcClient: SolanaJsonRpcClient, private val feeSigner: Signer) {
+/**
+ * Manages creation of Solana ATA account on the fly.
+ * @param client The Solana RPC client.
+ * @param feePayer The signer to pay the transaction fee.
+ */
+class AccountService(private val client: SolanaJsonRpcClient, private val feePayer: Signer) {
     companion object {
         val RPC_PARAMS = RpcParams(skipPreflight = true)
         private val PROGRAM_ACCOUNT: PublicKey = Token2022.PROGRAM_ID.toPublicKey()
@@ -29,21 +34,34 @@ class AccountService(private val rpcClient: SolanaJsonRpcClient, private val fee
     // This is only accessed by a single thread so safe to re-use.
     private val buffer = ByteBuffer.allocate(Solana.MAX_MESSAGE_SIZE)
 
-    fun createAta(mint: String, owner: String, payer: String) {
-        val instruction = createAtaInstruction(mint, owner, payer)
+    /**
+     * Creates an associated token account (ATA) for the given SPL token [mint] and [owner] if the ATA doesn't exist.
+     * The transaction is built and signed using this service's fee payer, with first simulating the result.
+     * This method will retry creation attempts if the ATA cannot be created due to connection issues.
+     *
+     * @param mint  The SPL token mint for which the associated token account is created.
+     * @param owner The owner of the associated token account.
+     *
+     * @throws net.corda.solana.aggregator.common.SolanaException if the transaction cannot be constructed
+     * or is too large.
+     * @throws com.lmax.solana4j.client.jsonrpc.SolanaJsonRpcClientException if the underlying RPC calls fail after
+     * exhausting retry attempts
+     */
+    fun createAta(mint: Pubkey, owner: Pubkey) {
+        val instruction = createAtaInstruction(mint.toPublicKey(), owner.toPublicKey(), feePayer.account)
         val (earlyResult, solanaTxBlob, blockhash) = simulateSolanaTx(instruction)
         if (earlyResult?.err != null) {
             return // TODO check if error relates to account already in use
         }
-        rpcClient.sendAndConfirm(solanaTxBlob, blockhash.lastValidBlockHeight, RPC_PARAMS)
+        client.sendAndConfirm(solanaTxBlob, blockhash.lastValidBlockHeight, RPC_PARAMS)
     }
 
     private fun simulateSolanaTx(instruction: TransactionInstruction):
         Triple<SimulateTransactionResponse?, String, Blockhash> {
         // TODO error handling
-        val blockhash = rpcClient.getLatestBlockhash(RPC_PARAMS).checkResponse("getLatestBlockhash")!!
+        val blockhash = client.getLatestBlockhash(RPC_PARAMS).checkResponse("getLatestBlockhash")!!
         val solanaTxBlob = serialiseSolanaTx(instruction, emptyList(), blockhash)
-        val result = rpcClient.simulate(solanaTxBlob, RPC_PARAMS)
+        val result = client.simulate(solanaTxBlob, RPC_PARAMS)
         return Triple(result, solanaTxBlob, blockhash)
     }
 
@@ -58,7 +76,7 @@ class AccountService(private val rpcClient: SolanaJsonRpcClient, private val fee
                 { txBuilder ->
                     txBuilder.append(instruction)
                 },
-                feeSigner,
+                feePayer,
                 additionalSigners,
                 blockhash,
                 buffer
@@ -69,14 +87,10 @@ class AccountService(private val rpcClient: SolanaJsonRpcClient, private val fee
     }
 
     private fun createAtaInstruction(
-        mint: String,
-        owner: String,
-        payer: String,
+        mintKey: PublicKey,
+        ownerKey: PublicKey,
+        payerKey: PublicKey,
     ): TransactionInstruction {
-        val mintKey: PublicKey = SolanaEncoding.account(mint)
-        val ownerKey: PublicKey = SolanaEncoding.account(owner)
-        val payerKey: PublicKey = SolanaEncoding.account(payer)
-
         val pda = AssociatedTokenProgram.deriveAddress(ownerKey, PROGRAM_ACCOUNT, mintKey)
 
         return AssociatedTokenProgram.createAssociatedTokenAccount(
