@@ -23,7 +23,7 @@ class FungibleTokenBridgeContract : Contract {
     override fun verify(tx: LedgerTransaction) {
         val bridgeCommands = tx.commandsOfType<BridgeCommand>()
         val bridgeCommand = bridgeCommands.requireSingle {
-            "Bridging transactions must have a single bridging command"
+            "Bridging transactions must have a single bridge command"
         }
         when (val cmdData = bridgeCommand.value) {
             is BridgeCommand.LockToken -> verifyLockToken(tx, cmdData)
@@ -61,7 +61,6 @@ class FungibleTokenBridgeContract : Contract {
         require(outputToken.amount.quantity == tokenProxy.amount) {
             "BridgedFungibleTokenProxy must have the same amount as the locked token"
         }
-        require(!tokenProxy.minted) { "BridgedFungibleTokenProxy must not be marked as minted when issuing" }
 
         require(tx.commands.size == 2) {
             // Presence of individual commands had been verified till this point
@@ -76,27 +75,20 @@ class FungibleTokenBridgeContract : Contract {
     }
 
     private fun verifyMintToSolana(tx: LedgerTransaction) {
-        val inputTokenProxy = tx.inputsOfType<BridgedFungibleTokenProxy>().requireSingle {
-            "Bridging transaction must have exactly one BridgedFungibleTokenProxy as input"
+        val bridgedFungibleTokenProxy = tx.inputsOfType<BridgedFungibleTokenProxy>().requireSingle {
+            "Bridge to Solana transaction must have exactly one BridgedFungibleTokenProxy as input"
         }
-        val outputTokenProxy = tx.outputsOfType<BridgedFungibleTokenProxy>().requireSingle {
-            "Bridging transaction must have exactly one BridgedFungibleTokenProxy as output"
+        require(tx.outputsOfType<BridgedFungibleTokenProxy>().isEmpty()) {
+            "Bridge to Solana transaction must not have any BridgedFungibleTokenProxy outputs"
         }
-        require(!inputTokenProxy.minted && outputTokenProxy.minted) {
-            "BridgedFungibleTokenProxy must be marked as minted"
-        }
-        require(outputTokenProxy.copy(minted = false) == inputTokenProxy) {
-            "BridgedFungibleTokenProxy must not change"
-        }
-
         val solanaInstruction = tx.notaryInstructionsOfType<SolanaInstruction>().requireSingle {
             "Exactly one Solana instruction required"
         }
         val expectedMintInstruction = Token2022.mintTo(
-            outputTokenProxy.mint,
-            outputTokenProxy.mintDestination,
-            outputTokenProxy.mintAuthority,
-            outputTokenProxy.amount,
+            bridgedFungibleTokenProxy.mint,
+            bridgedFungibleTokenProxy.mintDestination,
+            bridgedFungibleTokenProxy.mintAuthority,
+            bridgedFungibleTokenProxy.amount,
         )
         require(solanaInstruction == expectedMintInstruction) {
             "Solana instruction in the transaction not the expected mint instruction:\n" +

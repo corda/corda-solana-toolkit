@@ -2,3 +2,4 @@
 .idea
 build
 logs
+.DS_Store
