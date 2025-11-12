@@ -9,8 +9,10 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.AppServiceHub
+import net.corda.solana.aggregator.common.Signer
 import net.corda.solana.sdk.instruction.Pubkey
-import java.util.*
+import java.util.UUID
+import kotlin.io.path.Path
 
 class ConfigHandler(appServiceHub: AppServiceHub) {
     private val participants: Map<CordaX500Name, Pubkey>
@@ -23,6 +25,7 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
     val solanaRpcUrl: String
     val bridgeRedemptionWallet: Pubkey
     val redemptionHolders: Map<Pubkey, CordaX500Name>
+    val bridgeAuthoritySigner: Signer
 
     init {
         val config = appServiceHub.getAppContext().config
@@ -36,6 +39,7 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
         solanaWsUrl = config.getString("solanaWsUrl")
         solanaRpcUrl = config.getString("solanaRpcUrl")
         bridgeRedemptionWallet = Pubkey.fromBase58(config.getString("bridgeRedemptionWallet"))
+        bridgeAuthoritySigner = Signer.fromFile(Path(config.getString("bridgeAuthorityKeyFile")))
     }
 
     private fun getLockingIdentity(config: CordappConfig, appServiceHub: AppServiceHub): Party {

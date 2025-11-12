@@ -67,6 +67,8 @@ class BridgeFungibleTokenFlow(
         // TODO This needs to use the new MoveNotaryFlow
         val tokenProxyOnSolanaNotary = subFlow(NotaryChangeFlow(bridgedFungibleTokenProxy, solanaNotary))
 
+        bridgingService.createAta(bridgingCoordinates.mint, bridgingCoordinates.mintDestination)
+
         // Mint on Solana
         val mintTx = createMintTransaction(tokenProxyOnSolanaNotary)
 

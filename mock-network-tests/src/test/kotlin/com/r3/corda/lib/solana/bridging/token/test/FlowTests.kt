@@ -40,7 +40,7 @@ import org.junit.jupiter.api.assertNotNull
 import org.junit.jupiter.api.io.TempDir
 import java.math.BigDecimal
 import java.nio.file.Path
-import java.util.*
+import java.util.UUID
 
 abstract class FlowsTest {
     abstract val msftDescriptor: TokenTypeDescriptor
@@ -91,6 +91,7 @@ abstract class FlowsTest {
     private lateinit var solanaNotaryKey: Signer
     private lateinit var mintAuthoritySigner: Signer
     private lateinit var bridgeAuthoritySigner: Signer
+    private lateinit var bridgeAuthorityKeyFile: Path
     private lateinit var testValidator: SolanaTestValidator
 
     private lateinit var tokenMint: PublicKey
@@ -115,7 +116,8 @@ abstract class FlowsTest {
         solanaNotaryKeyFile = randomKeypairFile(generalDir)
         solanaNotaryKey = Signer.fromFile(solanaNotaryKeyFile)
         mintAuthoritySigner = Signer.fromFile(randomKeypairFile(custodiedKeysDir))
-        bridgeAuthoritySigner = Signer.fromFile(randomKeypairFile(custodiedKeysDir))
+        bridgeAuthorityKeyFile = randomKeypairFile(custodiedKeysDir)
+        bridgeAuthoritySigner = Signer.fromFile(bridgeAuthorityKeyFile)
         testValidator.start()
         testValidator.defaultNotaryProgramSetup(solanaNotaryKey.account)
         testValidator.fundAccount(10, mintAuthoritySigner)
@@ -148,6 +150,7 @@ abstract class FlowsTest {
             "solanaNotaryName" to solanaNotaryName.toString(),
             "solanaWsUrl" to SolanaTestValidator.WS_URL,
             "solanaRpcUrl" to SolanaTestValidator.RPC_URL,
+            "bridgeAuthorityKeyFile" to bridgeAuthorityKeyFile.toString(),
         )
         network = MockNetwork(
             MockNetworkParameters(
