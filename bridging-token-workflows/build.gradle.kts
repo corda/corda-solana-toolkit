@@ -17,6 +17,8 @@ dependencies {
     cordapp(libs.tokens.workflows)
 
     detektPlugins(libs.detekt.ktlint.wrapper)
+
+    testImplementation("io.mockk:mockk:1.13.10") //TODO if approved add to TOML
 }
 
 cordapp {

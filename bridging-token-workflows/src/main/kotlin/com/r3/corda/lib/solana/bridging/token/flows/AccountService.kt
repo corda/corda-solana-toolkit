@@ -20,11 +20,9 @@ import net.corda.solana.sdk.internal.Token2022
 import java.nio.BufferOverflowException
 import java.nio.ByteBuffer
 
-// TODO error handling
 class AccountService(private val rpcClient: SolanaJsonRpcClient, private val feeSigner: Signer) {
-
     companion object {
-        private val RPC_PARAMS = RpcParams(skipPreflight = true)
+        val RPC_PARAMS = RpcParams(skipPreflight = true)
         private val PROGRAM_ACCOUNT: PublicKey = Token2022.PROGRAM_ID.toPublicKey()
     }
 
@@ -34,12 +32,15 @@ class AccountService(private val rpcClient: SolanaJsonRpcClient, private val fee
     fun createAta(mint: String, owner: String, payer: String) {
         val instruction = createAtaInstruction(mint, owner, payer)
         val (earlyResult, solanaTxBlob, blockhash) = simulateSolanaTx(instruction)
+        if (earlyResult?.err != null) {
+            return // TODO check if error relates to account already in use
+        }
         rpcClient.sendAndConfirm(solanaTxBlob, blockhash.lastValidBlockHeight, RPC_PARAMS)
     }
 
-    private fun simulateSolanaTx(
-        instruction: TransactionInstruction
-    ): Triple<SimulateTransactionResponse?, String, Blockhash> {
+    private fun simulateSolanaTx(instruction: TransactionInstruction):
+        Triple<SimulateTransactionResponse?, String, Blockhash> {
+        // TODO error handling
         val blockhash = rpcClient.getLatestBlockhash(RPC_PARAMS).checkResponse("getLatestBlockhash")!!
         val solanaTxBlob = serialiseSolanaTx(instruction, emptyList(), blockhash)
         val result = rpcClient.simulate(solanaTxBlob, RPC_PARAMS)
@@ -72,7 +73,6 @@ class AccountService(private val rpcClient: SolanaJsonRpcClient, private val fee
         owner: String,
         payer: String,
     ): TransactionInstruction {
-
         val mintKey: PublicKey = SolanaEncoding.account(mint)
         val ownerKey: PublicKey = SolanaEncoding.account(owner)
         val payerKey: PublicKey = SolanaEncoding.account(payer)
@@ -80,12 +80,12 @@ class AccountService(private val rpcClient: SolanaJsonRpcClient, private val fee
         val pda = AssociatedTokenProgram.deriveAddress(ownerKey, PROGRAM_ACCOUNT, mintKey)
 
         return AssociatedTokenProgram.createAssociatedTokenAccount(
-                pda,
-                mintKey,
-                ownerKey,
-                payerKey,
-                PROGRAM_ACCOUNT,
-                true,
-            )
+            pda,
+            mintKey,
+            ownerKey,
+            payerKey,
+            PROGRAM_ACCOUNT,
+            true,
+        )
     }
 }
