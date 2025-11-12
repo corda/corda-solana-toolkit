@@ -1,6 +1,7 @@
 package com.r3.corda.lib.solana.bridging.token.test
 
 import com.lmax.solana4j.api.PublicKey
+import com.lmax.solana4j.programs.Token2022Program
 import com.r3.corda.lib.solana.bridging.token.testing.QuerySimpleTokensFlow
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.contracts.types.TokenType
@@ -15,6 +16,7 @@ import net.corda.core.identity.Party
 import net.corda.solana.aggregator.common.RpcParams
 import net.corda.solana.aggregator.common.Signer
 import net.corda.solana.aggregator.common.checkResponse
+import net.corda.solana.aggregator.common.sendAndConfirm
 import net.corda.solana.sdk.internal.Token2022
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
@@ -120,7 +122,6 @@ abstract class FlowsTest {
         testValidator.fundAccount(10, bridgeAuthoritySigner)
 
         aliceSigner = Signer.random()
-
         testValidator.fundAccount(10, aliceSigner)
 
         tokenMint = testValidator.createToken(mintAuthoritySigner, decimals = TOKEN_DECIMALS.toByte())
@@ -276,12 +277,11 @@ abstract class FlowsTest {
             .isEqualByComparingTo(MOVE_QUANTITY)
 
         // Simulate redemption transfer for Alice account on Solana
-        testValidator.mintTo(
+        transfer(
             aliceSigner,
-            tokenMint,
+            aliceBridgeTokenAccoount,
             aliceRedemptionTokenAccount,
-            (MOVE_QUANTITY.multiply(BigDecimal(1000L))).toLong(),
-            mintAuthoritySigner
+            (MOVE_QUANTITY.multiply(BigDecimal(1000L))).toLong()
         )
         // We need to wait for the Sava listener to process the newly received event
         Thread.sleep(5000)
@@ -320,6 +320,23 @@ abstract class FlowsTest {
             .tokenAmountsByToken(fungibleTokenType.state.data.tokenType)
             .states
             .map { it.state.data }
+    }
+
+    private fun transfer(fromOwner: Signer, fromTokenAccount: PublicKey, toTokenAccount: PublicKey, amount: Long) {
+        testValidator.client.sendAndConfirm(
+            { txBuilder ->
+                Token2022Program.factory(txBuilder).transfer(
+                    fromTokenAccount,
+                    toTokenAccount,
+                    fromOwner.account,
+                    amount,
+                    emptyList()
+                )
+            },
+            fromOwner,
+            emptyList(),
+            RpcParams()
+        )
     }
 
     private fun getSolanaTokenBalance(publicKey: PublicKey): BigDecimal {
