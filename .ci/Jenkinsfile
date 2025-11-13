@@ -80,10 +80,10 @@ pipeline {
         always {
             junit '**/build/test-results/**/*.xml'
             sh '''
-                    echo "Checking for running Solana validator process..."
-                    PIDS=$(ps aux | grep "solana" | grep -v grep | awk '{print $2}')
+                    echo "Checking for running solana-test-validator process..."
+                    PIDS=$(ps aux | grep "solana-test-validator" | grep -v grep | awk '{print $2}')
                     if [ -z "$PIDS" ]; then
-                      echo "Solana validator is not running."
+                      echo "solana-test-validator is not running."
                     else
                       echo "Found running PIDs: $PIDS"
                       kill $PIDS || true
