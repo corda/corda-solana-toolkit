@@ -9,7 +9,7 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.NotaryChangeFlow
+import net.corda.core.flows.MoveNotaryFlow
 import net.corda.core.flows.StartableByService
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
@@ -64,8 +64,9 @@ class BridgeFungibleTokenFlow(
         // Change notary to Solana notary
         val bridgedFungibleTokenProxy =
             moveTx.toLedgerTransaction(serviceHub).outRefsOfType<BridgedFungibleTokenProxy>().single()
-        // TODO This needs to use the new MoveNotaryFlow
-        val tokenProxyOnSolanaNotary = subFlow(NotaryChangeFlow(bridgedFungibleTokenProxy, solanaNotary))
+        val tokenProxyOnSolanaNotary = subFlow(
+            MoveNotaryFlow(listOf(bridgedFungibleTokenProxy), solanaNotary)
+        ).single()
 
         // Mint on Solana
         val mintTx = createMintTransaction(tokenProxyOnSolanaNotary)
