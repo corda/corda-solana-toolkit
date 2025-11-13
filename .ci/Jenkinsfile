@@ -79,6 +79,25 @@ pipeline {
     post {
         always {
             junit '**/build/test-results/**/*.xml'
+            sh '''
+                    echo "Checking for running Solana validator process..."
+                    PIDS=$(ps aux | grep "solana" | grep -v grep | awk '{print $2}')
+                    if [ -z "$PIDS" ]; then
+                      echo "Solana validator is not running."
+                    else
+                      echo "Found running PIDs: $PIDS"
+                      kill $PIDS || true
+                      sleep 5
+                      for PID in $PIDS; do
+                        if ps -p "$PID" > /dev/null 2>&1; then
+                          echo "PID $PID still alive, sending SIGKILL."
+                          kill -9 "$PID" || true
+                        else
+                          echo "PID $PID stopped successfully."
+                        fi
+                      done
+                    fi
+                  '''
         }
         cleanup {
             deleteDir() /* clean up our workspace */
