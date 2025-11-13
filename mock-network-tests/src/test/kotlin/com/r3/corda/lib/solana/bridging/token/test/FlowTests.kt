@@ -99,6 +99,7 @@ abstract class FlowsTest {
     private lateinit var tokenMint: PublicKey
     private lateinit var aliceSigner: Signer
     private lateinit var aliceBridgeTokenAccount: PublicKey
+    private lateinit var aliceAta: PublicKey
     private lateinit var aliceRedemptionTokenAccount: PublicKey
 
     @BeforeEach
@@ -130,6 +131,12 @@ abstract class FlowsTest {
 
         tokenMint = testValidator.createToken(mintAuthoritySigner, decimals = TOKEN_DECIMALS.toByte())
         aliceBridgeTokenAccount = aliceSigner.account
+        aliceAta = AssociatedTokenProgram
+            .deriveAddress(
+                aliceBridgeTokenAccount,
+                Token2022.PROGRAM_ID.toPublicKey(),
+                tokenMint
+            ).address()
         aliceRedemptionTokenAccount = testValidator.createTokenAccount(bridgeAuthoritySigner, tokenMint)
     }
 
@@ -223,7 +230,6 @@ abstract class FlowsTest {
             )
         )
 
-    @Suppress("LongMethod")
     @Test
     fun bridgeTest() {
         val msftTokenType = issuingBank.issue(msftDescriptor, ISSUING_QUANTITY, generalNotaryName)
@@ -278,17 +284,12 @@ abstract class FlowsTest {
         // BigDecimal.equals is scale-sensitive (1.0 != 1.00), so we compare numeric value instead.
         assertThat(getSolanaTokenBalance(aliceBridgeTokenAccount, tokenMint))
             .describedAs("Solana token amount numerically equals Corda bridged amount")
-            .isEqualByComparingTo(BigDecimal.ZERO) // MOVE_QUANTITY)
+            .isEqualByComparingTo(MOVE_QUANTITY)
 
         // Simulate redemption transfer for Alice account on Solana
         transfer(
             aliceSigner,
-            AssociatedTokenProgram
-                .deriveAddress(
-                    aliceBridgeTokenAccount,
-                    Token2022.PROGRAM_ID.toPublicKey(),
-                    tokenMint
-                ).address(),
+            aliceAta,
             aliceRedemptionTokenAccount,
             MOVE_QUANTITY.toRawAmount()
         )

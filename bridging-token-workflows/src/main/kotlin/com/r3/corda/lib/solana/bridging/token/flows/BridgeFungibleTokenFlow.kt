@@ -1,7 +1,6 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import com.lmax.solana4j.programs.AssociatedTokenProgram
 import com.r3.corda.lib.solana.bridging.token.contracts.FungibleTokenBridgeContract
 import com.r3.corda.lib.solana.bridging.token.states.BridgedFungibleTokenProxy
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
@@ -15,8 +14,6 @@ import net.corda.core.flows.StartableByService
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.solana.aggregator.common.toPubkey
-import net.corda.solana.aggregator.common.toPublicKey
 import net.corda.solana.sdk.internal.Token2022
 
 /**
@@ -52,6 +49,8 @@ class BridgeFungibleTokenFlow(
         val bridgingService = serviceHub.cordaService(BridgingService::class.java)
         val bridgingCoordinates = bridgingService.getBridgingCoordinates(token, originalHolder)
 
+        bridgingService.createAta(bridgingCoordinates.mint, bridgingCoordinates.mintDestination)
+
         // Move the token from ourIdentity (implied BridgeAuthority) to the lock holder (confidential identity).
         // Also, create a proxy of Fungible Token that will be later used to mint a token on Solana
         val moveTx = subFlow(
@@ -70,8 +69,6 @@ class BridgeFungibleTokenFlow(
         // TODO This needs to use the new MoveNotaryFlow
         val tokenProxyOnSolanaNotary = subFlow(NotaryChangeFlow(bridgedFungibleTokenProxy, solanaNotary))
 
-        bridgingService.createAta(bridgingCoordinates.mint, bridgingCoordinates.mintDestination)
-
         // Mint on Solana
         val mintTx = createMintTransaction(tokenProxyOnSolanaNotary)
 
@@ -82,15 +79,9 @@ class BridgeFungibleTokenFlow(
     private fun createMintTransaction(tokenProxyRef: StateAndRef<BridgedFungibleTokenProxy>): SignedTransaction {
         val bridgedFungibleTokenProxy = tokenProxyRef.state.data
         val transactionBuilder = TransactionBuilder(solanaNotary)
-        val pda = AssociatedTokenProgram.deriveAddress(
-            bridgedFungibleTokenProxy.mintDestination.toPublicKey(),
-            Token2022.PROGRAM_ID.toPublicKey(),
-            bridgedFungibleTokenProxy.mint.toPublicKey(),
-        )
-        val destination = pda.address().toPubkey()
         val instruction = Token2022.mintTo(
             bridgedFungibleTokenProxy.mint,
-            destination,
+            bridgedFungibleTokenProxy.mintDestination,
             bridgedFungibleTokenProxy.mintAuthority,
             bridgedFungibleTokenProxy.amount,
         )

@@ -1,10 +1,14 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
+import com.lmax.solana4j.programs.AssociatedTokenProgram
 import com.r3.corda.lib.solana.bridging.token.states.BridgedFungibleTokenProxy
 import com.r3.corda.lib.solana.bridging.token.states.RedeemedFungibleTokenProxy
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import net.corda.core.identity.Party
+import net.corda.solana.aggregator.common.toPubkey
+import net.corda.solana.aggregator.common.toPublicKey
 import net.corda.solana.sdk.instruction.Pubkey
+import net.corda.solana.sdk.internal.Token2022
 import java.util.*
 
 /**
@@ -24,18 +28,24 @@ data class BridgingCoordinates(
     val bridgeRedemptionWallet: Pubkey,
 ) {
     /**
-     * Creates an unminted [BridgedFungibleTokenProxy].
+     * Creates an unminted [BridgedFungibleTokenProxy] with ATA destination to bridge to.
      * Converts the Fungible Token amount to Solana token amount in 1:1 ration.
      * @param token the source of amount to bridge
      */
-    fun toBridgedFungibleTokenProxy(token: FungibleToken, bridgeAuthority: Party) =
-        BridgedFungibleTokenProxy(
+    fun toBridgedFungibleTokenProxy(token: FungibleToken, bridgeAuthority: Party): BridgedFungibleTokenProxy {
+        val pda = AssociatedTokenProgram.deriveAddress(
+            this.mintDestination.toPublicKey(),
+            Token2022.PROGRAM_ID.toPublicKey(),
+            this.mint.toPublicKey(),
+        )
+        return BridgedFungibleTokenProxy(
             amount = token.amount.quantity,
             mint = this.mint,
             mintAuthority = this.mintAuthority,
-            mintDestination = this.mintDestination,
+            mintDestination = pda.address().toPubkey(),
             bridgeAuthority = bridgeAuthority,
         )
+    }
 
     /**
      * Creates a [RedeemedFungibleTokenProxy].
