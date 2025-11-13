@@ -11,7 +11,7 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.AppServiceHub
 import net.corda.solana.notary.common.Signer
 import net.corda.solana.sdk.instruction.Pubkey
-import java.util.UUID
+import java.util.*
 import kotlin.io.path.Path
 
 class ConfigHandler(private val appServiceHub: AppServiceHub) {
@@ -26,6 +26,7 @@ class ConfigHandler(private val appServiceHub: AppServiceHub) {
     val solanaRpcUrl: String
     val redemptionWalletAccountToHolder: Map<Pubkey, CordaX500Name>
     val bridgeAuthoritySigner: Signer
+    val redemptionCheckIntervalSeconds: Long
 
     init {
         val config = appServiceHub.getAppContext().config
@@ -48,6 +49,7 @@ class ConfigHandler(private val appServiceHub: AppServiceHub) {
         solanaWsUrl = config.getString("solanaWsUrl")
         solanaRpcUrl = config.getString("solanaRpcUrl")
         bridgeAuthoritySigner = Signer.fromFile(Path(config.getString("bridgeAuthorityWalletFile")))
+        redemptionCheckIntervalSeconds = config.getLong("redemptionCheckIntervalSeconds")
     }
 
     private fun getLockingIdentity(config: CordappConfig, appServiceHub: AppServiceHub): Party {

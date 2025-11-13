@@ -73,8 +73,7 @@ class RedeemFungibleTokenFlow(
                 checkNotNull(lockCapture.lockId) { "Lock ID has not been captured during the unlock fungible tokens" },
                 unlockLedgerTx.outRefsOfType<FungibleToken>().map { it.ref }.toNonEmptySet()
             )
-
-        return subFlow(
+        val finalisedTx = subFlow(
             MoveFungibleTokens(
                 partyAndAmount = PartyAndAmount(redemptionHolder, moveAmount),
                 queryCriteria = QueryCriteria.VaultCustomQueryCriteria(
@@ -84,6 +83,7 @@ class RedeemFungibleTokenFlow(
                 )
             )
         )
+        return finalisedTx
     }
 
     private fun findTokenTypeOfFungibleTokenBy(tokenTypeIdentifier: String): TokenType {

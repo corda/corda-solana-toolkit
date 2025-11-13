@@ -60,6 +60,7 @@ data class BridgeAuthorityInfo(
                 "solanaWsUrl" to SolanaTestValidator.WS_URL,
                 "solanaRpcUrl" to SolanaTestValidator.RPC_URL,
                 "bridgeAuthorityWalletFile" to mintWalletFile.toString(),
+                "redemptionCheckIntervalSeconds" to 300, // 5 minutes
             )
             val node = network.createNode(
                 MockNodeParameters(
