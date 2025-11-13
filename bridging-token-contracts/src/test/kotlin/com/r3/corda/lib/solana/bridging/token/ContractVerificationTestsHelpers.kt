@@ -22,7 +22,7 @@ import org.mockito.Mockito.mock
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-val alice = Party(
+val tokenIssuer = Party(
     DUMMY_BANK_A_NAME,
     Crypto.generateKeyPair().public
 )
@@ -38,7 +38,7 @@ val services = MockServices(
     networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
 )
 val TOKEN_PROGRAM_ID: String = FungibleTokenContract.contractId
-val cordaTokenAmount = (10000 of TokenType("TEST", 0)).issuedBy(alice)
+val cordaTokenAmount = (10000 of TokenType("TEST", 0)).issuedBy(tokenIssuer)
 
 val mint = Pubkey(Signer.random().account.bytes())
 val mintAuthority = Pubkey(Signer.random().account.bytes())

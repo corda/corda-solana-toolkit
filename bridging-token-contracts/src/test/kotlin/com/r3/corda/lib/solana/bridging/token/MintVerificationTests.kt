@@ -104,7 +104,7 @@ class MintVerificationTests {
                 }
 
                 tweak {
-                    val overspendCordaIssuedTokenType = (10001 of TokenType("TEST", 0)).issuedBy(alice)
+                    val overspendCordaIssuedTokenType = (10001 of TokenType("TEST", 0)).issuedBy(tokenIssuer)
                     output(
                         TOKEN_PROGRAM_ID,
                         FungibleToken(overspendCordaIssuedTokenType, confidentialIdentity)
@@ -114,7 +114,7 @@ class MintVerificationTests {
                 }
 
                 tweak {
-                    val underspendCordaIssuedTokenType = (9999 of TokenType("TEST", 0)).issuedBy(alice)
+                    val underspendCordaIssuedTokenType = (9999 of TokenType("TEST", 0)).issuedBy(tokenIssuer)
                     output(
                         TOKEN_PROGRAM_ID,
                         FungibleToken(underspendCordaIssuedTokenType, confidentialIdentity)

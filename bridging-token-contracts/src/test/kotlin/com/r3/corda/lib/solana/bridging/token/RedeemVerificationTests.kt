@@ -105,7 +105,7 @@ class RedeemVerificationTests {
                     `fails with`("The amount in the RedeemState must match the amount in the FungibleToken state")
                 }
                 tweak {
-                    val overspendCordaIssuedTokenType = (10001 of TokenType("TEST", 0)).issuedBy(alice)
+                    val overspendCordaIssuedTokenType = (10001 of TokenType("TEST", 0)).issuedBy(tokenIssuer)
                     output(
                         TOKEN_PROGRAM_ID,
                         FungibleToken(overspendCordaIssuedTokenType, bridgeAuthority)
@@ -114,7 +114,7 @@ class RedeemVerificationTests {
                     `fails with`("In move groups the amount of input tokens MUST EQUAL the amount of output tokens")
                 }
                 tweak {
-                    val underspendCordaIssuedTokenType = (9999 of TokenType("TEST", 0)).issuedBy(alice)
+                    val underspendCordaIssuedTokenType = (9999 of TokenType("TEST", 0)).issuedBy(tokenIssuer)
                     output(
                         TOKEN_PROGRAM_ID,
                         FungibleToken(underspendCordaIssuedTokenType, bridgeAuthority)
