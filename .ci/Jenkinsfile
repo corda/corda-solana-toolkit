@@ -80,6 +80,8 @@ pipeline {
         always {
             junit '**/build/test-results/**/*.xml'
             sh '''
+                    TEST=$(ps aux | grep "solana")
+                    echo $TEST
                     echo "Checking for running solana-test-validator process..."
                     PIDS=$(ps aux | grep "solana-test-validator" | grep -v grep | awk '{print $2}')
                     if [ -z "$PIDS" ]; then
