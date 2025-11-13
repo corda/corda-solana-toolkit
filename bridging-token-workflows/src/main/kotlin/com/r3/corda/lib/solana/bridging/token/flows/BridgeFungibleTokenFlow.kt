@@ -1,6 +1,7 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import com.lmax.solana4j.programs.AssociatedTokenProgram
 import com.r3.corda.lib.solana.bridging.token.contracts.FungibleTokenBridgeContract
 import com.r3.corda.lib.solana.bridging.token.states.BridgedFungibleTokenProxy
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
@@ -14,6 +15,8 @@ import net.corda.core.flows.StartableByService
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.solana.aggregator.common.toPubkey
+import net.corda.solana.aggregator.common.toPublicKey
 import net.corda.solana.sdk.internal.Token2022
 
 /**
@@ -79,9 +82,15 @@ class BridgeFungibleTokenFlow(
     private fun createMintTransaction(tokenProxyRef: StateAndRef<BridgedFungibleTokenProxy>): SignedTransaction {
         val bridgedFungibleTokenProxy = tokenProxyRef.state.data
         val transactionBuilder = TransactionBuilder(solanaNotary)
+        val pda = AssociatedTokenProgram.deriveAddress(
+            bridgedFungibleTokenProxy.mintDestination.toPublicKey(),
+            Token2022.PROGRAM_ID.toPublicKey(),
+            bridgedFungibleTokenProxy.mint.toPublicKey(),
+        )
+        val destination = pda.address().toPubkey()
         val instruction = Token2022.mintTo(
             bridgedFungibleTokenProxy.mint,
-            bridgedFungibleTokenProxy.mintDestination,
+            destination,
             bridgedFungibleTokenProxy.mintAuthority,
             bridgedFungibleTokenProxy.amount,
         )

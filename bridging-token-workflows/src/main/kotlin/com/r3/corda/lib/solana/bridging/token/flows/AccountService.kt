@@ -28,7 +28,7 @@ import java.nio.ByteBuffer
 class AccountService(private val client: SolanaJsonRpcClient, private val feePayer: Signer) {
     companion object {
         val RPC_PARAMS = RpcParams(skipPreflight = true)
-        private val PROGRAM_ACCOUNT: PublicKey = Token2022.PROGRAM_ID.toPublicKey()
+        val PROGRAM_ACCOUNT: PublicKey = Token2022.PROGRAM_ID.toPublicKey()
     }
 
     // This is only accessed by a single thread so safe to re-use.
