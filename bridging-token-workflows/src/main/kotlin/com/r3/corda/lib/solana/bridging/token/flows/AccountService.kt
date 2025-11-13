@@ -28,7 +28,7 @@ import java.nio.ByteBuffer
 class AccountService(private val client: SolanaJsonRpcClient, private val feePayer: Signer) {
     companion object {
         val RPC_PARAMS = RpcParams(skipPreflight = true)
-        val PROGRAM_ACCOUNT: PublicKey = Token2022.PROGRAM_ID.toPublicKey()
+        private val PROGRAM_ACCOUNT: PublicKey = Token2022.PROGRAM_ID.toPublicKey()
     }
 
     // This is only accessed by a single thread so safe to re-use.
@@ -48,7 +48,19 @@ class AccountService(private val client: SolanaJsonRpcClient, private val feePay
      * exhausting retry attempts
      */
     fun createAta(mint: Pubkey, owner: Pubkey) {
-        val instruction = createAtaInstruction(mint.toPublicKey(), owner.toPublicKey(), feePayer.account)
+        val mintKey = mint.toPublicKey()
+        val ownerKey = owner.toPublicKey()
+        val payerKey = feePayer.account
+        val pda = AssociatedTokenProgram.deriveAddress(ownerKey, PROGRAM_ACCOUNT, mintKey)
+        // TODO use cache
+        val instruction = AssociatedTokenProgram.createAssociatedTokenAccount(
+            pda,
+            mintKey,
+            ownerKey,
+            payerKey,
+            PROGRAM_ACCOUNT,
+            true,
+        )
         val (earlyResult, solanaTxBlob, blockhash) = simulateSolanaTx(instruction)
         if (earlyResult?.err != null) {
             return // TODO check if error relates to account already in use
@@ -84,22 +96,5 @@ class AccountService(private val client: SolanaJsonRpcClient, private val feePay
         } catch (_: BufferOverflowException) {
             throw SolanaException("Transaction is too big for the Bridge Authority.")
         }
-    }
-
-    private fun createAtaInstruction(
-        mintKey: PublicKey,
-        ownerKey: PublicKey,
-        payerKey: PublicKey,
-    ): TransactionInstruction {
-        val pda = AssociatedTokenProgram.deriveAddress(ownerKey, PROGRAM_ACCOUNT, mintKey)
-
-        return AssociatedTokenProgram.createAssociatedTokenAccount(
-            pda,
-            mintKey,
-            ownerKey,
-            payerKey,
-            PROGRAM_ACCOUNT,
-            true,
-        )
     }
 }

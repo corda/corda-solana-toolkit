@@ -235,6 +235,8 @@ abstract class FlowsTest {
         val msftTokenType = issuingBank.issue(msftDescriptor, ISSUING_QUANTITY, generalNotaryName)
         val aaplTokenType = issuingBank.issue(aaplDescriptor, ISSUING_QUANTITY, generalNotaryName)
 
+        // TODO add check that ATA doesn't exists
+
         move(issuingBank, aliceParty, ISSUING_QUANTITY, msftTokenType).get()
         move(issuingBank, aliceParty, ISSUING_QUANTITY, aaplTokenType).get()
         move(alice, bridgeAuthorityParty, MOVE_QUANTITY, msftTokenType).get()
