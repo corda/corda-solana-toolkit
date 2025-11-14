@@ -1,6 +1,6 @@
 package com.r3.corda.lib.solana.bridging.token.test
 
-import com.r3.corda.lib.solana.bridging.token.test.FlowsTest.Companion.TOKEN_DECIMALS
+import com.r3.corda.lib.solana.bridging.token.test.FlowTests.Companion.TOKEN_DECIMALS
 import com.r3.corda.lib.solana.bridging.token.testing.IssueEvolvableTokenTypeFlow
 import com.r3.corda.lib.tokens.contracts.types.TokenType
 import net.corda.core.identity.CordaX500Name
@@ -17,7 +17,7 @@ class EvolvableDescriptor(
     override val tokenTypeIdentifier: String = UUID.randomUUID().toString()
 }
 
-class EvolvableTokenFlowTests : FlowsTest() {
+class EvolvableTokenFlowTests : FlowTests() {
     override val msftDescriptor: TokenTypeDescriptor = EvolvableDescriptor(MSFT_TICKER)
     override val aaplDescriptor: TokenTypeDescriptor = EvolvableDescriptor(APPL_TICKER)
 
