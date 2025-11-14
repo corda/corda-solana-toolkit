@@ -1,0 +1,90 @@
+package com.r3.corda.lib.solana.bridging.token.flows
+
+import net.corda.core.utilities.debug
+import net.corda.core.utilities.loggerFor
+import net.corda.solana.sdk.instruction.Pubkey
+import software.sava.core.accounts.PublicKey
+import software.sava.core.accounts.SolanaAccounts
+import software.sava.core.accounts.token.TokenAccount
+import software.sava.core.rpc.Filter
+import software.sava.rpc.json.http.client.SolanaRpcClient
+import software.sava.rpc.json.http.request.Commitment
+import software.sava.rpc.json.http.response.AccountInfo
+import software.sava.rpc.json.http.ws.SolanaRpcWebsocket
+import java.net.URI
+import java.net.http.HttpClient
+
+object SavaFactory {
+    val logger = loggerFor<SavaFactory>()
+
+    class WebSocketWrapper(val rpcUrl: String, val wsUrl: String) {
+        private val socket = createWebSocket(wsUrl)
+
+        fun onToken2022ByOwner(
+            owner: Pubkey,
+            onAccountChanged: (owner: Pubkey, account: Pubkey, tokenMint: Pubkey, amount: Long) -> Unit,
+        ): Boolean {
+            val ownerKey = owner.toPublickey()
+            logger.info("Attaching websocket for account owned by $owner")
+            return socket.programSubscribe(
+                Commitment.CONFIRMED,
+                SolanaAccounts.MAIN_NET.token2022Program(),
+                listOf(Filter.createMemCompFilter(TokenAccount.OWNER_OFFSET, ownerKey)),
+                { _ ->
+                    getNonZeroTokenAccounts(ownerKey, rpcUrl).forEach {
+                        logger.debug {
+                            "WebSocketWrapper::onSub found non zero account ${it.pubKey} owned by ${it.data.owner}"
+                        }
+                        try {
+                            onAccountChanged(
+                                owner,
+                                it.pubKey.toPubkey(),
+                                it.data.mint.toPubkey(),
+                                it.data.amount(),
+                            )
+                        } catch (e: Exception) {
+                            logger.error(
+                                "Tried to process account ${it.pubKey} with amount ${it.data.amount} " +
+                                    "but processing threw:",
+                                e
+                            )
+                        }
+                    }
+                }
+            ) { accountInfo ->
+                val token = TokenAccount.read(accountInfo.pubKey, accountInfo.data)
+                onAccountChanged(owner, accountInfo.pubKey.toPubkey(), token.mint.toPubkey(), token.amount)
+            }
+        }
+    }
+
+    fun getNonZeroTokenAccounts(owner: PublicKey, rpcUrl: String): List<AccountInfo<TokenAccount>> {
+        val httpClient = HttpClient.newHttpClient()
+        val solanaClient = SolanaRpcClient.createClient(URI.create(rpcUrl), httpClient)
+        logger.debug { "Checking for non-zero token accounts owned by $owner" }
+        return solanaClient
+            .getTokenAccountsForProgramByOwner(owner, SolanaAccounts.MAIN_NET.token2022Program())
+            .join()
+            .filter {
+                it.data.amount > 0
+            }
+    }
+
+    fun createWebSocket(rpcUrl: String): SolanaRpcWebsocket {
+        val httpClient = HttpClient.newHttpClient()
+        val socket = SolanaRpcWebsocket
+            .build()
+            .webSocketBuilder(httpClient.newWebSocketBuilder())
+            .uri(rpcUrl)
+            .solanaAccounts(SolanaAccounts.MAIN_NET)
+            .commitment(Commitment.CONFIRMED)
+            .create()
+
+        socket.connect().get()
+        return socket
+    }
+
+    fun Pubkey.toPublickey(): PublicKey = PublicKey.createPubKey(bytes)
+
+    fun PublicKey.toPubkey() = Pubkey(copyByteArray())
+}

@@ -6,7 +6,7 @@ plugins {
 
 dependencies {
     cordaProvided(libs.corda.core)
-    cordaProvided(libs.ent.corda.solana.common)
+    cordaProvided(libs.ent.corda.solana.notary.common)
     cordaProvided(libs.ent.corda.solana.sdk)
 
     cordapp(libs.tokens.contracts)
@@ -16,7 +16,9 @@ dependencies {
     testImplementation(libs.ent.corda.node.driver)
     testImplementation(libs.os.corda.core.test.utils)
     testImplementation(libs.ent.corda.test.utils)
+    testImplementation(libs.ent.corda.solana.notary.common)
     testImplementation(libs.mockito.core)
+    testImplementation(libs.lmax.solana4j)
 }
 
 cordapp {

@@ -10,7 +10,6 @@ import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.ServiceLifecycleEvent
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.debug
-import net.corda.solana.aggregator.common.sava.SavaFactory
 import net.corda.solana.sdk.instruction.Pubkey
 import org.slf4j.LoggerFactory
 import java.util.concurrent.Executors

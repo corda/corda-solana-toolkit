@@ -15,12 +15,14 @@ dependencies {
 
     detektPlugins(libs.detekt.ktlint.wrapper)
 
-    testImplementation(libs.ent.corda.solana.common)
+    testImplementation(libs.ent.corda.solana.notary.common)
     testImplementation(libs.ent.corda.solana.sdk)
     testImplementation(libs.ent.corda.test.utils)
     testImplementation(libs.os.corda.core.test.utils)
     testImplementation(libs.ent.corda.node.driver)
     testImplementation(libs.quasar.core)
+    testImplementation(libs.lmax.solana4j)
+    testImplementation(libs.lmax.solana4j.json.rpc)
 
     // When using SNAPSHOT node-driver, make sure we are using the same build of the Enterprise Corda node
     testRuntimeOnly(libs.ent.corda.node)
