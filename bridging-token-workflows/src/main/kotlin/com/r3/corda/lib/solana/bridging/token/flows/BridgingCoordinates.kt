@@ -11,8 +11,6 @@ import net.corda.solana.sdk.instruction.Pubkey
 import net.corda.solana.sdk.internal.Token2022
 import java.util.UUID
 
-fun PublicKey.toPubkey(): Pubkey = Pubkey(bytes())
-
 /**
  * Holds the necessary metadata to bridge a Corda token to Solana Token.
  *
@@ -72,3 +70,5 @@ data class BridgingCoordinates(
         participants = listOf(bridgeAuthority)
     )
 }
+
+fun PublicKey.toPubkey(): Pubkey = Pubkey(bytes())
