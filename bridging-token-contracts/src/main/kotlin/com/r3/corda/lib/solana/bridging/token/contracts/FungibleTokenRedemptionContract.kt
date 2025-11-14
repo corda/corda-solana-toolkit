@@ -30,7 +30,7 @@ class FungibleTokenRedemptionContract : Contract {
         val expectedInstruction = Token2022.burn(
             redeemState.mint,
             redeemState.burnAccount,
-            redeemState.bridgeRedemptionWallet,
+            redeemState.redemptionWallet,
             redeemState.amount
         )
 
