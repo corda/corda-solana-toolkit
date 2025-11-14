@@ -20,7 +20,7 @@ class RedeemVerificationTests {
         mint,
         10000,
         UUID.randomUUID(),
-        listOf(bridgeAuthority)
+        bridgeAuthority
     )
 
     @Test
