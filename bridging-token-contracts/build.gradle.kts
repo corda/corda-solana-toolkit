@@ -6,17 +6,16 @@ plugins {
 
 dependencies {
     cordaProvided(libs.corda.core)
-    cordaProvided(libs.corda.solana.common)
-    cordaProvided(libs.corda.solana.sdk)
+    cordaProvided(libs.ent.corda.solana.common)
+    cordaProvided(libs.ent.corda.solana.sdk)
 
     cordapp(libs.tokens.contracts)
 
     detektPlugins(libs.detekt.ktlint.wrapper)
 
-    testImplementation(libs.corda.node.driver)
-    testImplementation(libs.corda.core.test.utils)
-    testImplementation(libs.corda.test.utils)
-
+    testImplementation(libs.ent.corda.node.driver)
+    testImplementation(libs.os.corda.core.test.utils)
+    testImplementation(libs.ent.corda.test.utils)
     testImplementation(libs.mockito.core)
 }
 

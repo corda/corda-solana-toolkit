@@ -1,6 +1,6 @@
 package com.r3.corda.lib.solana.bridging.token.test
 
-import com.r3.corda.lib.solana.bridging.token.test.FlowsTest.Companion.TOKEN_DECIMALS
+import com.r3.corda.lib.solana.bridging.token.test.FlowTests.Companion.TOKEN_DECIMALS
 import com.r3.corda.lib.solana.bridging.token.testing.IssueSimpleTokenFlow
 import com.r3.corda.lib.tokens.contracts.types.TokenType
 import net.corda.core.identity.CordaX500Name
@@ -15,7 +15,7 @@ class SimpleDescriptor(
     override val tokenTypeIdentifier: String = ticker
 }
 
-class SimpleTokenFlowTests : FlowsTest() {
+class SimpleTokenFlowTests : FlowTests() {
     override val msftDescriptor: TokenTypeDescriptor = SimpleDescriptor(MSFT_TICKER)
     override val aaplDescriptor: TokenTypeDescriptor = SimpleDescriptor(APPL_TICKER)
 
