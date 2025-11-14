@@ -40,4 +40,5 @@ data class BridgingCoordinates(
             mintDestination = ata,
             bridgeAuthority = bridgeAuthority,
         )
+    }
 }
