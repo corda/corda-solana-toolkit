@@ -21,19 +21,19 @@ String COMMON_GRADLE_PARAMS = [
 ].join(' ')
 
 pipeline {
-        agent {
-            kubernetes {
-                cloud k8s.buildCluster.cloudName
-                yaml k8s.JSON
-                yamlMergeStrategy merge() // important to keep tolerations from the inherited template
-                idleMinutes 15
-                podRetention always()
-                nodeSelector k8s.nodeSelector
-                label k8s.jenkinsLabel
-                showRawYaml true
-                defaultContainer k8s.defaultContainer.name
-            }
+    agent {
+        kubernetes {
+            cloud k8s.buildCluster.cloudName
+            yaml k8s.JSON
+            yamlMergeStrategy merge() // important to keep tolerations from the inherited template
+            idleMinutes 15
+            podRetention always()
+            nodeSelector k8s.nodeSelector
+            label k8s.jenkinsLabel
+            showRawYaml true
+            defaultContainer k8s.defaultContainer.name
         }
+    }
 
     options { timestamps() }
 
@@ -51,29 +51,30 @@ pipeline {
     }
 
     stages {
-            stage('Build') {
-                steps {
-                    authenticateGradleWrapper()
-                    sh script: [
-                            './gradlew',
-                            COMMON_GRADLE_PARAMS,
-                            'build'
-                    ].join(' ')
+        stage('Build') {
+            steps {
+                authenticateGradleWrapper()
+                sh 'pkill -9 solana-test-validator || true'
+                sh script: ['./gradlew', COMMON_GRADLE_PARAMS, 'build'].join(' ')
+            }
+        }
+        stage('Snyk Delta') {
+            when {
+               changeRequest()
+            }
+            steps {
+                script {
+                    def modulesToScan = ['bridging-token-contracts', 'bridging-token-workflows']
+                    modulesToScan.each { module ->
+                        snykDeltaScan(
+                            env.SNYK_API_TOKEN,
+                            env.SNYK_ORG_ID,
+                            "--policy-path=./.snyk --sub-project=${module} --configuration-matching='^runtimeClasspath\$' --prune-repeated-subdependencies --target-reference='${env.BRANCH_NAME}' --project-tags=Branch='${env.BRANCH_NAME.replaceAll("[^0-9|a-z|A-Z]+", "_")}'"
+                        )
+                    }
                 }
             }
-            stage('Snyk Delta') {
-                  when {
-                       changeRequest()
-                  }
-                   steps {
-                       script {
-                           def modulesToScan = ['bridging-token-contracts', 'bridging-token-workflows']
-                           modulesToScan.each { module ->
-                              snykDeltaScan(env.SNYK_API_TOKEN, env.SNYK_ORG_ID, "--policy-path=./.snyk --sub-project=${module} --configuration-matching='^runtimeClasspath\$' --prune-repeated-subdependencies --target-reference='${env.BRANCH_NAME}' --project-tags=Branch='${env.BRANCH_NAME.replaceAll("[^0-9|a-z|A-Z]+", "_")}'")
-                           }
-                       }
-                   }
-            }
+        }
     }
 
     post {

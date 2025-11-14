@@ -10,7 +10,7 @@ plugins {
 }
 
 dependencies {
-    corda(libs.corda.node)
+    corda(libs.os.corda.node)
     cordaBootstrapper(libs.corda.node.api)
     cordaDriver(libs.corda.shell)
 
