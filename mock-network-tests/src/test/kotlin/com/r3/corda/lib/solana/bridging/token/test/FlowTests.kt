@@ -286,7 +286,7 @@ abstract class FlowTests {
 
         // SPL Token RPC returns decimal strings with trailing zeros trimmed,
         // BigDecimal.equals is scale-sensitive (1.0 != 1.00), so we compare numeric value instead.
-        assertThat(getSolanaTokenBalance(aliceBridgeWallet, tokenMint))
+        assertThat(getSolanaTokenBalance(aliceAta))
             .describedAs("Solana token amount numerically equals Corda bridged amount")
             .isEqualByComparingTo(MOVE_QUANTITY)
 
@@ -306,7 +306,7 @@ abstract class FlowTests {
             "Alice received redeemed MSFT shares back",
         )
         val msftFungibleTokens = bridgeAuthority.getAllFungibleTokens(issuingBankParty, msftTokenType)
-        assertTrue(msftFungibleTokens.isEmpty(), "No  MSFT shares left in Bridge Authority vault")
+        assertTrue(msftFungibleTokens.isEmpty(), "No MSFT shares left in Bridge Authority vault")
     }
 
     private inline fun <reified T : ContractState> StartedMockNode.queryStates(): List<StateAndRef<T>> {
@@ -357,11 +357,10 @@ abstract class FlowTests {
         return (this * BigDecimal(10L).pow(TOKEN_DECIMALS)).longValueExact()
     }
 
-    private fun getSolanaTokenBalance(wallet: PublicKey, mint: PublicKey): BigDecimal {
-        val ata = AssociatedTokenProgram.deriveAddress(wallet, Token2022.PROGRAM_ID.toPublicKey(), mint)
+    private fun getSolanaTokenBalance(ataAddress: PublicKey): BigDecimal {
         return testValidator
             .client
-            .getTokenAccountBalance(ata.address().base58(), RpcParams())
+            .getTokenAccountBalance(ataAddress.base58(), RpcParams())
             .checkResponse("getTokenAccountBalance")!!
             .uiAmountString
             .toBigDecimal()
