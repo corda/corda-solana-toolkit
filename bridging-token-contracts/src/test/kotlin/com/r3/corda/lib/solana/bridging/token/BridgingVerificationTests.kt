@@ -15,7 +15,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.services.IdentityService
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.solana.aggregator.common.Signer
+import net.corda.solana.notary.common.Signer
 import net.corda.solana.sdk.instruction.AccountMeta
 import net.corda.solana.sdk.instruction.Pubkey
 import net.corda.solana.sdk.instruction.SolanaInstruction

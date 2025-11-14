@@ -6,11 +6,12 @@ plugins {
 }
 
 dependencies {
+    implementation(libs.sava.rpc)
+
     implementation(libs.solana4j.json.rpc)
 
     cordaProvided(libs.corda.core)
     cordaProvided(libs.ent.corda.solana.sdk)
-    cordaProvided(libs.ent.corda.solana.common)
 
     cordapp(project(":bridging-token-contracts"))
     cordapp(libs.tokens.contracts)
@@ -38,6 +39,10 @@ java {
         languageVersion.set(JavaLanguageVersion.of(17))
     }
     withSourcesJar()
+}
+
+tasks.jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 publishing {

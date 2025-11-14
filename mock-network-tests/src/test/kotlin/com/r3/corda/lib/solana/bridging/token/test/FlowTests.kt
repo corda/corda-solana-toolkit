@@ -14,11 +14,10 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.solana.aggregator.common.RpcParams
-import net.corda.solana.aggregator.common.Signer
-import net.corda.solana.aggregator.common.checkResponse
-import net.corda.solana.aggregator.common.sendAndConfirm
-import net.corda.solana.aggregator.common.toPublicKey
+import net.corda.solana.notary.common.Signer
+import net.corda.solana.notary.common.rpc.DefaultRpcParams
+import net.corda.solana.notary.common.rpc.checkResponse
+import net.corda.solana.notary.common.rpc.sendAndConfirm
 import net.corda.solana.sdk.internal.Token2022
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
@@ -43,7 +42,6 @@ import org.junit.jupiter.api.io.TempDir
 import java.math.BigDecimal
 import java.nio.file.Path
 import java.util.UUID
-import kotlin.test.assertFalse
 
 abstract class FlowTests {
     abstract val msftDescriptor: TokenTypeDescriptor
@@ -352,7 +350,7 @@ abstract class FlowTests {
             },
             fromOwner,
             emptyList(),
-            RpcParams()
+            DefaultRpcParams()
         )
     }
 
@@ -363,7 +361,7 @@ abstract class FlowTests {
     private fun getSolanaTokenBalance(publicKey: PublicKey): BigDecimal {
         return testValidator
             .client
-            .getTokenAccountBalance(publicKey.base58(), RpcParams())
+            .getTokenAccountBalance(publicKey.base58(), DefaultRpcParams())
             .checkResponse("getTokenAccountBalance")!!
             .uiAmountString
             .toBigDecimal()
