@@ -35,16 +35,18 @@ data class BridgingCoordinates(
      * @param token the source of amount to bridge
      */
     fun toBridgedFungibleTokenProxy(token: FungibleToken, bridgeAuthority: Party): BridgedFungibleTokenProxy {
-        val pda = AssociatedTokenProgram.deriveAddress(
-            this.mintDestination.toPublicKey(),
-            Token2022.PROGRAM_ID.toPublicKey(),
-            this.mint.toPublicKey(),
-        )
+        val ata = AssociatedTokenProgram
+            .deriveAddress(
+                this.mintDestination.toPublicKey(),
+                Token2022.PROGRAM_ID.toPublicKey(),
+                this.mint.toPublicKey(),
+            ).address()
+            .toPubkey()
         return BridgedFungibleTokenProxy(
             amount = token.amount.quantity,
             mint = this.mint,
             mintAuthority = this.mintAuthority,
-            mintDestination = pda.address().toPubkey(),
+            mintDestination = ata,
             bridgeAuthority = bridgeAuthority,
         )
     }
