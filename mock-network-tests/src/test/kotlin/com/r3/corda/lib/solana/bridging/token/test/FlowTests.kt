@@ -44,7 +44,7 @@ import java.math.BigDecimal
 import java.nio.file.Path
 import java.util.UUID
 
-abstract class FlowsTest {
+abstract class FlowTests {
     abstract val msftDescriptor: TokenTypeDescriptor
     abstract val aaplDescriptor: TokenTypeDescriptor
 
@@ -201,7 +201,9 @@ abstract class FlowsTest {
     }
 
     fun stopCordaNetwork() {
-        network.stopNodes()
+        if (::network.isInitialized) {
+            network.stopNodes()
+        }
     }
 
     private fun createSolanaNotaryConfig(): String =
