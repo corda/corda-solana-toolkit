@@ -118,8 +118,8 @@ abstract class FlowsTest {
         bridgeAuthoritySigner = Signer.fromFile(randomKeypairFile(custodiedKeysDir))
         testValidator.start()
         testValidator.defaultNotaryProgramSetup(solanaNotaryKey.account)
-        testValidator.fundAccount(10L, mintAuthoritySigner)
-        testValidator.fundAccount(10L, bridgeAuthoritySigner)
+        testValidator.fundAccount(10, mintAuthoritySigner)
+        testValidator.fundAccount(10, bridgeAuthoritySigner)
 
         aliceSigner = Signer.random()
         testValidator.fundAccount(10, aliceSigner)

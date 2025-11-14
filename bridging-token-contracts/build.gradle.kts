@@ -16,6 +16,7 @@ dependencies {
     testImplementation(libs.corda.node.driver)
     testImplementation(libs.corda.core.test.utils)
     testImplementation(libs.corda.test.utils)
+    testImplementation(libs.corda.solana.notary.common)
 
     testImplementation(libs.mockito.core)
 }
