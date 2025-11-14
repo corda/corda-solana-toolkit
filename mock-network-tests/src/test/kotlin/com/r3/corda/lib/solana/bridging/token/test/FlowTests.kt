@@ -43,6 +43,7 @@ import org.junit.jupiter.api.io.TempDir
 import java.math.BigDecimal
 import java.nio.file.Path
 import java.util.UUID
+import kotlin.test.assertFalse
 
 abstract class FlowTests {
     abstract val msftDescriptor: TokenTypeDescriptor
@@ -237,7 +238,7 @@ abstract class FlowTests {
         val msftTokenType = issuingBank.issue(msftDescriptor, ISSUING_QUANTITY, generalNotaryName)
         val aaplTokenType = issuingBank.issue(aaplDescriptor, ISSUING_QUANTITY, generalNotaryName)
 
-        // TODO add check that ATA doesn't exists
+        assertFalse(isAtaPresent(aliceBridgeAta), "Alice ATA should not be created yet")
 
         move(issuingBank, aliceParty, ISSUING_QUANTITY, msftTokenType).get()
         move(issuingBank, aliceParty, ISSUING_QUANTITY, aaplTokenType).get()
@@ -289,6 +290,8 @@ abstract class FlowTests {
         assertThat(getSolanaTokenBalance(aliceBridgeAta))
             .describedAs("Solana token amount numerically equals Corda bridged amount")
             .isEqualByComparingTo(MOVE_QUANTITY)
+
+        assertTrue(isAtaPresent(aliceBridgeAta), "Alice ATA should be created")
 
         // Simulate redemption transfer for Alice account on Solana
         transfer(
@@ -364,6 +367,13 @@ abstract class FlowTests {
             .checkResponse("getTokenAccountBalance")!!
             .uiAmountString
             .toBigDecimal()
+    }
+
+    fun isAtaPresent(publicKey: PublicKey): Boolean {
+        val response = testValidator
+            .client
+            .getAccountInfo(publicKey.base58(), RpcParams())
+        return response.error == null && response.response != null
     }
 }
 

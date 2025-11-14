@@ -50,9 +50,12 @@ class AccountService(private val client: SolanaJsonRpcClient, private val feePay
     fun createAta(mint: Pubkey, owner: Pubkey) {
         val mintKey = mint.toPublicKey()
         val ownerKey = owner.toPublicKey()
-        val payerKey = feePayer.account
         val pda = AssociatedTokenProgram.deriveAddress(ownerKey, PROGRAM_ACCOUNT, mintKey)
-        // TODO use cache
+        // TODO add cache
+        if (isAtaPresent(pda.address())) {
+            return // no need to create ATA
+        }
+        val payerKey = feePayer.account
         val instruction = AssociatedTokenProgram.createAssociatedTokenAccount(
             pda,
             mintKey,
@@ -96,5 +99,11 @@ class AccountService(private val client: SolanaJsonRpcClient, private val feePay
         } catch (_: BufferOverflowException) {
             throw SolanaException("Transaction is too big for the Bridge Authority.")
         }
+    }
+
+    private fun isAtaPresent(publicKey: PublicKey): Boolean {
+        val response = client
+            .getAccountInfo(publicKey.base58(), RpcParams())
+        return response.error == null && response.response != null
     }
 }

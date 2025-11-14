@@ -1,5 +1,6 @@
 package com.r3.corda.lib.solana.briding.token.flows
 
+import com.lmax.solana4j.client.api.AccountInfo
 import com.lmax.solana4j.client.api.Blockhash
 import com.lmax.solana4j.client.api.SimulateTransactionResponse
 import com.lmax.solana4j.client.api.SolanaClientResponse
@@ -30,6 +31,7 @@ class AccountServiceTest {
     private val blockhash = mockk<Blockhash>()
     private val result = mockk<SolanaClientResponse<Blockhash>>()
     private val simulatedResult = mockk<SimulateTransactionResponse>(relaxed = true)
+    private val getAccountInfoResult = mockk<SolanaClientResponse<AccountInfo>>()
 
     @BeforeEach
     fun setUp() {
@@ -39,8 +41,11 @@ class AccountServiceTest {
         every { blockhash.lastValidBlockHeight } returns 123
         every { result.error } returns null
         every { result.response } returns blockhash
+        every { getAccountInfoResult.error } returns null
+        every { getAccountInfoResult.response } returns null
         every { rpcClient.getLatestBlockhash(any()) } returns result
         every { rpcClient.simulate(any(), any()) } returns simulatedResult
+        every { rpcClient.getAccountInfo(any(), any()) } returns getAccountInfoResult
         every {
             serialiseToTransaction(any(), feeSigner, emptyList(), blockhash, any())
         } returns "SERIALISED_TX"
@@ -61,6 +66,7 @@ class AccountServiceTest {
         service.createAta(mint, owner)
 
         verifyOrder {
+            rpcClient.getAccountInfo(any(), any())
             rpcClient.getLatestBlockhash(AccountService.RPC_PARAMS)
             rpcClient.simulate("SERIALISED_TX", AccountService.RPC_PARAMS)
             rpcClient.sendAndConfirm("SERIALISED_TX", 123, AccountService.RPC_PARAMS)
@@ -68,12 +74,29 @@ class AccountServiceTest {
     }
 
     @Test
-    fun `createAta calls Solana RPC with correct transaction but ATA already exists`() {
+    fun `createAta detecks ATA already exists`() {
+        every { getAccountInfoResult.response } returns mockk<AccountInfo>(relaxed = true)
+
+        service.createAta(mint, owner)
+
+        verifyOrder {
+            rpcClient.getAccountInfo(any(), any())
+        }
+        verify(exactly = 0) {
+            rpcClient.getLatestBlockhash(AccountService.RPC_PARAMS)
+            rpcClient.simulate("SERIALISED_TX", AccountService.RPC_PARAMS)
+            rpcClient.sendAndConfirm("SERIALISED_TX", any(), any())
+        }
+    }
+
+    @Test
+    fun `ATA was created after the check but before running simulate`() {
         every { simulatedResult.err } returns "Associated token account already in use"
 
         service.createAta(mint, owner)
 
         verifyOrder {
+            rpcClient.getAccountInfo(any(), any())
             rpcClient.getLatestBlockhash(AccountService.RPC_PARAMS)
             rpcClient.simulate("SERIALISED_TX", AccountService.RPC_PARAMS)
         }
