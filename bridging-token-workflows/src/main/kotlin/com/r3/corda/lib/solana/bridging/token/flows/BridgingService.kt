@@ -74,13 +74,10 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         }
     }
 
-    fun getBridgingCoordinates(tokenTypeId: String, originalHolder: Party) =
-        configHandler.getBridgingCoordinates(tokenTypeId, originalHolder)
+    fun getRedemptionCoordinates(tokenTypeId: String) = configHandler.getRedemptionCoordinates(tokenTypeId)
 
-    fun getBridgingCoordinates(
-        token: StateAndRef<FungibleToken>,
-        originalHolder: Party,
-    ) = configHandler.getBridgingCoordinates(token, originalHolder)
+    fun getBridgingCoordinates(token: StateAndRef<FungibleToken>, originalHolder: Party) =
+        configHandler.getBridgingCoordinates(token, originalHolder)
 
     private fun onTokenReceivedCallback(
         solanaOwner: Pubkey,
@@ -151,10 +148,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         val stx = appServiceHub.validatedTransactions.getTransaction(txHash) ?: error("Transaction $txHash not found")
 
         val inputTokens: List<FungibleToken> = stx.toLedgerTransaction(appServiceHub).inputsOfType<FungibleToken>()
-        if (inputTokens.isEmpty()) {
-            // This is possible if the token was issued in this transaction
-            return null
-        }
+        require(inputTokens.isNotEmpty()) { "The transaction must have at least one input token." }
 
         val holders = inputTokens.map { it.holder }.toSet()
         require(holders.size == 1) { "Transaction contains tokens of multiple holders" } // This should not happen

@@ -17,7 +17,7 @@ import net.corda.solana.sdk.instruction.Pubkey
 class MoveAndUnlockFungibleTokenFlow
 @JvmOverloads
 constructor(
-    val bridgingCoordinates: BridgingCoordinates,
+    val redemptionCoordinates: RedemptionCoordinates,
     val bridgeAuthority: Party,
     val lockingHolder: Party,
     val amount: Amount<TokenType>,
@@ -56,7 +56,7 @@ constructor(
             "When bridging a fungible token, only one token type can be moved at a time."
         }
 
-        val redeemState = bridgingCoordinates.toRedeemState(
+        val redeemState = redemptionCoordinates.toRedeemState(
             burnAccount = burnAccount,
             amount = amount.quantity,
             bridgeAuthority = bridgeAuthority,
