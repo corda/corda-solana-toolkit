@@ -19,8 +19,6 @@ import net.corda.solana.sdk.internal.Token2022
 import java.nio.BufferOverflowException
 import java.nio.ByteBuffer
 
-fun Pubkey.toPublicKey(): PublicKey = Solana.account(bytes)
-
 /**
  * Manages creation of Solana ATA account on the fly.
  * @param client The Solana RPC client.

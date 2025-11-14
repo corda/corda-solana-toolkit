@@ -1,8 +1,6 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
-import com.lmax.solana4j.api.PublicKey
 import com.lmax.solana4j.programs.AssociatedTokenProgram
-import com.r3.corda.lib.solana.bridging.token.flows.SavaFactory.toPubkey
 import com.r3.corda.lib.solana.bridging.token.states.BridgedFungibleTokenProxy
 import com.r3.corda.lib.solana.bridging.token.states.RedeemedFungibleTokenProxy
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
@@ -70,5 +68,3 @@ data class BridgingCoordinates(
         participants = listOf(bridgeAuthority)
     )
 }
-
-fun PublicKey.toPubkey(): Pubkey = Pubkey(bytes())
