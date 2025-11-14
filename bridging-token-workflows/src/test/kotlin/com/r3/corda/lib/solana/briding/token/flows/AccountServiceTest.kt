@@ -31,18 +31,18 @@ class AccountServiceTest {
         every { blockhashBase58 } returns "EkSnNWid2cvwEVnVx9aBqawnmiCNiDgp3gUdkDPTKN1N"
         every { lastValidBlockHeight } returns 123
     }
-    private val result = mockk<SolanaClientResponse<Blockhash>> {
+    private val latestBlockhashResponse = mockk<SolanaClientResponse<Blockhash>> {
         every { error } returns null
         every { response } returns blockhash
     }
-    private val simulatedResult = mockk<SimulateTransactionResponse>(relaxed = true)
-    private val getAccountInfoResult = mockk<SolanaClientResponse<AccountInfo>> {
+    private val simulateTransactionResponse = mockk<SimulateTransactionResponse>()
+    private val accountInfoResponse = mockk<SolanaClientResponse<AccountInfo>> {
         every { error } returns null
         every { response } returns null
     }
     private val rpcClient = mockk<SolanaJsonRpcClient> {
-        every { getLatestBlockhash(any()) } returns result
-        every { getAccountInfo(any(), any()) } returns getAccountInfoResult
+        every { getLatestBlockhash(any()) } returns latestBlockhashResponse
+        every { getAccountInfo(any(), any()) } returns accountInfoResponse
     }
     private val service: AccountService = AccountService(rpcClient, feeSigner)
 
@@ -50,7 +50,7 @@ class AccountServiceTest {
     fun setUp() { // Mocking an extension function is a bit more convoluted:
         mockkStatic("net.corda.solana.notary.common.rpc.SolanaApiExt")
         mockkStatic("net.corda.solana.notary.common.rpc.Solana4jUtilsKt")
-        every { rpcClient.simulate(any(), any()) } returns simulatedResult
+        every { rpcClient.simulate(any(), any()) } returns simulateTransactionResponse
         every {
             serialiseToTransaction(any(), feeSigner, emptyList(), blockhash, any())
         } returns "SERIALISED_TX"
@@ -58,7 +58,7 @@ class AccountServiceTest {
 
     @Test
     fun `createAta calls Solana RPC with correct transaction`() {
-        every { simulatedResult.err } returns null as Any?
+        every { simulateTransactionResponse.err } returns null as Any?
         val sendAndConfirmResponse = mockk<TransactionResponse>()
         every {
             rpcClient.sendAndConfirm(
@@ -80,7 +80,7 @@ class AccountServiceTest {
 
     @Test
     fun `createAta detects ATA already exists and doesn't create it`() {
-        every { getAccountInfoResult.response } returns mockk<AccountInfo>(relaxed = true)
+        every { accountInfoResponse.response } returns mockk<AccountInfo>(relaxed = true)
 
         service.createAta(mint, owner)
 
@@ -96,7 +96,7 @@ class AccountServiceTest {
 
     @Test
     fun `ATA was created after the check but before running simulate`() {
-        every { simulatedResult.err } returns "Associated token account already in use"
+        every { simulateTransactionResponse.err } returns "Associated token account already in use"
 
         service.createAta(mint, owner)
 
