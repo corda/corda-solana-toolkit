@@ -7,11 +7,12 @@ plugins {
 
 dependencies {
     implementation(libs.sava.rpc)
-
-    implementation(libs.solana4j.json.rpc)
+    implementation(libs.lmax.solana4j)
+    implementation(libs.lmax.solana4j.json.rpc)
 
     cordaProvided(libs.corda.core)
     cordaProvided(libs.ent.corda.solana.sdk)
+    cordaProvided(libs.ent.corda.solana.notary.common)
 
     cordapp(project(":bridging-token-contracts"))
     cordapp(libs.tokens.contracts)

@@ -1,15 +1,17 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
+import com.lmax.solana4j.api.PublicKey
 import com.lmax.solana4j.programs.AssociatedTokenProgram
+import com.r3.corda.lib.solana.bridging.token.flows.SavaFactory.toPubkey
 import com.r3.corda.lib.solana.bridging.token.states.BridgedFungibleTokenProxy
 import com.r3.corda.lib.solana.bridging.token.states.RedeemedFungibleTokenProxy
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import net.corda.core.identity.Party
-import net.corda.solana.aggregator.common.toPubkey
-import net.corda.solana.aggregator.common.toPublicKey
 import net.corda.solana.sdk.instruction.Pubkey
 import net.corda.solana.sdk.internal.Token2022
 import java.util.UUID
+
+fun PublicKey.toPubkey(): Pubkey = Pubkey(bytes())
 
 /**
  * Holds the necessary metadata to bridge a Corda token to Solana Token.

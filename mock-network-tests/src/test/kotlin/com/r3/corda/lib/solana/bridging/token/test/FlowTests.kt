@@ -3,6 +3,7 @@ package com.r3.corda.lib.solana.bridging.token.test
 import com.lmax.solana4j.api.PublicKey
 import com.lmax.solana4j.programs.AssociatedTokenProgram
 import com.lmax.solana4j.programs.Token2022Program
+import com.r3.corda.lib.solana.bridging.token.flows.toPublicKey
 import com.r3.corda.lib.solana.bridging.token.testing.QuerySimpleTokensFlow
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.contracts.types.TokenType
@@ -34,6 +35,7 @@ import net.corda.testing.solana.randomKeypairFile
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -370,7 +372,7 @@ abstract class FlowTests {
     fun isAtaPresent(publicKey: PublicKey): Boolean {
         val response = testValidator
             .client
-            .getAccountInfo(publicKey.base58(), RpcParams())
+            .getAccountInfo(publicKey.base58(), DefaultRpcParams())
         return response.error == null && response.response != null
     }
 }

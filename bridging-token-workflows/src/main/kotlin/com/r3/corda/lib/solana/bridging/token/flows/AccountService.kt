@@ -7,18 +7,19 @@ import com.lmax.solana4j.client.api.Blockhash
 import com.lmax.solana4j.client.api.SimulateTransactionResponse
 import com.lmax.solana4j.client.jsonrpc.SolanaJsonRpcClient
 import com.lmax.solana4j.programs.AssociatedTokenProgram
-import net.corda.solana.aggregator.common.RpcParams
-import net.corda.solana.aggregator.common.Signer
-import net.corda.solana.aggregator.common.SolanaException
-import net.corda.solana.aggregator.common.checkResponse
-import net.corda.solana.aggregator.common.sendAndConfirm
-import net.corda.solana.aggregator.common.serialiseToTransaction
-import net.corda.solana.aggregator.common.simulate
-import net.corda.solana.aggregator.common.toPublicKey
+import net.corda.solana.notary.common.Signer
+import net.corda.solana.notary.common.rpc.DefaultRpcParams
+import net.corda.solana.notary.common.rpc.SolanaException
+import net.corda.solana.notary.common.rpc.checkResponse
+import net.corda.solana.notary.common.rpc.sendAndConfirm
+import net.corda.solana.notary.common.rpc.serialiseToTransaction
+import net.corda.solana.notary.common.rpc.simulate
 import net.corda.solana.sdk.instruction.Pubkey
 import net.corda.solana.sdk.internal.Token2022
 import java.nio.BufferOverflowException
 import java.nio.ByteBuffer
+
+fun Pubkey.toPublicKey(): PublicKey = Solana.account(bytes)
 
 /**
  * Manages creation of Solana ATA account on the fly.
@@ -27,7 +28,7 @@ import java.nio.ByteBuffer
  */
 class AccountService(private val client: SolanaJsonRpcClient, private val feePayer: Signer) {
     companion object {
-        val RPC_PARAMS = RpcParams(skipPreflight = true)
+        val RPC_PARAMS = DefaultRpcParams(skipPreflight = true)
         private val PROGRAM_ACCOUNT: PublicKey = Token2022.PROGRAM_ID.toPublicKey()
     }
 
@@ -103,7 +104,7 @@ class AccountService(private val client: SolanaJsonRpcClient, private val feePay
 
     private fun isAtaPresent(publicKey: PublicKey): Boolean {
         val response = client
-            .getAccountInfo(publicKey.base58(), RpcParams())
+            .getAccountInfo(publicKey.base58(), DefaultRpcParams())
         return response.error == null && response.response != null
     }
 }
