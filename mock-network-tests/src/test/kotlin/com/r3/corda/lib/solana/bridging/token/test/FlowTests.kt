@@ -306,7 +306,7 @@ abstract class FlowTests {
             "Alice received redeemed MSFT shares back",
         )
         val msftFungibleTokens = bridgeAuthority.getAllFungibleTokens(issuingBankParty, msftTokenType)
-        assertTrue(msftFungibleTokens.isEmpty(), "No MSFT shares left in Bridge Authority vault")
+        assertTrue(msftFungibleTokens.isEmpty(), "No  MSFT shares left in Bridge Authority vault")
     }
 
     private inline fun <reified T : ContractState> StartedMockNode.queryStates(): List<StateAndRef<T>> {

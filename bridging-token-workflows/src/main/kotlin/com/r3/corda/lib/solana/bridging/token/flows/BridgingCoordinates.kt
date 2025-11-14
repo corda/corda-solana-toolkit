@@ -9,7 +9,7 @@ import net.corda.solana.aggregator.common.toPubkey
 import net.corda.solana.aggregator.common.toPublicKey
 import net.corda.solana.sdk.instruction.Pubkey
 import net.corda.solana.sdk.internal.Token2022
-import java.util.*
+import java.util.UUID
 
 /**
  * Holds the necessary metadata to bridge a Corda token to Solana Token.
