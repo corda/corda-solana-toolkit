@@ -99,7 +99,7 @@ abstract class FlowTests {
     private lateinit var tokenMint: PublicKey
     private lateinit var aliceSigner: Signer
     private lateinit var aliceBridgeWallet: PublicKey
-    private lateinit var aliceAta: PublicKey
+    private lateinit var aliceBridgeAta: PublicKey
     private lateinit var aliceRedemptionTokenAccount: PublicKey
 
     @BeforeEach
@@ -131,7 +131,7 @@ abstract class FlowTests {
 
         tokenMint = testValidator.createToken(mintAuthoritySigner, decimals = TOKEN_DECIMALS.toByte())
         aliceBridgeWallet = aliceSigner.account
-        aliceAta = AssociatedTokenProgram
+        aliceBridgeAta = AssociatedTokenProgram
             .deriveAddress(
                 aliceBridgeWallet,
                 Token2022.PROGRAM_ID.toPublicKey(),
@@ -286,14 +286,14 @@ abstract class FlowTests {
 
         // SPL Token RPC returns decimal strings with trailing zeros trimmed,
         // BigDecimal.equals is scale-sensitive (1.0 != 1.00), so we compare numeric value instead.
-        assertThat(getSolanaTokenBalance(aliceAta))
+        assertThat(getSolanaTokenBalance(aliceBridgeAta))
             .describedAs("Solana token amount numerically equals Corda bridged amount")
             .isEqualByComparingTo(MOVE_QUANTITY)
 
         // Simulate redemption transfer for Alice account on Solana
         transfer(
             aliceSigner,
-            aliceAta,
+            aliceBridgeAta,
             aliceRedemptionTokenAccount,
             MOVE_QUANTITY.toRawAmount()
         )
@@ -357,10 +357,10 @@ abstract class FlowTests {
         return (this * BigDecimal(10L).pow(TOKEN_DECIMALS)).longValueExact()
     }
 
-    private fun getSolanaTokenBalance(ataAddress: PublicKey): BigDecimal {
+    private fun getSolanaTokenBalance(publicKey: PublicKey): BigDecimal {
         return testValidator
             .client
-            .getTokenAccountBalance(ataAddress.base58(), RpcParams())
+            .getTokenAccountBalance(publicKey.base58(), RpcParams())
             .checkResponse("getTokenAccountBalance")!!
             .uiAmountString
             .toBigDecimal()
