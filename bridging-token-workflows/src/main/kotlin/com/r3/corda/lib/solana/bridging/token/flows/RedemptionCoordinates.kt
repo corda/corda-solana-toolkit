@@ -21,19 +21,16 @@ data class RedemptionCoordinates(
      * @param burnAccount the Solana wallet to which tokens are sent to be burnt/redeemed
      * @param amount the amount of tokens to redeem
      * @param bridgeAuthority the Corda party operating the bridge
-     * @param lockId the unique identifier of lock used to soft-lock the fungible tokens on Corda
      * */
     fun toRedeemState(
         burnAccount: Pubkey,
         amount: Long,
         bridgeAuthority: Party,
-        lockId: UUID,
     ) = RedeemedFungibleTokenProxy(
         burnAccount = burnAccount,
         redemptionWallet = redemptionWallet,
         mint = mint,
         amount = amount,
-        lockId = lockId,
         bridgeAuthority = bridgeAuthority
     )
 }

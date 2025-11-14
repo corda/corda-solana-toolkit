@@ -146,6 +146,7 @@ abstract class FlowTests {
             "mintAuthorities" to mapOf(msftDescriptor.tokenTypeIdentifier to mintAuthoritySigner.account.base58()),
             "lockingIdentityLabel" to UUID.randomUUID().toString(),
             "solanaNotaryName" to solanaNotaryName.toString(),
+            "cordaNotaryName" to generalNotaryName.toString(),
             "solanaWsUrl" to SolanaTestValidator.WS_URL,
             "solanaRpcUrl" to SolanaTestValidator.RPC_URL,
         )

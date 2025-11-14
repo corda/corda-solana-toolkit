@@ -19,6 +19,7 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
     private val mintAuthorities: Map<String, Pubkey>
     val lockingIdentity: Party
     val solanaNotary: Party
+    val cordaNotary: Party
     val bridgeAuthority: PartyAndCertificate
     val solanaWsUrl: String
     val solanaRpcUrl: String
@@ -34,7 +35,8 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
         redemptionHolders = config.getMap("redemptionHolders", Pubkey::fromBase58, CordaX500Name::parse)
         bridgeAuthority = appServiceHub.myInfo.legalIdentitiesAndCerts.first()
         lockingIdentity = getLockingIdentity(config, appServiceHub)
-        solanaNotary = getSolanaNotary(config, appServiceHub)
+        solanaNotary = getNotary("solanaNotaryName", config, appServiceHub)
+        cordaNotary = getNotary("cordaNotaryName", config, appServiceHub)
         solanaWsUrl = config.getString("solanaWsUrl")
         solanaRpcUrl = config.getString("solanaRpcUrl")
         bridgeRedemptionWallet = Pubkey.fromBase58(config.getString("bridgeRedemptionWallet"))
@@ -60,14 +62,14 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
         return identity.party
     }
 
-    private fun getSolanaNotary(config: CordappConfig, appServiceHub: AppServiceHub): Party {
-        val solanaNotaryName = try {
-            CordaX500Name.parse(config.getString("solanaNotaryName"))
+    private fun getNotary(notaryNameConfig: String, config: CordappConfig, appServiceHub: AppServiceHub): Party {
+        val notaryName = try {
+            CordaX500Name.parse(config.getString(notaryNameConfig))
         } catch (_: CordappConfigException) {
-            error("Could not find configuration entry 'solanaNotaryName'")
+            error("Could not find configuration entry '$notaryNameConfig'")
         }
-        return requireNotNull(appServiceHub.networkMapCache.getNotary(solanaNotaryName)) {
-            "Cound not find Solana Notary '$solanaNotaryName' in the network parameters"
+        return requireNotNull(appServiceHub.networkMapCache.getNotary(notaryName)) {
+            "Cound not find Solana Notary '$notaryName' in the network parameters"
         }
     }
 

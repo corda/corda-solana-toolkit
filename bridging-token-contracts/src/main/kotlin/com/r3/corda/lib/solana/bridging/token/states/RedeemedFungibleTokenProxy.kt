@@ -14,7 +14,6 @@ data class RedeemedFungibleTokenProxy(
     val redemptionWallet: Pubkey,
     val mint: Pubkey,
     val amount: Long,
-    val lockId: UUID,
     val bridgeAuthority: Party,
 ) : ContractState {
     override val participants: List<AbstractParty>

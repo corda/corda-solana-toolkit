@@ -24,8 +24,8 @@ class FungibleTokenRedemptionContract : Contract {
     }
 
     private fun verifyUnlockToken(tx: LedgerTransaction, redeemCommand: RedeemCommand.UnlockToken) {
-        val redeemState = tx.outputsOfType<RedeemedFungibleTokenProxy>().requireSingle {
-            "Redemption requires exactly one output state for a RedeemedFungibleTokenProxy"
+        val redeemState = tx.inputsOfType<RedeemedFungibleTokenProxy>().requireSingle {
+            "Redemption requires exactly one input state for a RedeemedFungibleTokenProxy"
         }
         val inputFungibleState = tx.inputsOfType<FungibleToken>().requireSingle {
             "UnlockToken requires exactly one input FungibleToken state"
@@ -52,12 +52,12 @@ class FungibleTokenRedemptionContract : Contract {
     }
 
     private fun verifyBurnOnSolana(tx: LedgerTransaction) {
-        val redeemState = tx.inputsOfType<RedeemedFungibleTokenProxy>().requireSingle {
-            "Redemption requires exactly one input RedeemedFungibleTokenProxy"
+        val redeemState = tx.outputsOfType<RedeemedFungibleTokenProxy>().requireSingle {
+            "Redemption requires exactly one output RedeemedFungibleTokenProxy"
         }
 
-        require(tx.outputsOfType<RedeemedFungibleTokenProxy>().isEmpty()) {
-            "BurnOnSolana transaction must not have any RedeemedFungibleTokenProxy outputs"
+        require(tx.inputsOfType<RedeemedFungibleTokenProxy>().isEmpty()) {
+            "BurnOnSolana transaction must not have any RedeemedFungibleTokenProxy inputs"
         }
 
         val solanaInstruction = tx.notaryInstructionsOfType<SolanaInstruction>().requireSingle {
