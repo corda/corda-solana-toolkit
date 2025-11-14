@@ -16,6 +16,7 @@ import net.corda.core.flows.MoveNotaryFlow
 import net.corda.core.flows.StartableByService
 import net.corda.core.identity.Party
 import net.corda.core.node.services.vault.Builder.equal
+import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -46,7 +47,7 @@ class RedeemFungibleTokenFlow(
     @Suspendable
     override fun call(): SignedTransaction {
         val bridgingService = serviceHub.cordaService(BridgingService::class.java)
-        val bridgingCoordinates = bridgingService.getBridgingCoordinates(tokenTypeId, redemptionHolder)
+        val redemptionCoordinates = bridgingService.getRedemptionCoordinates(tokenTypeId)
         val token = findTokenTypeOfFungibleTokenBy(tokenTypeId)
         val moveAmount = Amount(amount, token)
         // Move the token from ourIdentity (implied BridgeAuthority) to the lock holder (confidential identity).
@@ -54,7 +55,7 @@ class RedeemFungibleTokenFlow(
         val unlockTx =
             subFlow(
                 MoveAndUnlockFungibleTokenFlow(
-                    bridgingCoordinates,
+                    redemptionCoordinates,
                     ourIdentity,
                     lockingHolder,
                     moveAmount,
@@ -91,7 +92,7 @@ class RedeemFungibleTokenFlow(
         val instruction = with(redeemStateAndRef.state.data) {
             Token2022.burn(
                 mint = mint,
-                owner = bridgeRedemptionWallet,
+                owner = redemptionWallet,
                 source = burnAccount,
                 amount = amount,
             )
@@ -111,13 +112,17 @@ class RedeemFungibleTokenFlow(
 
     private fun findTokenTypeOfFungibleTokenBy(tokenTypeIdentifier: String): TokenType {
         val predicate = PersistentFungibleToken::tokenIdentifier.equal(tokenTypeIdentifier)
-        val custom = QueryCriteria.VaultCustomQueryCriteria(predicate)
-        val matches = serviceHub.vaultService.queryBy(FungibleToken::class.java, custom).states
+        val criteria = QueryCriteria.VaultCustomQueryCriteria(predicate)
+        val matches = serviceHub.vaultService
+            .queryBy(
+                contractStateType = FungibleToken::class.java,
+                criteria = criteria,
+                paging = PageSpecification(pageSize = 1, pageNumber = 1)
+            ).states
 
         val matched = requireNotNull(matches.firstOrNull()) {
             "No fungible token with type identifier '$tokenTypeIdentifier' found in the vault"
         }
-        // This must be the IssuedTokenType as this is from the fungible token
         return matched.state.data.amount.token
     }
 }
