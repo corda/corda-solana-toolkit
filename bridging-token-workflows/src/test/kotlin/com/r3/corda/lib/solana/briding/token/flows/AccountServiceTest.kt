@@ -19,39 +19,44 @@ import net.corda.solana.notary.common.rpc.serialiseToTransaction
 import net.corda.solana.notary.common.rpc.simulate
 import net.corda.solana.sdk.instruction.Pubkey
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 
 class AccountServiceTest {
-    private val rpcClient = mockk<SolanaJsonRpcClient>()
-    private lateinit var service: AccountService
     private val mint = Pubkey.fromBase58("4Nd1mYQKMnHkBc7FAuoRdNff7kwh28ykVZCENKxw7d9X")
     private val owner = Pubkey.fromBase58("7z7N2fHcQ6FqLwV8pK7Kqs6QZtqv4sZgQ8Q3jL2xG4nQ")
-    private val feeSigner = mockk<Signer>()
-
-    private val blockhash = mockk<Blockhash>()
-    private val result = mockk<SolanaClientResponse<Blockhash>>()
+    private val feeSigner = mockk<Signer> {
+        every { account } returns SolanaEncoding.account("9w9kL7JH2Brw39i2e3D9o1bT2PukUq3FkSmQnG8Yx1aP")
+    }
+    private val blockhash = mockk<Blockhash> {
+        every { blockhashBase58 } returns "EkSnNWid2cvwEVnVx9aBqawnmiCNiDgp3gUdkDPTKN1N"
+        every { lastValidBlockHeight } returns 123
+    }
+    private val result = mockk<SolanaClientResponse<Blockhash>> {
+        every { error } returns null
+        every { response } returns blockhash
+    }
     private val simulatedResult = mockk<SimulateTransactionResponse>(relaxed = true)
-    private val getAccountInfoResult = mockk<SolanaClientResponse<AccountInfo>>()
+    private val getAccountInfoResult = mockk<SolanaClientResponse<AccountInfo>> {
+        every { error } returns null
+        every { response } returns null
+    }
+    private val rpcClient = mockk<SolanaJsonRpcClient> {
+        every { getLatestBlockhash(any()) } returns result
+        every { getAccountInfo(any(), any()) } returns getAccountInfoResult
+    }
+    private val service: AccountService = AccountService(rpcClient, feeSigner)
 
     @BeforeEach
-    fun setUp() {
-        service = AccountService(rpcClient, feeSigner)
+    fun setUp() { // Mocking an extension function is a bit more convoluted:
         mockkStatic("net.corda.solana.notary.common.rpc.SolanaApiExt")
-        every { feeSigner.account } returns SolanaEncoding.account("9w9kL7JH2Brw39i2e3D9o1bT2PukUq3FkSmQnG8Yx1aP")
-        every { blockhash.lastValidBlockHeight } returns 123
-        every { blockhash.blockhashBase58 } returns "EkSnNWid2cvwEVnVx9aBqawnmiCNiDgp3gUdkDPTKN1N"
-        every { result.error } returns null
-        every { result.response } returns blockhash
-        every { getAccountInfoResult.error } returns null
-        every { getAccountInfoResult.response } returns null
-        every { rpcClient.getLatestBlockhash(any()) } returns result
+        mockkStatic("net.corda.solana.notary.common.rpc.Solana4jUtilsKt")
         every { rpcClient.simulate(any(), any()) } returns simulatedResult
-        every { rpcClient.getAccountInfo(any(), any()) } returns getAccountInfoResult
         every {
             serialiseToTransaction(any(), feeSigner, emptyList(), blockhash, any())
         } returns "SERIALISED_TX"
     }
 
-    // @Test
+    @Test
     fun `createAta calls Solana RPC with correct transaction`() {
         every { simulatedResult.err } returns null as Any?
         val sendAndConfirmResponse = mockk<TransactionResponse>()
@@ -73,7 +78,7 @@ class AccountServiceTest {
         }
     }
 
-    // @Test
+    @Test
     fun `createAta detects ATA already exists and doesn't create it`() {
         every { getAccountInfoResult.response } returns mockk<AccountInfo>(relaxed = true)
 
@@ -89,7 +94,7 @@ class AccountServiceTest {
         }
     }
 
-    // @Test
+    @Test
     fun `ATA was created after the check but before running simulate`() {
         every { simulatedResult.err } returns "Associated token account already in use"
 
