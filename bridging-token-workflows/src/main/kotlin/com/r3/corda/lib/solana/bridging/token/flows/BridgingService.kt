@@ -12,6 +12,7 @@ import net.corda.core.node.services.ServiceLifecycleEvent
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.debug
 import net.corda.solana.sdk.instruction.Pubkey
+import net.corda.solana.sdk.internal.Token2022
 import org.slf4j.LoggerFactory
 import java.net.http.HttpClient
 import java.util.concurrent.Executors
@@ -33,7 +34,11 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         appServiceHub.registerUnloadHandler { onStop() }
         appServiceHub.register { onStartup(it) }
         rpcClient = SolanaJsonRpcClient(HttpClient.newHttpClient(), configHandler.solanaRpcUrl)
-        accountService = AccountService(rpcClient, configHandler.bridgeAuthoritySigner)
+        accountService = AccountService(
+            rpcClient,
+            configHandler.bridgeAuthoritySigner,
+            Token2022.PROGRAM_ID.toPublicKey(),
+        )
     }
 
     private fun onStop() {
@@ -85,7 +90,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         configHandler.getBridgingCoordinates(token, originalHolder)
 
     fun createAta(mint: Pubkey, owner: Pubkey) {
-        accountService.createAta(mint, owner)
+        accountService.createAta(mint.toPublicKey(), owner.toPublicKey())
     }
 
     private fun onTokenReceivedCallback(

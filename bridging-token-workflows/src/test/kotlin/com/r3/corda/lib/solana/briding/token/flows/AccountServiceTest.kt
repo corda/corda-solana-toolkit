@@ -7,6 +7,7 @@ import com.lmax.solana4j.client.api.TransactionResponse
 import com.lmax.solana4j.client.jsonrpc.SolanaJsonRpcClient
 import com.lmax.solana4j.encoding.SolanaEncoding
 import com.r3.corda.lib.solana.bridging.token.flows.AccountService
+import com.r3.corda.lib.solana.bridging.token.flows.toPublicKey
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -17,12 +18,13 @@ import net.corda.solana.notary.common.rpc.DefaultRpcParams
 import net.corda.solana.notary.common.rpc.sendAndConfirm
 import net.corda.solana.notary.common.rpc.serialiseToTransaction
 import net.corda.solana.sdk.instruction.Pubkey
+import net.corda.solana.sdk.internal.Token2022
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class AccountServiceTest {
-    private val mint = Pubkey.fromBase58("4Nd1mYQKMnHkBc7FAuoRdNff7kwh28ykVZCENKxw7d9X")
-    private val owner = Pubkey.fromBase58("7z7N2fHcQ6FqLwV8pK7Kqs6QZtqv4sZgQ8Q3jL2xG4nQ")
+    private val mint = Pubkey.fromBase58("4Nd1mYQKMnHkBc7FAuoRdNff7kwh28ykVZCENKxw7d9X").toPublicKey()
+    private val owner = Pubkey.fromBase58("7z7N2fHcQ6FqLwV8pK7Kqs6QZtqv4sZgQ8Q3jL2xG4nQ").toPublicKey()
     private val feeSigner = mockk<Signer> {
         every { account } returns SolanaEncoding.account("9w9kL7JH2Brw39i2e3D9o1bT2PukUq3FkSmQnG8Yx1aP")
     }
@@ -42,7 +44,7 @@ class AccountServiceTest {
         every { getLatestBlockhash(any()) } returns latestBlockhashResponse
         every { getAccountInfo(any(), any()) } returns accountInfoResponse
     }
-    private val service: AccountService = AccountService(rpcClient, feeSigner)
+    private val service: AccountService = AccountService(rpcClient, feeSigner, Token2022.PROGRAM_ID.toPublicKey())
 
     @BeforeEach
     fun setUp() { // Mocking an extension function is a bit more convoluted:

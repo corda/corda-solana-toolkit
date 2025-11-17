@@ -361,7 +361,7 @@ abstract class FlowTests {
     private fun getSolanaTokenBalance(publicKey: PublicKey): BigDecimal {
         return testValidator
             .client
-            .getTokenAccountBalance(publicKey.base58(), DefaultRpcParams())
+            .getTokenAccountBalance(publicKey.base58(), testValidator.rpcParams)
             .checkResponse("getTokenAccountBalance")!!
             .uiAmountString
             .toBigDecimal()
@@ -370,7 +370,7 @@ abstract class FlowTests {
     fun isAtaPresent(publicKey: PublicKey): Boolean {
         val response = testValidator
             .client
-            .getAccountInfo(publicKey.base58(), DefaultRpcParams())
+            .getAccountInfo(publicKey.base58(), testValidator.rpcParams)
         return response.error == null && response.response != null
     }
 }
