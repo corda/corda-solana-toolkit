@@ -2,65 +2,23 @@ package com.r3.corda.lib.solana.bridging.token
 
 import com.r3.corda.lib.solana.bridging.token.contracts.FungibleTokenBridgeContract
 import com.r3.corda.lib.solana.bridging.token.states.BridgedFungibleTokenProxy
-import com.r3.corda.lib.tokens.contracts.FungibleTokenContract
 import com.r3.corda.lib.tokens.contracts.commands.IssueTokenCommand
 import com.r3.corda.lib.tokens.contracts.commands.MoveTokenCommand
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.contracts.types.TokenType
 import com.r3.corda.lib.tokens.contracts.utilities.issuedBy
 import com.r3.corda.lib.tokens.contracts.utilities.of
-import net.corda.core.crypto.Crypto
-import net.corda.core.identity.AnonymousParty
-import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
-import net.corda.core.node.services.IdentityService
-import net.corda.core.utilities.OpaqueBytes
-import net.corda.solana.notary.common.Signer
-import net.corda.solana.sdk.instruction.AccountMeta
-import net.corda.solana.sdk.instruction.Pubkey
-import net.corda.solana.sdk.instruction.SolanaInstruction
 import net.corda.solana.sdk.internal.Token2022
-import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.core.TestIdentity
-import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito.mock
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 
-class BridgingVerificationTests {
-    companion object {
-        val tokenIssuer = Party(
-            CordaX500Name("Alice", "Lodz", "PL"),
-            Crypto.generateKeyPair().public
-        )
-        val bridgeAuthorityParty = Party(
-            CordaX500Name("Bridge Authority", "Frankfurt", "DE"),
-            Crypto.generateKeyPair().public
-        )
-        val confidentialIdentity = AnonymousParty(Crypto.generateKeyPair().public)
-        val services = MockServices(
-            cordappPackages = listOf("com.r3.corda.lib.solana.bridging.token"),
-            initialIdentity = TestIdentity(bridgeAuthorityParty.name),
-            identityService = mock<IdentityService>(),
-            networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
-        )
-        val TOKEN_PROGRAM_ID: String = FungibleTokenContract.contractId
-    }
-
-    val cordaIssuedTokenType = (10000 of TokenType("TEST", 0)).issuedBy(tokenIssuer)
-
-    val mint = Pubkey(Signer.random().account.bytes())
-    val mintAuthority = Pubkey(Signer.random().account.bytes())
-    val tokenAccount = Pubkey(Signer.random().account.bytes())
-
+class MintVerificationTests {
     val bridgedFungibleTokenProxy = BridgedFungibleTokenProxy(
         10000,
         tokenAccount,
         mint,
         mintAuthority,
-        bridgeAuthorityParty
+        bridgeAuthority
     )
 
     @Test
@@ -71,25 +29,24 @@ class BridgingVerificationTests {
                 attachment(FungibleTokenBridgeContract.CONTRACT_ID)
                 input(
                     TOKEN_PROGRAM_ID,
-                    FungibleToken(cordaIssuedTokenType, bridgeAuthorityParty)
+                    FungibleToken(cordaTokenAmount, bridgeAuthority)
                 )
                 output(
                     TOKEN_PROGRAM_ID,
-                    FungibleToken(cordaIssuedTokenType, confidentialIdentity)
+                    FungibleToken(cordaTokenAmount, confidentialIdentity)
                 )
                 output(
                     FungibleTokenBridgeContract.CONTRACT_ID,
                     bridgedFungibleTokenProxy
                 )
                 command(
-                    listOf(bridgeAuthorityParty.owningKey, confidentialIdentity.owningKey),
-                    MoveTokenCommand(cordaIssuedTokenType.token, listOf(0), listOf(0))
+                    listOf(bridgeAuthority.owningKey, confidentialIdentity.owningKey),
+                    MoveTokenCommand(cordaTokenAmount.token, listOf(0), listOf(0))
                 )
                 command(
-                    listOf(bridgeAuthorityParty.owningKey),
-                    FungibleTokenBridgeContract.BridgeCommand.LockToken(bridgeAuthorityParty, confidentialIdentity)
+                    listOf(bridgeAuthority.owningKey),
+                    FungibleTokenBridgeContract.BridgeCommand.LockToken(bridgeAuthority, confidentialIdentity)
                 )
-
                 verifies()
             }
         }
@@ -105,7 +62,7 @@ class BridgingVerificationTests {
                     bridgedFungibleTokenProxy
                 )
                 command(
-                    listOf(bridgeAuthorityParty.owningKey),
+                    listOf(bridgeAuthority.owningKey),
                     FungibleTokenBridgeContract.BridgeCommand.MintToSolana
                 )
                 notaryInstruction(Token2022.mintTo(mint, tokenAccount, mintAuthority, 10000))
@@ -115,31 +72,24 @@ class BridgingVerificationTests {
         }
     }
 
-    @Suppress("LongMethod")
     @Test
     fun lockAmountErrors() {
         services.ledger {
             transaction {
                 attachment(TOKEN_PROGRAM_ID)
                 attachment(FungibleTokenBridgeContract.CONTRACT_ID)
-                input(
-                    TOKEN_PROGRAM_ID,
-                    FungibleToken(cordaIssuedTokenType, bridgeAuthorityParty)
+                input(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
+                command(
+                    listOf(bridgeAuthority.owningKey, confidentialIdentity.owningKey),
+                    MoveTokenCommand(cordaTokenAmount.token, listOf(0), listOf(0))
                 )
                 command(
-                    listOf(bridgeAuthorityParty.owningKey, confidentialIdentity.owningKey),
-                    MoveTokenCommand(cordaIssuedTokenType.token, listOf(0), listOf(0))
-                )
-                command(
-                    listOf(bridgeAuthorityParty.owningKey),
-                    FungibleTokenBridgeContract.BridgeCommand.LockToken(bridgeAuthorityParty, confidentialIdentity)
+                    listOf(bridgeAuthority.owningKey),
+                    FungibleTokenBridgeContract.BridgeCommand.LockToken(bridgeAuthority, confidentialIdentity)
                 )
 
                 tweak {
-                    output(
-                        TOKEN_PROGRAM_ID,
-                        FungibleToken(cordaIssuedTokenType, confidentialIdentity)
-                    )
+                    output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
                     output(
                         FungibleTokenBridgeContract.CONTRACT_ID,
                         bridgedFungibleTokenProxy.copy(amount = 9999)
@@ -148,14 +98,8 @@ class BridgingVerificationTests {
                 }
 
                 tweak {
-                    output(
-                        TOKEN_PROGRAM_ID,
-                        FungibleToken(cordaIssuedTokenType, confidentialIdentity)
-                    )
-                    output(
-                        FungibleTokenBridgeContract.CONTRACT_ID,
-                        bridgedFungibleTokenProxy.copy(amount = 10001)
-                    )
+                    output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
+                    output(FungibleTokenBridgeContract.CONTRACT_ID, bridgedFungibleTokenProxy.copy(amount = 10001))
                     `fails with`("BridgedFungibleTokenProxy must have the same amount as the locked token")
                 }
 
@@ -165,10 +109,7 @@ class BridgingVerificationTests {
                         TOKEN_PROGRAM_ID,
                         FungibleToken(overspendCordaIssuedTokenType, confidentialIdentity)
                     )
-                    output(
-                        FungibleTokenBridgeContract.CONTRACT_ID,
-                        bridgedFungibleTokenProxy
-                    )
+                    output(FungibleTokenBridgeContract.CONTRACT_ID, bridgedFungibleTokenProxy)
                     `fails with`("In move groups the amount of input tokens MUST EQUAL the amount of output tokens")
                 }
 
@@ -178,50 +119,38 @@ class BridgingVerificationTests {
                         TOKEN_PROGRAM_ID,
                         FungibleToken(underspendCordaIssuedTokenType, confidentialIdentity)
                     )
-                    output(
-                        FungibleTokenBridgeContract.CONTRACT_ID,
-                        bridgedFungibleTokenProxy
-                    )
+                    output(FungibleTokenBridgeContract.CONTRACT_ID, bridgedFungibleTokenProxy)
                     `fails with`("In move groups the amount of input tokens MUST EQUAL the amount of output tokens")
                 }
             }
         }
     }
 
-    @Suppress("LongMethod")
     @Test
     fun lockCommandErrors() {
         services.ledger {
             transaction {
                 attachment(TOKEN_PROGRAM_ID)
                 attachment(FungibleTokenBridgeContract.CONTRACT_ID)
-                input(
-                    TOKEN_PROGRAM_ID,
-                    FungibleToken(cordaIssuedTokenType, bridgeAuthorityParty)
-                )
+                input(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
                 output(
                     TOKEN_PROGRAM_ID,
-                    FungibleToken(cordaIssuedTokenType, confidentialIdentity)
+                    FungibleToken(cordaTokenAmount, confidentialIdentity)
                 )
-                output(
-                    FungibleTokenBridgeContract.CONTRACT_ID,
-                    bridgedFungibleTokenProxy
-                )
-                tweak {
-                    `fails with`("A transaction must contain at least one command")
-                }
+                output(FungibleTokenBridgeContract.CONTRACT_ID, bridgedFungibleTokenProxy)
+                tweak { `fails with`("A transaction must contain at least one command") }
                 tweak {
                     command(
-                        listOf(bridgeAuthorityParty.owningKey, confidentialIdentity.owningKey),
-                        MoveTokenCommand(cordaIssuedTokenType.token, listOf(0), listOf(0))
+                        listOf(bridgeAuthority.owningKey, confidentialIdentity.owningKey),
+                        MoveTokenCommand(cordaTokenAmount.token, listOf(0), listOf(0))
                     )
                     `fails with`("Bridging transactions must have a single bridge command")
                 }
                 tweak {
                     command(
-                        listOf(bridgeAuthorityParty.owningKey),
+                        listOf(bridgeAuthority.owningKey),
                         FungibleTokenBridgeContract.BridgeCommand.LockToken(
-                            bridgeAuthorityParty,
+                            bridgeAuthority,
                             confidentialIdentity
                         )
                     )
@@ -229,29 +158,29 @@ class BridgingVerificationTests {
                 }
                 tweak {
                     command(
-                        listOf(bridgeAuthorityParty.owningKey, confidentialIdentity.owningKey),
-                        MoveTokenCommand(cordaIssuedTokenType.token, listOf(0), listOf(0))
+                        listOf(bridgeAuthority.owningKey, confidentialIdentity.owningKey),
+                        MoveTokenCommand(cordaTokenAmount.token, listOf(0), listOf(0))
                     )
                     command(
-                        listOf(bridgeAuthorityParty.owningKey),
+                        listOf(bridgeAuthority.owningKey),
                         FungibleTokenBridgeContract.BridgeCommand.LockToken(
-                            bridgeAuthorityParty,
+                            bridgeAuthority,
                             confidentialIdentity
                         )
                     )
                     command(
-                        listOf(bridgeAuthorityParty.owningKey),
+                        listOf(bridgeAuthority.owningKey),
                         FungibleTokenBridgeContract.BridgeCommand.MintToSolana
                     )
                     `fails with`("Bridging transactions must have a single bridge command")
                 }
                 command(
-                    listOf(bridgeAuthorityParty.owningKey, confidentialIdentity.owningKey),
-                    MoveTokenCommand(cordaIssuedTokenType.token, listOf(0), listOf(0))
+                    listOf(bridgeAuthority.owningKey, confidentialIdentity.owningKey),
+                    MoveTokenCommand(cordaTokenAmount.token, listOf(0), listOf(0))
                 )
                 command(
-                    listOf(bridgeAuthorityParty.owningKey),
-                    FungibleTokenBridgeContract.BridgeCommand.LockToken(bridgeAuthorityParty, confidentialIdentity)
+                    listOf(bridgeAuthority.owningKey),
+                    FungibleTokenBridgeContract.BridgeCommand.LockToken(bridgeAuthority, confidentialIdentity)
                 )
                 verifies()
             }
@@ -266,25 +195,19 @@ class BridgingVerificationTests {
             transaction {
                 attachment(TOKEN_PROGRAM_ID)
                 attachment(FungibleTokenBridgeContract.CONTRACT_ID)
-                input(
-                    TOKEN_PROGRAM_ID,
-                    FungibleToken(cordaIssuedTokenType, bridgeAuthorityParty)
-                )
+                input(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
                 output(
                     TOKEN_PROGRAM_ID,
-                    FungibleToken(cordaIssuedTokenType, confidentialIdentity)
+                    FungibleToken(cordaTokenAmount, confidentialIdentity)
                 )
-                output(
-                    FungibleTokenBridgeContract.CONTRACT_ID,
-                    bridgedFungibleTokenProxy
+                output(FungibleTokenBridgeContract.CONTRACT_ID, bridgedFungibleTokenProxy)
+                command(
+                    listOf(bridgeAuthority.owningKey, confidentialIdentity.owningKey),
+                    MoveTokenCommand(cordaTokenAmount.token, listOf(0), listOf(0))
                 )
                 command(
-                    listOf(bridgeAuthorityParty.owningKey, confidentialIdentity.owningKey),
-                    MoveTokenCommand(cordaIssuedTokenType.token, listOf(0), listOf(0))
-                )
-                command(
-                    listOf(bridgeAuthorityParty.owningKey),
-                    FungibleTokenBridgeContract.BridgeCommand.LockToken(bridgeAuthorityParty, confidentialIdentity)
+                    listOf(bridgeAuthority.owningKey),
+                    FungibleTokenBridgeContract.BridgeCommand.LockToken(bridgeAuthority, confidentialIdentity)
                 )
                 tweak {
                     notaryInstruction(Token2022.mintTo(mint, mintAuthority, mintAuthority, 10000))
@@ -299,12 +222,9 @@ class BridgingVerificationTests {
         services.ledger {
             transaction {
                 attachment(FungibleTokenBridgeContract.CONTRACT_ID)
-                input(
-                    FungibleTokenBridgeContract.CONTRACT_ID,
-                    bridgedFungibleTokenProxy
-                )
+                input(FungibleTokenBridgeContract.CONTRACT_ID, bridgedFungibleTokenProxy)
                 command(
-                    listOf(bridgeAuthorityParty.owningKey),
+                    listOf(bridgeAuthority.owningKey),
                     FungibleTokenBridgeContract.BridgeCommand.MintToSolana
                 )
 
@@ -329,10 +249,7 @@ class BridgingVerificationTests {
         services.ledger {
             transaction {
                 attachment(FungibleTokenBridgeContract.CONTRACT_ID)
-                input(
-                    FungibleTokenBridgeContract.CONTRACT_ID,
-                    bridgedFungibleTokenProxy
-                )
+                input(FungibleTokenBridgeContract.CONTRACT_ID, bridgedFungibleTokenProxy)
                 notaryInstruction(Token2022.mintTo(mint, tokenAccount, mintAuthority, 10000))
 
                 // no commands
@@ -342,12 +259,12 @@ class BridgingVerificationTests {
 
                 // two bridging commands
                 command(
-                    listOf(bridgeAuthorityParty.owningKey),
+                    listOf(bridgeAuthority.owningKey),
                     FungibleTokenBridgeContract.BridgeCommand.MintToSolana,
                 )
                 tweak {
                     command(
-                        listOf(bridgeAuthorityParty.owningKey),
+                        listOf(bridgeAuthority.owningKey),
                         FungibleTokenBridgeContract.BridgeCommand.MintToSolana,
                     )
                     `fails with`("Bridging transactions must have a single bridge command")
@@ -357,8 +274,8 @@ class BridgingVerificationTests {
                 tweak {
                     attachment(TOKEN_PROGRAM_ID)
                     command(
-                        listOf(bridgeAuthorityParty.owningKey),
-                        IssueTokenCommand(cordaIssuedTokenType.token, emptyList())
+                        listOf(bridgeAuthority.owningKey),
+                        IssueTokenCommand(cordaTokenAmount.token, emptyList())
                     )
                     `fails with`("Bridging transaction must only contain a single command")
                 }
@@ -373,12 +290,9 @@ class BridgingVerificationTests {
         services.ledger {
             transaction {
                 attachment(FungibleTokenBridgeContract.CONTRACT_ID)
-                input(
-                    FungibleTokenBridgeContract.CONTRACT_ID,
-                    bridgedFungibleTokenProxy
-                )
+                input(FungibleTokenBridgeContract.CONTRACT_ID, bridgedFungibleTokenProxy)
                 command(
-                    listOf(bridgeAuthorityParty.owningKey),
+                    listOf(bridgeAuthority.owningKey),
                     FungibleTokenBridgeContract.BridgeCommand.MintToSolana,
                 )
 
@@ -387,9 +301,7 @@ class BridgingVerificationTests {
                     `fails with`("Solana instruction in the transaction not the expected mint instruction:")
                 }
 
-                tweak {
-                    `fails with`("Exactly one Solana instruction required")
-                }
+                tweak { `fails with`("Exactly one Solana instruction required") }
 
                 tweak {
                     notaryInstruction(Token2022.mintTo(mint, tokenAccount, mintAuthority, 10000))
@@ -403,8 +315,8 @@ class BridgingVerificationTests {
                 }
                 // wrong destination
                 tweak {
-                    Token2022.mintTo(mint, tokenAccount, tokenAccount, 10000)
-                    `fails with`("Exactly one Solana instruction required")
+                    notaryInstruction(Token2022.mintTo(mint, tokenAccount, tokenAccount, 10000))
+                    `fails with`("Solana instruction in the transaction not the expected mint instruction")
                 }
                 // wrong amount
                 tweak {
@@ -417,26 +329,5 @@ class BridgingVerificationTests {
                 verifies()
             }
         }
-    }
-
-    private fun instructionWithWrongOperation(programId: Pubkey): SolanaInstruction {
-        val operation = 6
-        val amount: Long = 10000
-        val destination = Token2022.PROGRAM_ID
-        val data = ByteBuffer
-            .allocate(9)
-            .order(ByteOrder.LITTLE_ENDIAN)
-            .put(operation.toByte())
-            .putLong(amount)
-            .array()
-        return SolanaInstruction(
-            programId,
-            listOf(
-                AccountMeta(mint, isSigner = false, isWritable = true),
-                AccountMeta(destination, isSigner = false, isWritable = true),
-                AccountMeta(mintAuthority, isSigner = true, isWritable = false),
-            ),
-            OpaqueBytes(data)
-        )
     }
 }
