@@ -5,6 +5,7 @@ import com.lmax.solana4j.api.PublicKey
 import com.lmax.solana4j.api.TransactionInstruction
 import com.lmax.solana4j.client.api.Blockhash
 import com.lmax.solana4j.client.jsonrpc.SolanaJsonRpcClient
+import com.lmax.solana4j.encoding.SolanaEncoding
 import com.lmax.solana4j.programs.AssociatedTokenProgram
 import net.corda.solana.notary.common.Signer
 import net.corda.solana.notary.common.rpc.DefaultRpcParams
@@ -15,6 +16,7 @@ import net.corda.solana.notary.common.rpc.serialiseToTransaction
 import org.slf4j.LoggerFactory
 import java.nio.BufferOverflowException
 import java.nio.ByteBuffer
+import java.util.Base64
 
 /**
  * Manages creation of Solana ATA account on the fly.
@@ -33,7 +35,7 @@ class AccountService(
 
     /**
      * Creates an associated token account (ATA) for the given SPL token [mintAccount] and [ownerAccount]
-     * if one does not already exist.
+     * if one does not already exist. The method is idempotent and may be rerun in case f a flow restart.
      *
      * The transaction is built and signed using this service's fee payer and submitted with preflight
      * checks enabled. If submission fails due to a stale blockhash, the creation is retried with a new
@@ -44,14 +46,17 @@ class AccountService(
      *
      * @throws net.corda.solana.notary.common.rpc.SolanaException if the transaction cannot be constructed
      *         or is too large.
-     * @throws com.lmax.solana4j.client.jsonrpc.SolanaJsonRpcClientException if the underlying RPC calls
-     *         fail after exhausting retry attempts.
+     * @throws com.lmax.solana4j.client.jsonrpc.SolanaJsonRpcClientException if the underlying RPC calls fail.
      */
     fun createAta(mintAccount: PublicKey, ownerAccount: PublicKey) {
         val pda = AssociatedTokenProgram.deriveAddress(ownerAccount, programAccount, mintAccount)
         // TODO use cache first
-        if (isAtaPresent(pda.address())) {
-            return // no need to create ATA
+        try {
+            if (requireAtaMatches(pda.address(), mintAccount, ownerAccount, programAccount)) {
+                return // ATA already exists
+            }
+        } catch (e: IllegalStateException) {
+            logger.warn("Error while checking if ATA exists or not ATA", e) // Continue attempt to create ATA
         }
         val instruction = AssociatedTokenProgram.createAssociatedTokenAccount(
             pda,
@@ -96,9 +101,32 @@ class AccountService(
         }
     }
 
-    private fun isAtaPresent(publicKey: PublicKey): Boolean {
-        val response = client
-            .getAccountInfo(publicKey.base58(), DefaultRpcParams())
-        return response.error == null && response.response != null
+    private fun requireAtaMatches(
+        account: PublicKey,
+        expectedMintAccount: PublicKey,
+        expectedWalletAccount: PublicKey,
+        expectedTokenProgram: PublicKey,
+    ): Boolean {
+        val clientResponse = client.getAccountInfo(account.base58(), DefaultRpcParams())
+        val response = clientResponse.response ?: return false
+
+        val encoded = response.data?.accountInfoEncoded ?: return false
+        check(encoded.size >= 2) { "Missing encoded account data" }
+        check(encoded[1].equals("base64", ignoreCase = true)) { "Unsupported encoding: ${encoded[1]}" }
+
+        val binaryData = Base64.getDecoder().decode(encoded.first())
+        check(binaryData.size >= 64) { "Account data too short to be a token account" }
+
+        val mintAccount = SolanaEncoding.account(binaryData.copyOfRange(0, 32))
+        val walletAccount = SolanaEncoding.account(binaryData.copyOfRange(32, 64))
+
+        val programMatch = response.owner == expectedTokenProgram.base58()
+        val mintMatch = mintAccount == expectedMintAccount
+        val walletMatch = walletAccount == expectedWalletAccount
+        check(programMatch && mintMatch && walletMatch) {
+            "ATA account does not match expected info: " +
+                "programMatch=$programMatch, mintMatch=$mintMatch, walletMatch=$walletMatch"
+        }
+        return true
     }
 }

@@ -1,96 +1,85 @@
 package com.r3.corda.lib.solana.briding.token.flows
 
-import com.lmax.solana4j.client.api.AccountInfo
-import com.lmax.solana4j.client.api.Blockhash
-import com.lmax.solana4j.client.api.SolanaClientResponse
-import com.lmax.solana4j.client.api.TransactionResponse
-import com.lmax.solana4j.client.jsonrpc.SolanaJsonRpcClient
-import com.lmax.solana4j.encoding.SolanaEncoding
+import com.lmax.solana4j.api.PublicKey
+import com.lmax.solana4j.programs.AssociatedTokenProgram
 import com.r3.corda.lib.solana.bridging.token.flows.AccountService
 import com.r3.corda.lib.solana.bridging.token.flows.toPublicKey
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.mockkStatic
-import io.mockk.verify
-import io.mockk.verifyOrder
 import net.corda.solana.notary.common.Signer
-import net.corda.solana.notary.common.rpc.DefaultRpcParams
-import net.corda.solana.notary.common.rpc.sendAndConfirm
-import net.corda.solana.notary.common.rpc.serialiseToTransaction
-import net.corda.solana.sdk.instruction.Pubkey
+import net.corda.solana.notary.common.rpc.SolanaClientException
+import net.corda.solana.notary.common.rpc.checkResponse
 import net.corda.solana.sdk.internal.Token2022
+import net.corda.testing.solana.SolanaTestValidator
+import net.corda.testing.solana.randomKeypairFile
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertDoesNotThrow
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.math.BigDecimal
+import java.nio.file.Path
 
 class AccountServiceTest {
-    private val mint = Pubkey.fromBase58("4Nd1mYQKMnHkBc7FAuoRdNff7kwh28ykVZCENKxw7d9X").toPublicKey()
-    private val owner = Pubkey.fromBase58("7z7N2fHcQ6FqLwV8pK7Kqs6QZtqv4sZgQ8Q3jL2xG4nQ").toPublicKey()
-    private val feeSigner = mockk<Signer> {
-        every { account } returns SolanaEncoding.account("9w9kL7JH2Brw39i2e3D9o1bT2PukUq3FkSmQnG8Yx1aP")
-    }
-    private val blockhash = mockk<Blockhash> {
-        every { blockhashBase58 } returns "EkSnNWid2cvwEVnVx9aBqawnmiCNiDgp3gUdkDPTKN1N"
-        every { lastValidBlockHeight } returns 123
-    }
-    private val latestBlockhashResponse = mockk<SolanaClientResponse<Blockhash>> {
-        every { error } returns null
-        every { response } returns blockhash
-    }
-    private val accountInfoResponse = mockk<SolanaClientResponse<AccountInfo>> {
-        every { error } returns null
-        every { response } returns null
-    }
-    private val rpcClient = mockk<SolanaJsonRpcClient> {
-        every { getLatestBlockhash(any()) } returns latestBlockhashResponse
-        every { getAccountInfo(any(), any()) } returns accountInfoResponse
-    }
-    private val service: AccountService = AccountService(rpcClient, feeSigner, Token2022.PROGRAM_ID.toPublicKey())
+    lateinit var testValidator: SolanaTestValidator
+    lateinit var mintAuthoritySigner: Signer
+    lateinit var tokenMint: PublicKey
+    lateinit var wallet: Signer
+
+    @TempDir
+    lateinit var custodiedKeysDir: Path
 
     @BeforeEach
-    fun setUp() { // Mocking an extension function is a bit more convoluted:
-        mockkStatic("net.corda.solana.notary.common.rpc.SolanaApiExt")
-        mockkStatic("net.corda.solana.notary.common.rpc.Solana4jUtilsKt")
-        every {
-            serialiseToTransaction(any(), feeSigner, emptyList(), blockhash, any())
-        } returns "SERIALISED_TX"
+    fun setup() {
+        testValidator = SolanaTestValidator()
+        mintAuthoritySigner = Signer.fromFile(randomKeypairFile(custodiedKeysDir))
+        testValidator.start()
+        testValidator.fundAccount(10, mintAuthoritySigner)
+        tokenMint = testValidator.createToken(mintAuthoritySigner, decimals = 3.toByte())
+        wallet = Signer.fromFile(randomKeypairFile(custodiedKeysDir))
     }
 
-    // This test also covers situation when ATA was created in the meantime,
-    // after getAccountInfo indicated the account doesn't exists
-    @Test
-    fun `createAta calls Solana RPC with correct transaction`() {
-        val sendAndConfirmResponse = mockk<TransactionResponse> {
-            every { slot } returns 123
-        }
-        every {
-            rpcClient.sendAndConfirm(
-                eq("SERIALISED_TX"),
-                eq(123),
-                eq(DefaultRpcParams())
-            )
-        } returns sendAndConfirmResponse
-
-        service.createAta(mint, owner)
-
-        verifyOrder {
-            rpcClient.getAccountInfo(any(), any())
-            rpcClient.getLatestBlockhash(DefaultRpcParams())
-            rpcClient.sendAndConfirm("SERIALISED_TX", 123, DefaultRpcParams())
+    @AfterEach
+    fun tearDown() {
+        if (::testValidator.isInitialized) {
+            testValidator.close()
         }
     }
 
     @Test
-    fun `createAta detects ATA already exists and doesn't create it`() {
-        every { accountInfoResponse.response } returns mockk<AccountInfo>(relaxed = true)
+    fun test() {
+        val sut = AccountService(testValidator.client, mintAuthoritySigner, Token2022.PROGRAM_ID.toPublicKey())
 
-        service.createAta(mint, owner)
+        val tokenAccount = AssociatedTokenProgram
+            .deriveAddress(
+                wallet.account,
+                Token2022.PROGRAM_ID.toPublicKey(),
+                tokenMint
+            ).address()
 
-        verifyOrder {
-            rpcClient.getAccountInfo(any(), any())
-        }
-        verify(exactly = 0) {
-            rpcClient.getLatestBlockhash(DefaultRpcParams())
-            rpcClient.sendAndConfirm("SERIALISED_TX", any(), any())
-        }
+        assertThrows(
+            SolanaClientException::class.java,
+            { getSolanaTokenBalance(tokenAccount) },
+            "ATA account should not exist yet"
+        )
+        sut.createAta(tokenMint, wallet.account)
+        assertEquals(
+            BigDecimal.ZERO,
+            getSolanaTokenBalance(tokenAccount),
+            "ATA should exist with 0 balance"
+        )
+        assertDoesNotThrow(
+            { sut.createAta(tokenMint, wallet.account) },
+            "The call to create ATA is idempotent"
+        )
+    }
+
+    private fun getSolanaTokenBalance(publicKey: PublicKey): BigDecimal {
+        return testValidator
+            .client
+            .getTokenAccountBalance(publicKey.base58(), testValidator.rpcParams)
+            .checkResponse("getTokenAccountBalance")!!
+            .uiAmountString
+            .toBigDecimal()
     }
 }

@@ -20,7 +20,8 @@ dependencies {
 
     detektPlugins(libs.detekt.ktlint.wrapper)
 
-    testImplementation("io.mockk:mockk:1.13.10") //TODO if approved add to TOML
+    testImplementation(libs.ent.corda.test.utils)
+    testImplementation(libs.os.corda.core.test.utils)
 }
 
 cordapp {

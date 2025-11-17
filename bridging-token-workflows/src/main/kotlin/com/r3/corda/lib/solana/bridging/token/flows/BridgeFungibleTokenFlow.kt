@@ -49,6 +49,7 @@ class BridgeFungibleTokenFlow(
         val bridgingService = serviceHub.cordaService(BridgingService::class.java)
         val bridgingCoordinates = bridgingService.getBridgingCoordinates(token, originalHolder)
 
+        // Idempotent creation, safe to invoke again if the flow restarts from a checkpoint.
         bridgingService.createAta(bridgingCoordinates.mint, bridgingCoordinates.mintDestination)
 
         // Move the token from ourIdentity (implied BridgeAuthority) to the lock holder (confidential identity).
