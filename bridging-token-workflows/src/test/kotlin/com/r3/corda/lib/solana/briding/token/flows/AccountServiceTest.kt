@@ -2,7 +2,6 @@ package com.r3.corda.lib.solana.briding.token.flows
 
 import com.lmax.solana4j.client.api.AccountInfo
 import com.lmax.solana4j.client.api.Blockhash
-import com.lmax.solana4j.client.api.SimulateTransactionResponse
 import com.lmax.solana4j.client.api.SolanaClientResponse
 import com.lmax.solana4j.client.api.TransactionResponse
 import com.lmax.solana4j.client.jsonrpc.SolanaJsonRpcClient
@@ -14,9 +13,9 @@ import io.mockk.mockkStatic
 import io.mockk.verify
 import io.mockk.verifyOrder
 import net.corda.solana.notary.common.Signer
+import net.corda.solana.notary.common.rpc.DefaultRpcParams
 import net.corda.solana.notary.common.rpc.sendAndConfirm
 import net.corda.solana.notary.common.rpc.serialiseToTransaction
-import net.corda.solana.notary.common.rpc.simulate
 import net.corda.solana.sdk.instruction.Pubkey
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -35,7 +34,6 @@ class AccountServiceTest {
         every { error } returns null
         every { response } returns blockhash
     }
-    private val simulateTransactionResponse = mockk<SimulateTransactionResponse>()
     private val accountInfoResponse = mockk<SolanaClientResponse<AccountInfo>> {
         every { error } returns null
         every { response } returns null
@@ -50,21 +48,23 @@ class AccountServiceTest {
     fun setUp() { // Mocking an extension function is a bit more convoluted:
         mockkStatic("net.corda.solana.notary.common.rpc.SolanaApiExt")
         mockkStatic("net.corda.solana.notary.common.rpc.Solana4jUtilsKt")
-        every { rpcClient.simulate(any(), any()) } returns simulateTransactionResponse
         every {
             serialiseToTransaction(any(), feeSigner, emptyList(), blockhash, any())
         } returns "SERIALISED_TX"
     }
 
+    // This test also covers situation when ATA was created in the meantime,
+    // after getAccountInfo indicated the account doesn't exists
     @Test
     fun `createAta calls Solana RPC with correct transaction`() {
-        every { simulateTransactionResponse.err } returns null as Any?
-        val sendAndConfirmResponse = mockk<TransactionResponse>()
+        val sendAndConfirmResponse = mockk<TransactionResponse> {
+            every { slot } returns 123
+        }
         every {
             rpcClient.sendAndConfirm(
                 eq("SERIALISED_TX"),
                 eq(123),
-                eq(AccountService.RPC_PARAMS)
+                eq(DefaultRpcParams())
             )
         } returns sendAndConfirmResponse
 
@@ -72,9 +72,8 @@ class AccountServiceTest {
 
         verifyOrder {
             rpcClient.getAccountInfo(any(), any())
-            rpcClient.getLatestBlockhash(AccountService.RPC_PARAMS)
-            rpcClient.simulate("SERIALISED_TX", AccountService.RPC_PARAMS)
-            rpcClient.sendAndConfirm("SERIALISED_TX", 123, AccountService.RPC_PARAMS)
+            rpcClient.getLatestBlockhash(DefaultRpcParams())
+            rpcClient.sendAndConfirm("SERIALISED_TX", 123, DefaultRpcParams())
         }
     }
 
@@ -88,24 +87,7 @@ class AccountServiceTest {
             rpcClient.getAccountInfo(any(), any())
         }
         verify(exactly = 0) {
-            rpcClient.getLatestBlockhash(AccountService.RPC_PARAMS)
-            rpcClient.simulate("SERIALISED_TX", AccountService.RPC_PARAMS)
-            rpcClient.sendAndConfirm("SERIALISED_TX", any(), any())
-        }
-    }
-
-    @Test
-    fun `ATA was created after the check but before running simulate`() {
-        every { simulateTransactionResponse.err } returns "Associated token account already in use"
-
-        service.createAta(mint, owner)
-
-        verifyOrder {
-            rpcClient.getAccountInfo(any(), any())
-            rpcClient.getLatestBlockhash(AccountService.RPC_PARAMS)
-            rpcClient.simulate("SERIALISED_TX", AccountService.RPC_PARAMS)
-        }
-        verify(exactly = 0) {
+            rpcClient.getLatestBlockhash(DefaultRpcParams())
             rpcClient.sendAndConfirm("SERIALISED_TX", any(), any())
         }
     }

@@ -4,7 +4,6 @@ import com.lmax.solana4j.Solana
 import com.lmax.solana4j.api.PublicKey
 import com.lmax.solana4j.api.TransactionInstruction
 import com.lmax.solana4j.client.api.Blockhash
-import com.lmax.solana4j.client.api.SimulateTransactionResponse
 import com.lmax.solana4j.client.jsonrpc.SolanaJsonRpcClient
 import com.lmax.solana4j.programs.AssociatedTokenProgram
 import net.corda.solana.notary.common.Signer
@@ -13,9 +12,9 @@ import net.corda.solana.notary.common.rpc.SolanaException
 import net.corda.solana.notary.common.rpc.checkResponse
 import net.corda.solana.notary.common.rpc.sendAndConfirm
 import net.corda.solana.notary.common.rpc.serialiseToTransaction
-import net.corda.solana.notary.common.rpc.simulate
 import net.corda.solana.sdk.instruction.Pubkey
 import net.corda.solana.sdk.internal.Token2022
+import org.slf4j.LoggerFactory
 import java.nio.BufferOverflowException
 import java.nio.ByteBuffer
 
@@ -26,7 +25,8 @@ import java.nio.ByteBuffer
  */
 class AccountService(private val client: SolanaJsonRpcClient, private val feePayer: Signer) {
     companion object {
-        val RPC_PARAMS = DefaultRpcParams(skipPreflight = true)
+        private val logger = LoggerFactory.getLogger(AccountService::class.java)
+        private val RPC_PARAMS = DefaultRpcParams()
         private val PROGRAM_ACCOUNT: PublicKey = Token2022.PROGRAM_ID.toPublicKey()
     }
 
@@ -35,8 +35,10 @@ class AccountService(private val client: SolanaJsonRpcClient, private val feePay
 
     /**
      * Creates an associated token account (ATA) for the given SPL token [mint] and [owner] if the ATA doesn't exist.
-     * The transaction is built and signed using this service's fee payer, with first simulating the result.
-     * This method will retry creation attempts if the ATA cannot be created due to connection issues.
+     * The transaction is built and signed using this service's fee payer.
+     * The transaction is submitted with preflight enabled.
+     * This method will retry creation attempts if the ATA cannot be created due to stale blockhash.
+     * The method is not thread-safe.
      *
      * @param mint The SPL token mint for which the associated token account is created.
      * @param owner The owner of the associated token account.
@@ -50,33 +52,28 @@ class AccountService(private val client: SolanaJsonRpcClient, private val feePay
         val mintKey = mint.toPublicKey()
         val ownerKey = owner.toPublicKey()
         val pda = AssociatedTokenProgram.deriveAddress(ownerKey, PROGRAM_ACCOUNT, mintKey)
-        // TODO add cache
+        // TODO use cache first
         if (isAtaPresent(pda.address())) {
             return // no need to create ATA
         }
-        val payerKey = feePayer.account
         val instruction = AssociatedTokenProgram.createAssociatedTokenAccount(
             pda,
             mintKey,
             ownerKey,
-            payerKey,
+            feePayer.account,
             PROGRAM_ACCOUNT,
-            true,
+            false,
         )
-        val (earlyResult, solanaTxBlob, blockhash) = simulateSolanaTx(instruction)
-        if (earlyResult?.err != null) {
-            return // TODO check if error relates to account already in use
-        }
-        client.sendAndConfirm(solanaTxBlob, blockhash.lastValidBlockHeight, RPC_PARAMS)
-    }
-
-    private fun simulateSolanaTx(instruction: TransactionInstruction):
-        Triple<SimulateTransactionResponse?, String, Blockhash> {
-        // TODO error handling
         val blockhash = client.getLatestBlockhash(RPC_PARAMS).checkResponse("getLatestBlockhash")!!
         val solanaTxBlob = serialiseSolanaTx(instruction, emptyList(), blockhash)
-        val result = client.simulate(solanaTxBlob, RPC_PARAMS)
-        return Triple(result, solanaTxBlob, blockhash)
+        try {
+            val result = client.sendAndConfirm(solanaTxBlob, blockhash.lastValidBlockHeight, RPC_PARAMS)
+            logger.info("ATA created successfully, slot=${result.slot}, owner=$ownerKey, mint=$mintKey, pda=$pda.")
+            // TODO add to cache
+        } catch (e: Exception) {
+            logger.error("Exception while creating ATA owner=$ownerKey, mint=$mintKey, pda=$pda", e)
+            throw e
+        }
     }
 
     private fun serialiseSolanaTx(
