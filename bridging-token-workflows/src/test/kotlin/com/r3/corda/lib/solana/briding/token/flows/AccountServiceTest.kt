@@ -33,7 +33,7 @@ class AccountServiceTest {
             testValidator.start()
         } catch (e: java.lang.IllegalStateException) {
             if (e.message == "Another solana-test-validator instance is already running") {
-                // for these test this is fine, the tests create random new accounts
+                // for these tests error is fine, tests create random new accounts
             } else {
                 throw e
             }
