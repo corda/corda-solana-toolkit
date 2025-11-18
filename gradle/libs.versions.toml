@@ -8,6 +8,7 @@ artifactory = "6.0.2"
 detekt = "2.0.0-alpha.0"
 corda-plugin = "5.1.3"
 lmax-solana = "1.2.2"
+caffeine-cache = "3.2.3"
 
 [libraries]
 corda-core = { module = "net.corda:corda-core", version.ref = "corda-os" }
@@ -26,7 +27,7 @@ mockito-core = { module = "org.mockito:mockito-core", version = "5.5.0" } # ledg
 sava-rpc = { module = "software.sava:sava-rpc", version = "24.23.3-j17-1" }
 lmax-solana4j = { module = "com.lmax:solana4j", version.ref = "lmax-solana" } # for tests
 lmax-solana4j-json-rpc = { module = "com.lmax:solana4j-json-rpc", version.ref = "lmax-solana" } # for tests
-caffeine-cache = { module = "com.github.ben-manes.caffeine:caffeine", version = "3.2.3" }
+caffeine-cache = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "caffeine-cache" }
 
 # Libraries for a sample Corddap deployment
 corda-node-api = { module = "net.corda:corda-node-api", version.ref = "corda-os" }

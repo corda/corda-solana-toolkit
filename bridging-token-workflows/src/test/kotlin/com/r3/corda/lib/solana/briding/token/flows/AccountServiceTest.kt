@@ -79,9 +79,9 @@ class AccountServiceTest {
     fun `test with empty cache`() {
         // the est only indirectly indicates that an error from chain was identified as ATA already exists
         val noCache = object : AtaCache {
-            override fun put(key: Pair<PublicKey, PublicKey>) = Unit
+            override fun put(mintAccount: PublicKey, ownerAccount: PublicKey) = Unit
 
-            override fun contains(key: Pair<PublicKey, PublicKey>) = false
+            override fun contains(mintAccount: PublicKey, ownerAccount: PublicKey) = false
         }
 
         val sut = AccountService(testValidator.client, mintAuthoritySigner, noCache)
