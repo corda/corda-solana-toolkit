@@ -1,36 +1,31 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
+import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.lmax.solana4j.api.PublicKey
 import com.lmax.solana4j.client.jsonrpc.SolanaJsonRpcClient
-import com.lmax.solana4j.encoding.SolanaEncoding
 import com.lmax.solana4j.programs.AssociatedTokenProgram
 import net.corda.solana.notary.common.Signer
-import net.corda.solana.notary.common.rpc.SolanaException
+import net.corda.solana.notary.common.rpc.SolanaTransactionException
 import net.corda.solana.notary.common.rpc.checkResponse
 import net.corda.solana.notary.common.rpc.sendAndConfirm
 import net.corda.solana.notary.common.rpc.serialiseToTransaction
 import org.slf4j.LoggerFactory
-import java.util.Base64
 
 /**
  * Manages creation of Solana ATA account on the fly.
  * @param client The Solana RPC client.
  * @param feePayer The signer to pay the transaction fee.
+ * @param existingAtaCache For caching results
  */
 class AccountService(
     private val client: SolanaJsonRpcClient,
     private val feePayer: Signer,
+    private val existingAtaCache: AtaCache = BoundedAtaCache(),
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(AccountService::class.java)
     }
-
-    // Indicates if for a pair of mint and owner a relevant ATA is created on chain
-    private val existingAtaCache = Caffeine
-        .newBuilder()
-        .maximumSize(10_000)
-        .build<Pair<PublicKey, PublicKey>, Unit>()
 
     /**
      * Creates an associated token account (ATA) for the given SPL token [mintAccount] and [ownerAccount]
@@ -49,25 +44,17 @@ class AccountService(
      */
     fun createAta(mintAccount: PublicKey, ownerAccount: PublicKey) {
         val cacheKey = Pair(mintAccount, ownerAccount)
-        if (existingAtaCache.getIfPresent(cacheKey) != null) {
+        if (existingAtaCache.contains(cacheKey)) {
             return // ATA already exists
         }
         val pda = AssociatedTokenProgram.deriveAddress(ownerAccount, tokenProgramId, mintAccount)
-        try {
-            if (requireAtaMatches(pda.address(), mintAccount, ownerAccount)) {
-                existingAtaCache.put(cacheKey, Unit)
-                return // ATA already exists but was not cached
-            }
-        } catch (e: IllegalStateException) {
-            throw SolanaException("Error while checking if ATA exists or non-ATA found", e)
-        }
         val instruction = AssociatedTokenProgram.createAssociatedTokenAccount(
             pda,
             mintAccount,
             ownerAccount,
             feePayer.account,
             tokenProgramId,
-            true,
+            false,
         )
         val blockhash = client.getLatestBlockhash(rpcParams).checkResponse("getLatestBlockhash")!!
         val solanaTxBlob = serialiseToTransaction(
@@ -83,38 +70,39 @@ class AccountService(
             logger.info(
                 "ATA created successfully, slot=${result.slot}, owner=$ownerAccount, mint=$mintAccount, pda=$pda."
             )
-            existingAtaCache.put(cacheKey, Unit)
-        } catch (e: Exception) {
+            existingAtaCache.put(cacheKey)
+        } catch (e: SolanaTransactionException) {
+            val errors = e.error
+            if (errors is Map<*, *>) {
+                val error = errors["InstructionError"]
+                if (error is List<*> && error.contains("IllegalOwner")) {
+                    existingAtaCache.put(cacheKey)
+                    return // expected error when ATA already exists
+                }
+            }
             logger.error("Exception while creating ATA owner=$ownerAccount, mint=$mintAccount, pda=$pda", e)
             throw e
         }
     }
+}
 
-    private fun requireAtaMatches(
-        account: PublicKey,
-        expectedMintAccount: PublicKey,
-        expectedWalletAccount: PublicKey,
-    ): Boolean {
-        val clientResponse = client.getAccountInfo(account.base58(), rpcParams)
-        val response = clientResponse.response ?: return false
+interface AtaCache {
+    fun put(key: Pair<PublicKey, PublicKey>)
 
-        val encoded = response.data?.accountInfoEncoded ?: return false
-        check(encoded.size >= 2) { "Missing encoded account data" }
-        check(encoded[1].equals("base64", ignoreCase = true)) { "Unsupported encoding: ${encoded[1]}" }
+    fun contains(key: Pair<PublicKey, PublicKey>): Boolean
+}
 
-        val binaryData = Base64.getDecoder().decode(encoded.first())
-        check(binaryData.size >= 64) { "Account data too short to be a token account" }
+class BoundedAtaCache : AtaCache {
+    private val cache: Cache<Pair<PublicKey, PublicKey>, Unit> = Caffeine
+        .newBuilder()
+        .maximumSize(10_000)
+        .build()
 
-        val mintAccount = SolanaEncoding.account(binaryData.copyOfRange(0, 32))
-        val walletAccount = SolanaEncoding.account(binaryData.copyOfRange(32, 64))
+    override fun put(key: Pair<PublicKey, PublicKey>) {
+        cache.put(key, Unit)
+    }
 
-        val programMatch = response.owner == tokenProgramId.base58()
-        val mintMatch = mintAccount == expectedMintAccount
-        val walletMatch = walletAccount == expectedWalletAccount
-        check(programMatch && mintMatch && walletMatch) {
-            "ATA account does not match expected info: " +
-                "programMatch=$programMatch, mintMatch=$mintMatch, walletMatch=$walletMatch"
-        }
-        return true
+    override fun contains(key: Pair<PublicKey, PublicKey>): Boolean {
+        return cache.getIfPresent(key) != null
     }
 }

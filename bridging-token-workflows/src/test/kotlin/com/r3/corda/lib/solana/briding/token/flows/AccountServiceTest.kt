@@ -3,6 +3,7 @@ package com.r3.corda.lib.solana.briding.token.flows
 import com.lmax.solana4j.api.PublicKey
 import com.lmax.solana4j.programs.AssociatedTokenProgram
 import com.r3.corda.lib.solana.bridging.token.flows.AccountService
+import com.r3.corda.lib.solana.bridging.token.flows.AtaCache
 import com.r3.corda.lib.solana.bridging.token.flows.toPublicKey
 import net.corda.solana.notary.common.Signer
 import net.corda.solana.notary.common.rpc.SolanaClientException
@@ -49,6 +50,41 @@ class AccountServiceTest {
     @Test
     fun test() {
         val sut = AccountService(testValidator.client, mintAuthoritySigner)
+
+        val tokenAccount = AssociatedTokenProgram
+            .deriveAddress(
+                wallet.account,
+                Token2022.PROGRAM_ID.toPublicKey(),
+                tokenMint
+            ).address()
+
+        assertThrows(
+            SolanaClientException::class.java,
+            { getSolanaTokenBalance(tokenAccount) },
+            "ATA account should not exist yet"
+        )
+        sut.createAta(tokenMint, wallet.account)
+        assertEquals(
+            BigDecimal.ZERO,
+            getSolanaTokenBalance(tokenAccount),
+            "ATA should exist with 0 balance"
+        )
+        assertDoesNotThrow(
+            { sut.createAta(tokenMint, wallet.account) },
+            "The call to create ATA should be idempotent"
+        )
+    }
+
+    @Test
+    fun `test with empty cache`() {
+        // the est only indirectly indicates that an error from chain was identified as ATA already exists
+        val noCache = object : AtaCache {
+            override fun put(key: Pair<PublicKey, PublicKey>) = Unit
+
+            override fun contains(key: Pair<PublicKey, PublicKey>) = false
+        }
+
+        val sut = AccountService(testValidator.client, mintAuthoritySigner, noCache)
 
         val tokenAccount = AssociatedTokenProgram
             .deriveAddress(
