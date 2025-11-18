@@ -77,8 +77,8 @@ class AccountService(
     private fun doesAtaAlreadyExist(e: SolanaTransactionException): Boolean {
         val errors = e.error
         if (errors is Map<*, *>) {
-            val error = errors["InstructionError"]
-            if (error is List<*> && error.contains("IllegalOwner")) {
+            val errorEntries = errors["InstructionError"]
+            if (errorEntries != null && errorEntries is List<*> && errorEntries.contains("IllegalOwner")) {
                 return true
             }
         }

@@ -17,9 +17,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.io.TempDir
 import java.math.BigDecimal
-import java.nio.file.Path
 
 class AccountServiceTest {
     lateinit var testValidator: SolanaTestValidator
@@ -27,17 +25,14 @@ class AccountServiceTest {
     lateinit var tokenMint: PublicKey
     lateinit var wallet: Signer
 
-    @TempDir
-    lateinit var custodiedKeysDir: Path
-
     @BeforeEach
     fun setup() {
         testValidator = SolanaTestValidator()
-        mintAuthoritySigner = Signer.fromFile(randomKeypairFile(custodiedKeysDir))
+        mintAuthoritySigner = Signer.fromFile(randomKeypairFile())
         testValidator.start()
         testValidator.fundAccount(10, mintAuthoritySigner)
         tokenMint = testValidator.createToken(mintAuthoritySigner, decimals = 3.toByte())
-        wallet = Signer.fromFile(randomKeypairFile(custodiedKeysDir))
+        wallet = Signer.fromFile(randomKeypairFile())
     }
 
     @AfterEach
@@ -77,7 +72,7 @@ class AccountServiceTest {
 
     @Test
     fun `test with empty cache`() {
-        // the est only indirectly indicates that an error from chain was identified as ATA already exists
+        // the test only indirectly indicates that an error from chain was identified as ATA already exists
         val noCache = object : AtaCache {
             override fun put(mintAccount: PublicKey, ownerAccount: PublicKey) = Unit
 
