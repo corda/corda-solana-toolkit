@@ -22,7 +22,7 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
     val bridgeAuthority: PartyAndCertificate
     val solanaWsUrl: String
     val solanaRpcUrl: String
-    val bridgeRedemptionWallet: Pubkey
+    val bridgeRedemptionAddress: Pubkey
     val redemptionHolders: Map<Pubkey, CordaX500Name>
 
     init {
@@ -37,7 +37,7 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
         solanaNotary = getSolanaNotary(config, appServiceHub)
         solanaWsUrl = config.getString("solanaWsUrl")
         solanaRpcUrl = config.getString("solanaRpcUrl")
-        bridgeRedemptionWallet = Pubkey.fromBase58(config.getString("bridgeRedemptionWallet"))
+        bridgeRedemptionAddress = Pubkey.fromBase58(config.getString("bridgeRedemptionAddress"))
     }
 
     private fun getLockingIdentity(config: CordappConfig, appServiceHub: AppServiceHub): Party {
@@ -116,6 +116,6 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
         val mint = checkNotNull(tokenIdToMintAccount[tokenTypeId]) {
             "No mint mapping found for token type id $tokenTypeId"
         }
-        return RedemptionCoordinates(mint, bridgeRedemptionWallet)
+        return RedemptionCoordinates(mint, bridgeRedemptionAddress)
     }
 }

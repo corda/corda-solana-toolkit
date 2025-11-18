@@ -141,7 +141,7 @@ abstract class FlowTests {
         val baConfig = mapOf(
             "participants" to mapOf(aliceIdentity.name.toString() to aliceBridgeTokenAccount.base58()),
             "redemptionHolders" to mapOf(aliceRedemptionTokenAccount.base58() to aliceIdentity.name.toString()),
-            "bridgeRedemptionWallet" to bridgeAuthoritySigner.account.base58(),
+            "bridgeRedemptionAddress" to bridgeAuthoritySigner.account.base58(),
             "mints" to mapOf(msftDescriptor.tokenTypeIdentifier to tokenMint.base58()),
             "mintAuthorities" to mapOf(msftDescriptor.tokenTypeIdentifier to mintAuthoritySigner.account.base58()),
             "lockingIdentityLabel" to UUID.randomUUID().toString(),
