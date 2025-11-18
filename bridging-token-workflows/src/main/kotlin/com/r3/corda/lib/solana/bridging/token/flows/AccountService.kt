@@ -1,8 +1,7 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
+import com.github.benmanes.caffeine.cache.Caffeine
 import com.lmax.solana4j.api.PublicKey
-import com.lmax.solana4j.api.TransactionInstruction
-import com.lmax.solana4j.client.api.Blockhash
 import com.lmax.solana4j.client.jsonrpc.SolanaJsonRpcClient
 import com.lmax.solana4j.encoding.SolanaEncoding
 import com.lmax.solana4j.programs.AssociatedTokenProgram
@@ -27,6 +26,12 @@ class AccountService(
         private val logger = LoggerFactory.getLogger(AccountService::class.java)
     }
 
+    // Indicates if for a pair of mint and owner a relevant ATA is created on chain
+    private val existingAtaCache = Caffeine
+        .newBuilder()
+        .maximumSize(10_000)
+        .build<Pair<PublicKey, PublicKey>, Unit>()
+
     /**
      * Creates an associated token account (ATA) for the given SPL token [mintAccount] and [ownerAccount]
      * if one does not already exist. The method is idempotent and may be rerun in case f a flow restart.
@@ -43,11 +48,15 @@ class AccountService(
      * @throws com.lmax.solana4j.client.jsonrpc.SolanaJsonRpcClientException if the underlying RPC calls fail.
      */
     fun createAta(mintAccount: PublicKey, ownerAccount: PublicKey) {
+        val cacheKey = Pair(mintAccount, ownerAccount)
+        if (existingAtaCache.getIfPresent(cacheKey) != null) {
+            return // ATA already exists
+        }
         val pda = AssociatedTokenProgram.deriveAddress(ownerAccount, tokenProgramId, mintAccount)
-        // TODO use cache first
         try {
             if (requireAtaMatches(pda.address(), mintAccount, ownerAccount)) {
-                return // ATA already exists
+                existingAtaCache.put(cacheKey, Unit)
+                return // ATA already exists but was not cached
             }
         } catch (e: IllegalStateException) {
             throw SolanaException("Error while checking if ATA exists or non-ATA found", e)
@@ -61,32 +70,24 @@ class AccountService(
             true,
         )
         val blockhash = client.getLatestBlockhash(rpcParams).checkResponse("getLatestBlockhash")!!
-        val solanaTxBlob = serialiseSolanaTx(instruction, emptyList(), blockhash)
+        val solanaTxBlob = serialiseToTransaction(
+            { txBuilder ->
+                txBuilder.append(instruction)
+            },
+            feePayer,
+            emptyList(),
+            blockhash,
+        )
         try {
             val result = client.sendAndConfirm(solanaTxBlob, blockhash.lastValidBlockHeight, rpcParams)
             logger.info(
                 "ATA created successfully, slot=${result.slot}, owner=$ownerAccount, mint=$mintAccount, pda=$pda."
             )
-            // TODO add to cache
+            existingAtaCache.put(cacheKey, Unit)
         } catch (e: Exception) {
             logger.error("Exception while creating ATA owner=$ownerAccount, mint=$mintAccount, pda=$pda", e)
             throw e
         }
-    }
-
-    private fun serialiseSolanaTx(
-        instruction: TransactionInstruction,
-        additionalSigners: Collection<Signer>,
-        blockhash: Blockhash,
-    ): String {
-        return serialiseToTransaction(
-            { txBuilder ->
-                txBuilder.append(instruction)
-            },
-            feePayer,
-            additionalSigners,
-            blockhash,
-        )
     }
 
     private fun requireAtaMatches(

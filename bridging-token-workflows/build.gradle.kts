@@ -9,6 +9,7 @@ dependencies {
     implementation(libs.sava.rpc)
     implementation(libs.lmax.solana4j)
     implementation(libs.lmax.solana4j.json.rpc)
+    implementation(libs.caffeine.cache)
 
     cordaProvided(libs.corda.core)
     cordaProvided(libs.ent.corda.solana.sdk)
