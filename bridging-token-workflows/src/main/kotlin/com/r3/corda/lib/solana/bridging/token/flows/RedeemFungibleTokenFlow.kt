@@ -1,7 +1,7 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import com.r3.corda.lib.solana.bridging.token.states.RedeemedFungibleTokenProxy
+import com.r3.corda.lib.solana.bridging.token.states.FungibleTokenBurnReceipt
 import com.r3.corda.lib.tokens.contracts.internal.schemas.PersistentFungibleToken
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.contracts.types.TokenType
@@ -27,6 +27,7 @@ import net.corda.solana.sdk.instruction.Pubkey
  * @param tokenTypeId the identifier of the token being redeemed
  * @param amount the amount of tokens to redeem
  * @param solanaNotary notary to perform bridging
+ * @param generalNotary notary to use for Corda-side fungible token movement to the redemption holder
  * @param lockingHolder the confidential identity that holds the fungible tokens
  */
 @StartableByService
@@ -37,7 +38,7 @@ class RedeemFungibleTokenFlow(
     val tokenTypeId: String,
     val amount: Long,
     val solanaNotary: Party,
-    val cordaNotary: Party,
+    val generalNotary: Party,
     val lockingHolder: Party,
 ) : FlowLogic<SignedTransaction>() {
     @Suspendable
@@ -51,9 +52,9 @@ class RedeemFungibleTokenFlow(
                 burnAccount,
                 amount
             )
-        ).toLedgerTransaction(serviceHub).outRefsOfType<RedeemedFungibleTokenProxy>().single()
+        ).toLedgerTransaction(serviceHub).outRefsOfType<FungibleTokenBurnReceipt>().single()
         val notaryChangeTx = subFlow(
-            MoveNotaryFlow(listOf(redeemStateAndRef), cordaNotary)
+            MoveNotaryFlow(listOf(redeemStateAndRef), generalNotary)
         ).single()
 
         // Unlock the fungible tokens from the locking holder

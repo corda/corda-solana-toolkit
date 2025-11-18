@@ -2,7 +2,7 @@ package com.r3.corda.lib.solana.bridging.token.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import com.r3.corda.lib.solana.bridging.token.contracts.FungibleTokenRedemptionContract
-import com.r3.corda.lib.solana.bridging.token.states.RedeemedFungibleTokenProxy
+import com.r3.corda.lib.solana.bridging.token.states.FungibleTokenBurnReceipt
 import com.r3.corda.lib.tokens.contracts.states.AbstractToken
 import com.r3.corda.lib.tokens.contracts.types.IssuedTokenType
 import com.r3.corda.lib.tokens.contracts.types.TokenType
@@ -17,7 +17,7 @@ import net.corda.core.transactions.TransactionBuilder
 class MoveAndUnlockFungibleTokenFlow
 @JvmOverloads
 constructor(
-    val redeemStateAndRef: StateAndRef<RedeemedFungibleTokenProxy>,
+    val redeemStateAndRef: StateAndRef<FungibleTokenBurnReceipt>,
     val bridgeAuthority: Party,
     val lockingHolder: Party,
     val amount: Amount<TokenType>,

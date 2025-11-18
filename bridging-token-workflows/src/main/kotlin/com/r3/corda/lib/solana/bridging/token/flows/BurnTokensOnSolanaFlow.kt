@@ -32,7 +32,7 @@ class BurnTokensOnSolanaFlow(
             FungibleTokenRedemptionContract.RedeemCommand.BurnOnSolana,
             listOf(ourIdentity.owningKey),
         )
-        // We issue RedeemedFungibleTokenProxy state to record burning of tokens on Solana
+        // We issue FungibleTokenBurnReceipt state to record burning of tokens on Solana
         val redeemState = redemptionCoordinates.toRedeemState(
             burnAccount = burnAccount,
             amount = amount,

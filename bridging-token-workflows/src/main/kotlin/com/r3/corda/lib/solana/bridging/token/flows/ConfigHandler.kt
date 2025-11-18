@@ -19,7 +19,7 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
     private val mintAuthorities: Map<String, Pubkey>
     val lockingIdentity: Party
     val solanaNotary: Party
-    val cordaNotary: Party
+    val generalNotaryName: Party
     val bridgeAuthority: PartyAndCertificate
     val solanaWsUrl: String
     val solanaRpcUrl: String
@@ -36,7 +36,7 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
         bridgeAuthority = appServiceHub.myInfo.legalIdentitiesAndCerts.first()
         lockingIdentity = getLockingIdentity(config, appServiceHub)
         solanaNotary = getNotary("solanaNotaryName", config, appServiceHub)
-        cordaNotary = getNotary("cordaNotaryName", config, appServiceHub)
+        generalNotaryName = getNotary("generalNotaryName", config, appServiceHub)
         solanaWsUrl = config.getString("solanaWsUrl")
         solanaRpcUrl = config.getString("solanaRpcUrl")
         bridgeRedemptionWallet = Pubkey.fromBase58(config.getString("bridgeRedemptionWallet"))
