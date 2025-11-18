@@ -29,7 +29,15 @@ class AccountServiceTest {
     fun setup() {
         testValidator = SolanaTestValidator()
         mintAuthoritySigner = Signer.fromFile(randomKeypairFile())
-        testValidator.start()
+        try {
+            testValidator.start()
+        } catch (e: java.lang.IllegalStateException) {
+            if (e.message == "Another solana-test-validator instance is already running") {
+                // for these test this is fine, the tests create random new accounts
+            } else {
+                throw e
+            }
+        }
         testValidator.fundAccount(10, mintAuthoritySigner)
         tokenMint = testValidator.createToken(mintAuthoritySigner, decimals = 3.toByte())
         wallet = Signer.fromFile(randomKeypairFile())
