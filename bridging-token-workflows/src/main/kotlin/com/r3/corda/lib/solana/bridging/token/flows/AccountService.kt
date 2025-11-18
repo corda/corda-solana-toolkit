@@ -1,6 +1,5 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
-import com.lmax.solana4j.Solana
 import com.lmax.solana4j.api.PublicKey
 import com.lmax.solana4j.api.TransactionInstruction
 import com.lmax.solana4j.client.api.Blockhash
@@ -8,14 +7,11 @@ import com.lmax.solana4j.client.jsonrpc.SolanaJsonRpcClient
 import com.lmax.solana4j.encoding.SolanaEncoding
 import com.lmax.solana4j.programs.AssociatedTokenProgram
 import net.corda.solana.notary.common.Signer
-import net.corda.solana.notary.common.rpc.DefaultRpcParams
 import net.corda.solana.notary.common.rpc.SolanaException
 import net.corda.solana.notary.common.rpc.checkResponse
 import net.corda.solana.notary.common.rpc.sendAndConfirm
 import net.corda.solana.notary.common.rpc.serialiseToTransaction
 import org.slf4j.LoggerFactory
-import java.nio.BufferOverflowException
-import java.nio.ByteBuffer
 import java.util.Base64
 
 /**
@@ -26,11 +22,9 @@ import java.util.Base64
 class AccountService(
     private val client: SolanaJsonRpcClient,
     private val feePayer: Signer,
-    private val programAccount: PublicKey,
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(AccountService::class.java)
-        private val RPC_PARAMS = DefaultRpcParams()
     }
 
     /**
@@ -49,27 +43,27 @@ class AccountService(
      * @throws com.lmax.solana4j.client.jsonrpc.SolanaJsonRpcClientException if the underlying RPC calls fail.
      */
     fun createAta(mintAccount: PublicKey, ownerAccount: PublicKey) {
-        val pda = AssociatedTokenProgram.deriveAddress(ownerAccount, programAccount, mintAccount)
+        val pda = AssociatedTokenProgram.deriveAddress(ownerAccount, tokenProgramId, mintAccount)
         // TODO use cache first
         try {
-            if (requireAtaMatches(pda.address(), mintAccount, ownerAccount, programAccount)) {
+            if (requireAtaMatches(pda.address(), mintAccount, ownerAccount)) {
                 return // ATA already exists
             }
         } catch (e: IllegalStateException) {
-            logger.warn("Error while checking if ATA exists or not ATA", e) // Continue attempt to create ATA
+            throw SolanaException("Error while checking if ATA exists or non-ATA found", e)
         }
         val instruction = AssociatedTokenProgram.createAssociatedTokenAccount(
             pda,
             mintAccount,
             ownerAccount,
             feePayer.account,
-            programAccount,
+            tokenProgramId,
             true,
         )
-        val blockhash = client.getLatestBlockhash(RPC_PARAMS).checkResponse("getLatestBlockhash")!!
+        val blockhash = client.getLatestBlockhash(rpcParams).checkResponse("getLatestBlockhash")!!
         val solanaTxBlob = serialiseSolanaTx(instruction, emptyList(), blockhash)
         try {
-            val result = client.sendAndConfirm(solanaTxBlob, blockhash.lastValidBlockHeight, RPC_PARAMS)
+            val result = client.sendAndConfirm(solanaTxBlob, blockhash.lastValidBlockHeight, rpcParams)
             logger.info(
                 "ATA created successfully, slot=${result.slot}, owner=$ownerAccount, mint=$mintAccount, pda=$pda."
             )
@@ -85,29 +79,22 @@ class AccountService(
         additionalSigners: Collection<Signer>,
         blockhash: Blockhash,
     ): String {
-        val buffer = ByteBuffer.allocate(Solana.MAX_MESSAGE_SIZE)
-        return try {
-            serialiseToTransaction(
-                { txBuilder ->
-                    txBuilder.append(instruction)
-                },
-                feePayer,
-                additionalSigners,
-                blockhash,
-                buffer
-            )
-        } catch (_: BufferOverflowException) {
-            throw SolanaException("Transaction is too big for the Bridge Authority.")
-        }
+        return serialiseToTransaction(
+            { txBuilder ->
+                txBuilder.append(instruction)
+            },
+            feePayer,
+            additionalSigners,
+            blockhash,
+        )
     }
 
     private fun requireAtaMatches(
         account: PublicKey,
         expectedMintAccount: PublicKey,
         expectedWalletAccount: PublicKey,
-        expectedTokenProgram: PublicKey,
     ): Boolean {
-        val clientResponse = client.getAccountInfo(account.base58(), DefaultRpcParams())
+        val clientResponse = client.getAccountInfo(account.base58(), rpcParams)
         val response = clientResponse.response ?: return false
 
         val encoded = response.data?.accountInfoEncoded ?: return false
@@ -120,7 +107,7 @@ class AccountService(
         val mintAccount = SolanaEncoding.account(binaryData.copyOfRange(0, 32))
         val walletAccount = SolanaEncoding.account(binaryData.copyOfRange(32, 64))
 
-        val programMatch = response.owner == expectedTokenProgram.base58()
+        val programMatch = response.owner == tokenProgramId.base58()
         val mintMatch = mintAccount == expectedMintAccount
         val walletMatch = walletAccount == expectedWalletAccount
         check(programMatch && mintMatch && walletMatch) {

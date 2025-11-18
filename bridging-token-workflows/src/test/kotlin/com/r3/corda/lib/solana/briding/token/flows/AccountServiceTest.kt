@@ -48,7 +48,7 @@ class AccountServiceTest {
 
     @Test
     fun test() {
-        val sut = AccountService(testValidator.client, mintAuthoritySigner, Token2022.PROGRAM_ID.toPublicKey())
+        val sut = AccountService(testValidator.client, mintAuthoritySigner)
 
         val tokenAccount = AssociatedTokenProgram
             .deriveAddress(
@@ -70,7 +70,7 @@ class AccountServiceTest {
         )
         assertDoesNotThrow(
             { sut.createAta(tokenMint, wallet.account) },
-            "The call to create ATA is idempotent"
+            "The call to create ATA should be idempotent"
         )
     }
 

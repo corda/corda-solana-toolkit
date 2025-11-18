@@ -5,7 +5,6 @@ import com.r3.corda.lib.solana.bridging.token.states.BridgedFungibleTokenProxy
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import net.corda.core.identity.Party
 import net.corda.solana.sdk.instruction.Pubkey
-import net.corda.solana.sdk.internal.Token2022
 
 /**
  * Holds the necessary metadata to bridge a Corda token to Solana Token.
@@ -29,7 +28,7 @@ data class BridgingCoordinates(
         val tokenAccount = AssociatedTokenProgram
             .deriveAddress(
                 this.wallet.toPublicKey(),
-                Token2022.PROGRAM_ID.toPublicKey(),
+                tokenProgramId,
                 this.mint.toPublicKey(),
             ).address()
             .toPubkey()
