@@ -66,6 +66,9 @@ class FungibleTokenRedemptionContract : Contract {
         val redeemReceiptState = tx.outputsOfType<FungibleTokenBurnReceipt>().requireSingle {
             "Redemption requires exactly one output FungibleTokenBurnReceipt"
         }
+        require(tx.commands.size == 1) {
+            "BurnOnSolana transaction must only contain a single command"
+        }
         require(tx.commands.single().signers.contains(redeemReceiptState.bridgeAuthority.owningKey)) {
             "The bridge authority must sign the BurnOnSolana transaction"
         }
@@ -85,9 +88,6 @@ class FungibleTokenRedemptionContract : Contract {
             "The Solana instruction in the transaction not the expected burn instruction:\n" +
                 "transaction: $solanaInstruction\n" +
                 "expected:    $expectedInstruction"
-        }
-        require(tx.commands.size == 1) {
-            "BurnOnSolana transaction must only contain a single command"
         }
     }
 

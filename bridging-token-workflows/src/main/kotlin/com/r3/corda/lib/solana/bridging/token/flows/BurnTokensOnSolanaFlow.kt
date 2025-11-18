@@ -33,12 +33,12 @@ class BurnTokensOnSolanaFlow(
             listOf(ourIdentity.owningKey),
         )
         // We issue FungibleTokenBurnReceipt state to record burning of tokens on Solana
-        val redeemState = redemptionCoordinates.toRedeemState(
+        val redeemReceiptState = redemptionCoordinates.toRedeemReceiptState(
             burnAccount = burnAccount,
             amount = amount,
             bridgeAuthority = ourIdentity
         )
-        transactionBuilder.addOutputState(redeemState)
+        transactionBuilder.addOutputState(redeemReceiptState)
         // Verify
         transactionBuilder.verify(serviceHub)
         return subFlow(FinalityFlow(serviceHub.signInitialTransaction(transactionBuilder), emptyList()))

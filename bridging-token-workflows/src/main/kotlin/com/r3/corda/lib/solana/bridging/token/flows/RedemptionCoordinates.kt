@@ -21,7 +21,7 @@ data class RedemptionCoordinates(
      * @param amount the amount of tokens to redeem
      * @param bridgeAuthority the Corda party operating the bridge
      * */
-    fun toRedeemState(
+    fun toRedeemReceiptState(
         burnAccount: Pubkey,
         amount: Long,
         bridgeAuthority: Party,
