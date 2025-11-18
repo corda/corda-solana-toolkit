@@ -94,7 +94,7 @@ abstract class FlowTests {
     private lateinit var solanaNotaryKey: Signer
     private lateinit var mintAuthoritySigner: Signer
     private lateinit var bridgeAuthoritySigner: Signer
-    private lateinit var bridgeAuthorityKeyFile: Path
+    private lateinit var bridgeAuthorityWalletFile: Path
     private lateinit var testValidator: SolanaTestValidator
 
     private lateinit var tokenMint: PublicKey
@@ -119,8 +119,8 @@ abstract class FlowTests {
         solanaNotaryKeyFile = randomKeypairFile(generalDir)
         solanaNotaryKey = Signer.fromFile(solanaNotaryKeyFile)
         mintAuthoritySigner = Signer.fromFile(randomKeypairFile(custodiedKeysDir))
-        bridgeAuthorityKeyFile = randomKeypairFile(custodiedKeysDir)
-        bridgeAuthoritySigner = Signer.fromFile(bridgeAuthorityKeyFile)
+        bridgeAuthorityWalletFile = randomKeypairFile(custodiedKeysDir)
+        bridgeAuthoritySigner = Signer.fromFile(bridgeAuthorityWalletFile)
         testValidator.start()
         testValidator.defaultNotaryProgramSetup(solanaNotaryKey.account)
         testValidator.fundAccount(10, mintAuthoritySigner)
@@ -158,7 +158,7 @@ abstract class FlowTests {
             "solanaNotaryName" to solanaNotaryName.toString(),
             "solanaWsUrl" to SolanaTestValidator.WS_URL,
             "solanaRpcUrl" to SolanaTestValidator.RPC_URL,
-            "bridgeAuthorityKeyFile" to bridgeAuthorityKeyFile.toString(),
+            "bridgeAuthorityWalletFile" to bridgeAuthorityWalletFile.toString(),
         )
         network = MockNetwork(
             MockNetworkParameters(

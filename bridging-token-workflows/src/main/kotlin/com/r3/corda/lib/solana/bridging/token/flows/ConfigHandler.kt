@@ -41,7 +41,7 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
         solanaWsUrl = config.getString("solanaWsUrl")
         solanaRpcUrl = config.getString("solanaRpcUrl")
         bridgeRedemptionWallet = Pubkey.fromBase58(config.getString("bridgeRedemptionWallet"))
-        bridgeAuthoritySigner = Signer.fromFile(Path(config.getString("bridgeAuthorityKeyFile")))
+        bridgeAuthoritySigner = Signer.fromFile(Path(config.getString("bridgeAuthorityWalletFile")))
     }
 
     private fun getLockingIdentity(config: CordappConfig, appServiceHub: AppServiceHub): Party {
