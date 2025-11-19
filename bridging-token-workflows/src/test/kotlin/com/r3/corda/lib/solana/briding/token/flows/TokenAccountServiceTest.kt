@@ -2,24 +2,46 @@ package com.r3.corda.lib.solana.briding.token.flows
 
 import com.lmax.solana4j.api.PublicKey
 import com.lmax.solana4j.programs.AssociatedTokenProgram
-import com.r3.corda.lib.solana.bridging.token.flows.AccountService
-import com.r3.corda.lib.solana.bridging.token.flows.AtaCache
+import com.r3.corda.lib.solana.bridging.token.flows.BoundedExistingAtaCache
+import com.r3.corda.lib.solana.bridging.token.flows.ExistingAtaCache
+import com.r3.corda.lib.solana.bridging.token.flows.TokenAccountService
 import com.r3.corda.lib.solana.bridging.token.flows.toPublicKey
 import net.corda.solana.notary.common.Signer
 import net.corda.solana.notary.common.rpc.SolanaClientException
 import net.corda.solana.notary.common.rpc.checkResponse
 import net.corda.solana.sdk.internal.Token2022
 import net.corda.testing.solana.SolanaTestValidator
-import net.corda.testing.solana.randomKeypairFile
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Named
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.MethodSource
+import java.lang.IllegalStateException
 import java.math.BigDecimal
+import java.util.stream.Stream
 
-class AccountServiceTest {
+class TokenAccountServiceTest {
+    companion object {
+        @JvmStatic
+        fun cacheImplementations(): Stream<Named<ExistingAtaCache>> = Stream.of(
+            Named.of(
+                "first ATA create operation is cached, second operation doesn't reach chain",
+                BoundedExistingAtaCache()
+            ),
+            Named.of(
+                "no cache, ATA creation requested twice on chain",
+                object : ExistingAtaCache {
+                    override fun put(mintAccount: PublicKey, ownerAccount: PublicKey) = Unit
+
+                    override fun contains(mintAccount: PublicKey, ownerAccount: PublicKey) = false
+                }
+            )
+        )
+    }
+
     lateinit var testValidator: SolanaTestValidator
     lateinit var mintAuthoritySigner: Signer
     lateinit var tokenMint: PublicKey
@@ -28,10 +50,10 @@ class AccountServiceTest {
     @BeforeEach
     fun setup() {
         testValidator = SolanaTestValidator()
-        mintAuthoritySigner = Signer.fromFile(randomKeypairFile())
+        mintAuthoritySigner = Signer.random()
         try {
             testValidator.start()
-        } catch (e: java.lang.IllegalStateException) {
+        } catch (e: IllegalStateException) {
             if (e.message == "Another solana-test-validator instance is already running") {
                 // for these tests error is fine, tests create random new accounts
             } else {
@@ -40,7 +62,7 @@ class AccountServiceTest {
         }
         testValidator.fundAccount(10, mintAuthoritySigner)
         tokenMint = testValidator.createToken(mintAuthoritySigner, decimals = 3.toByte())
-        wallet = Signer.fromFile(randomKeypairFile())
+        wallet = Signer.random()
     }
 
     @AfterEach
@@ -50,44 +72,10 @@ class AccountServiceTest {
         }
     }
 
-    @Test
-    fun test() {
-        val sut = AccountService(testValidator.client, mintAuthoritySigner)
-
-        val tokenAccount = AssociatedTokenProgram
-            .deriveAddress(
-                wallet.account,
-                Token2022.PROGRAM_ID.toPublicKey(),
-                tokenMint
-            ).address()
-
-        assertThrows(
-            SolanaClientException::class.java,
-            { getSolanaTokenBalance(tokenAccount) },
-            "ATA account should not exist yet"
-        )
-        sut.createAta(tokenMint, wallet.account)
-        assertEquals(
-            BigDecimal.ZERO,
-            getSolanaTokenBalance(tokenAccount),
-            "ATA should exist with 0 balance"
-        )
-        assertDoesNotThrow(
-            { sut.createAta(tokenMint, wallet.account) },
-            "The call to create ATA should be idempotent"
-        )
-    }
-
-    @Test
-    fun `test with empty cache`() {
-        // the test only indirectly indicates that an error from chain was identified as ATA already exists
-        val noCache = object : AtaCache {
-            override fun put(mintAccount: PublicKey, ownerAccount: PublicKey) = Unit
-
-            override fun contains(mintAccount: PublicKey, ownerAccount: PublicKey) = false
-        }
-
-        val sut = AccountService(testValidator.client, mintAuthoritySigner, noCache)
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("cacheImplementations")
+    fun `repeated call to  create ATA should not throw exception`(cache: ExistingAtaCache) {
+        val sut = TokenAccountService(testValidator.client, mintAuthoritySigner, cache)
 
         val tokenAccount = AssociatedTokenProgram
             .deriveAddress(

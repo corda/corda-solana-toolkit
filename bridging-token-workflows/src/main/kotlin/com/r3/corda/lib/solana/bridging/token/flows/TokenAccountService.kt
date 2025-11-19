@@ -6,28 +6,33 @@ import com.lmax.solana4j.api.PublicKey
 import com.lmax.solana4j.client.jsonrpc.SolanaJsonRpcClient
 import com.lmax.solana4j.programs.AssociatedTokenProgram
 import net.corda.solana.notary.common.Signer
+import net.corda.solana.notary.common.rpc.DefaultRpcParams
 import net.corda.solana.notary.common.rpc.SolanaTransactionException
 import net.corda.solana.notary.common.rpc.sendAndConfirm
 import org.slf4j.LoggerFactory
 
 /**
- * Manages creation of Solana ATA account on the fly.
+ * Manages creation of Solana ATA account on the fly,
+ * ATA requests are cached internally in-memory to avoid unnecessary requests to Solana.
  * @param client The Solana RPC client.
  * @param feePayer The signer to pay the transaction fee.
- * @param existingAtaCache For internal results cache.
+ * @param existingAtaCache The internal results cache, exposed for testing.
  */
-class AccountService(
+class TokenAccountService(
     private val client: SolanaJsonRpcClient,
     private val feePayer: Signer,
-    private val existingAtaCache: AtaCache = BoundedAtaCache(), // configurable for testing
+    private val existingAtaCache: ExistingAtaCache = BoundedExistingAtaCache(), // configurable for testing
 ) {
     companion object {
-        private val logger = LoggerFactory.getLogger(AccountService::class.java)
+        private val logger = LoggerFactory.getLogger(TokenAccountService::class.java)
+
+        // preflight required to avoid running transaction which will fail on chain
+        private val rpcParams = DefaultRpcParams(commitment, false)
     }
 
     /**
-     * Creates an associated token account (ATA) for the given SPL token [mintAccount] and [ownerAccount]
-     * if one does not already exist. The method is idempotent and may be rerun in case f a flow restart.
+     * Optimistically attempts to create an associated token account (ATA) for the given SPL token [mintAccount],
+     * [ownerAccount] and Token2022. The method is idempotent and may be rerun in case a flow restart.
      *
      * The transaction is built and signed using this service's fee payer and submitted with preflight
      * checks enabled. If submission fails due to a stale blockhash, the creation is retried with a new blockhash.
@@ -89,13 +94,13 @@ class AccountService(
 /**
  * Holds pairs of mint account and owner account that represents a relevant PDA.
  */
-interface AtaCache {
+interface ExistingAtaCache {
     fun put(mintAccount: PublicKey, ownerAccount: PublicKey)
 
     fun contains(mintAccount: PublicKey, ownerAccount: PublicKey): Boolean
 }
 
-class BoundedAtaCache : AtaCache {
+class BoundedExistingAtaCache : ExistingAtaCache {
     private val cache: Cache<Pair<PublicKey, PublicKey>, Unit> = Caffeine
         .newBuilder()
         .maximumSize(10_000)

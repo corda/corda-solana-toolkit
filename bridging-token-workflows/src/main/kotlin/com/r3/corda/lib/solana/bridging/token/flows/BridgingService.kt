@@ -26,14 +26,14 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
     private val executor = Executors.newSingleThreadExecutor()
     private val configHandler = ConfigHandler(appServiceHub)
     private val rpcClient: SolanaJsonRpcClient
-    private val accountService: AccountService
+    private val accountService: TokenAccountService
 
     init {
         socket = SavaFactory.WebSocketWrapper(configHandler.solanaRpcUrl, configHandler.solanaWsUrl)
         appServiceHub.registerUnloadHandler { onStop() }
         appServiceHub.register { onStartup(it) }
         rpcClient = SolanaJsonRpcClient(HttpClient.newHttpClient(), configHandler.solanaRpcUrl)
-        accountService = AccountService(rpcClient, configHandler.bridgeAuthoritySigner)
+        accountService = TokenAccountService(rpcClient, configHandler.bridgeAuthoritySigner)
     }
 
     private fun onStop() {
