@@ -50,7 +50,7 @@ class FungibleTokenRedemptionContract : Contract {
             "The holder of the output FungibleToken must be the same identity that burned the FungibleTokenBurnReceipt"
         }
         // Assuming a single token to carry the amount equal to the redeemed amount
-        // TODO: Allow for multiple fungible states to cover the redeemed amount - ENT-14629
+        // TODO Allow for multiple fungible states to cover the redeemed amount - ENT-14629
         require(burnReceiptState.amount == outputFungibleState.amount.quantity) {
             "The amount in the FungibleTokenBurnReceipt must match the amount in the FungibleToken state"
         }
