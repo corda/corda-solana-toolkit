@@ -2,6 +2,7 @@ package com.r3.corda.lib.solana.bridging.token.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import com.r3.corda.lib.solana.bridging.token.contracts.FungibleTokenRedemptionContract
+import com.r3.corda.lib.solana.bridging.token.states.FungibleTokenBurnReceipt
 import com.r3.corda.lib.tokens.contracts.states.AbstractToken
 import com.r3.corda.lib.tokens.contracts.types.IssuedTokenType
 import com.r3.corda.lib.tokens.contracts.types.TokenType
@@ -12,16 +13,15 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.flows.FlowSession
 import net.corda.core.identity.Party
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.solana.sdk.instruction.Pubkey
 
 class MoveAndUnlockFungibleTokenFlow
 @JvmOverloads
 constructor(
-    val redemptionCoordinates: RedemptionCoordinates,
+    val burnReceiptStateAndRef: StateAndRef<FungibleTokenBurnReceipt>,
     val bridgeAuthority: Party,
     val lockingHolder: Party,
     val amount: Amount<TokenType>,
-    val burnAccount: Pubkey,
+    val lockCapture: FungibleTokenLockCapture,
     override val participantSessions: List<FlowSession> = emptyList(),
     override val observerSessions: List<FlowSession> = emptyList(),
 ) : AbstractMoveTokensFlow() {
@@ -34,6 +34,9 @@ constructor(
             holder = bridgeAuthority,
             changeHolder = lockingHolder
         )
+
+        // Capture the lockId generated during move to use it later to unlock tokens
+        lockCapture.lockId = transactionBuilder.lockId
 
         val outputGroups: Map<IssuedTokenType, List<AbstractToken>> =
             transactionBuilder
@@ -48,23 +51,14 @@ constructor(
                 .groupBy { it.state.data.issuedTokenType }
 
         check(outputGroups.keys == inputGroups.keys) {
-            "Input and output token types must correspond to each other when moving tokensToIssue"
+            "Input and output token types must correspond to each other when moving tokens"
         }
 
-        // Added for clarity, this is implied condition because only a single token is moved at a time
         check(outputGroups.keys.size == 1) {
-            "When bridging a fungible token, only one token type can be moved at a time."
+            "When redeeming a fungible token, only one token type can be moved at a time."
         }
 
-        val redeemState = redemptionCoordinates.toRedeemState(
-            burnAccount = burnAccount,
-            amount = amount.quantity,
-            bridgeAuthority = bridgeAuthority,
-            transactionBuilder.lockId
-        )
-
-        transactionBuilder.addOutputState(redeemState)
-
+        transactionBuilder.addInputState(burnReceiptStateAndRef)
         val unlockTokenCommand = FungibleTokenRedemptionContract.RedeemCommand.UnlockToken(lockingHolder)
 
         outputGroups.forEach { (issuedTokenType: IssuedTokenType, _: List<AbstractToken>) ->

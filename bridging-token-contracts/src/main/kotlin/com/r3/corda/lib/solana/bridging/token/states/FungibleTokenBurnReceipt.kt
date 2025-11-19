@@ -6,15 +6,13 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.solana.sdk.instruction.Pubkey
-import java.util.*
 
 @BelongsToContract(FungibleTokenRedemptionContract::class)
-data class RedeemedFungibleTokenProxy(
+data class FungibleTokenBurnReceipt(
     val burnAccount: Pubkey,
     val redemptionWallet: Pubkey,
     val mint: Pubkey,
     val amount: Long,
-    val lockId: UUID,
     val bridgeAuthority: Party,
 ) : ContractState {
     override val participants: List<AbstractParty>
