@@ -7,15 +7,22 @@ plugins {
 
 dependencies {
     implementation(libs.sava.rpc)
+    implementation(libs.lmax.solana4j)
+    implementation(libs.lmax.solana4j.json.rpc)
+    implementation(libs.caffeine.cache)
 
     cordaProvided(libs.corda.core)
     cordaProvided(libs.ent.corda.solana.sdk)
+    cordaProvided(libs.ent.corda.solana.notary.common)
 
     cordapp(project(":bridging-token-contracts"))
     cordapp(libs.tokens.contracts)
     cordapp(libs.tokens.workflows)
 
     detektPlugins(libs.detekt.ktlint.wrapper)
+
+    testImplementation(libs.ent.corda.test.utils)
+    testImplementation(libs.os.corda.core.test.utils)
 }
 
 cordapp {
