@@ -107,6 +107,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
                     tokenId,
                     amount,
                     solanaNotary,
+                    generalNotaryName,
                     lockingIdentity
                 )
             )
