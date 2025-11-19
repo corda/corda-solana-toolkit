@@ -13,11 +13,13 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.utilities.seconds
 import net.corda.solana.notary.common.Signer
 import net.corda.solana.notary.common.rpc.DefaultRpcParams
 import net.corda.solana.notary.common.rpc.checkResponse
 import net.corda.solana.notary.common.rpc.sendAndConfirm
 import net.corda.solana.sdk.internal.Token2022
+import net.corda.testing.common.internal.eventually
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
@@ -245,13 +247,13 @@ abstract class FlowTests {
         )
 
         // We need to wait for the vault listener to process the newly received token
-        Thread.sleep(5000)
-
-        assertEquals(
-            BigDecimal.ZERO,
-            bridgeAuthority.myTokenBalance(issuingBankParty, msftTokenType),
-            "Bridge Authority has no longer MSFT shares, they are under Locking Identity"
-        )
+        eventually(duration = 5.seconds) {
+            assertEquals(
+                BigDecimal.ZERO,
+                bridgeAuthority.myTokenBalance(issuingBankParty, msftTokenType),
+                "Bridge Authority has no longer MSFT shares, they are under Locking Identity"
+            )
+        }
 
         val msftFungibleToken = bridgeAuthority
             .getAllFungibleTokens(issuingBankParty, msftTokenType)
@@ -275,25 +277,22 @@ abstract class FlowTests {
 
         // SPL Token RPC returns decimal strings with trailing zeros trimmed,
         // BigDecimal.equals is scale-sensitive (1.0 != 1.00), so we compare numeric value instead.
-        assertThat(getSolanaTokenBalance(aliceBridgeTokenAccount))
-            .describedAs("Solana token amount numerically equals Corda bridged amount")
-            .isEqualByComparingTo(MOVE_QUANTITY)
+        eventually(duration = 5.seconds) {
+            assertThat(getSolanaTokenBalance(aliceBridgeTokenAccount))
+                .describedAs("Solana token amount numerically equals Corda bridged amount")
+                .isEqualByComparingTo(MOVE_QUANTITY)
+        }
 
         // Simulate redemption transfer for Alice account on Solana
-        transfer(
-            aliceSigner,
-            aliceBridgeTokenAccount,
-            aliceRedemptionTokenAccount,
-            MOVE_QUANTITY.toRawAmount()
-        )
+        transfer(aliceSigner, aliceBridgeTokenAccount, aliceRedemptionTokenAccount, MOVE_QUANTITY.toRawAmount())
         // We need to wait for the websocket listener to process the newly received event
-        Thread.sleep(10_000)
-
-        assertEquals(
-            ISSUING_QUANTITY,
-            alice.myTokenBalance(issuingBankParty, msftTokenType),
-            "Alice received redeemed MSFT shares back",
-        )
+        eventually(duration = 10.seconds) {
+            assertEquals(
+                ISSUING_QUANTITY,
+                alice.myTokenBalance(issuingBankParty, msftTokenType),
+                "Alice received redeemed MSFT shares back",
+            )
+        }
         val msftFungibleTokens = bridgeAuthority.getAllFungibleTokens(issuingBankParty, msftTokenType)
         assertTrue(msftFungibleTokens.isEmpty(), "No  MSFT shares left in Bridge Authority vault")
     }
