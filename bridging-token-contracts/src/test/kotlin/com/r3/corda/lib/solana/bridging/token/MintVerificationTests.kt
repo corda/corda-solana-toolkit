@@ -45,7 +45,7 @@ class MintVerificationTests {
                 )
                 command(
                     listOf(bridgeAuthority.owningKey),
-                    FungibleTokenBridgeContract.BridgeCommand.LockToken(bridgeAuthority, confidentialIdentity)
+                    FungibleTokenBridgeContract.BridgeCommand.LockToken
                 )
                 verifies()
             }
@@ -85,7 +85,7 @@ class MintVerificationTests {
                 )
                 command(
                     listOf(bridgeAuthority.owningKey),
-                    FungibleTokenBridgeContract.BridgeCommand.LockToken(bridgeAuthority, confidentialIdentity)
+                    FungibleTokenBridgeContract.BridgeCommand.LockToken
                 )
 
                 tweak {
@@ -149,10 +149,7 @@ class MintVerificationTests {
                 tweak {
                     command(
                         listOf(bridgeAuthority.owningKey),
-                        FungibleTokenBridgeContract.BridgeCommand.LockToken(
-                            bridgeAuthority,
-                            confidentialIdentity
-                        )
+                        FungibleTokenBridgeContract.BridgeCommand.LockToken
                     )
                     `fails with`("There must be at least one token command in this transaction.")
                 }
@@ -163,10 +160,7 @@ class MintVerificationTests {
                     )
                     command(
                         listOf(bridgeAuthority.owningKey),
-                        FungibleTokenBridgeContract.BridgeCommand.LockToken(
-                            bridgeAuthority,
-                            confidentialIdentity
-                        )
+                        FungibleTokenBridgeContract.BridgeCommand.LockToken
                     )
                     command(
                         listOf(bridgeAuthority.owningKey),
@@ -180,7 +174,7 @@ class MintVerificationTests {
                 )
                 command(
                     listOf(bridgeAuthority.owningKey),
-                    FungibleTokenBridgeContract.BridgeCommand.LockToken(bridgeAuthority, confidentialIdentity)
+                    FungibleTokenBridgeContract.BridgeCommand.LockToken
                 )
                 verifies()
             }
@@ -207,7 +201,7 @@ class MintVerificationTests {
                 )
                 command(
                     listOf(bridgeAuthority.owningKey),
-                    FungibleTokenBridgeContract.BridgeCommand.LockToken(bridgeAuthority, confidentialIdentity)
+                    FungibleTokenBridgeContract.BridgeCommand.LockToken
                 )
                 tweak {
                     notaryInstruction(Token2022.mintTo(mint, mintAuthority, mintAuthority, 10000))

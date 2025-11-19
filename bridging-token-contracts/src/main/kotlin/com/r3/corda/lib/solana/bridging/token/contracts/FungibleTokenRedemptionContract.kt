@@ -29,7 +29,7 @@ class FungibleTokenRedemptionContract : Contract {
      */
     private fun verifyUnlockToken(tx: LedgerTransaction, redeemCommand: RedeemCommand.UnlockToken) {
         val burnReceiptState = tx.inputsOfType<FungibleTokenBurnReceipt>().requireSingle {
-            "Redemption requires exactly one input state for a FungibleTokenBurnReceipt"
+            "Token burning transaction requires exactly one input state for a FungibleTokenBurnReceipt"
         }
         val inputFungibleState = tx.inputsOfType<FungibleToken>().requireSingle {
             "UnlockToken requires exactly one input FungibleToken state"
@@ -65,7 +65,7 @@ class FungibleTokenRedemptionContract : Contract {
 
     private fun verifyBurnOnSolana(tx: LedgerTransaction) {
         val burnReceiptState = tx.outputsOfType<FungibleTokenBurnReceipt>().requireSingle {
-            "Redemption requires exactly one output FungibleTokenBurnReceipt"
+            "Token burning transaction requires exactly one output FungibleTokenBurnReceipt"
         }
         require(tx.commands.size == 1) {
             "BurnOnSolana transaction must only contain a single command"
