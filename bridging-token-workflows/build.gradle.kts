@@ -7,6 +7,7 @@ plugins {
 
 dependencies {
     implementation(libs.sava.rpc)
+    implementation(libs.lmax.solana4j.json.rpc)
 
     cordaProvided(libs.corda.core)
     cordaProvided(libs.ent.corda.solana.sdk)
