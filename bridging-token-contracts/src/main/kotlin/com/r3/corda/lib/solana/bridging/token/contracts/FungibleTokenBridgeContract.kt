@@ -50,6 +50,10 @@ class FungibleTokenBridgeContract : Contract {
             "The holder of the locked token must match the bridge authority in the token proxy"
         }
 
+        require(inputToken.holder != outputToken.holder) {
+            "The token holder must change when locking the token"
+        }
+
         require(outputToken.amount.quantity == tokenProxy.amount) {
             "BridgedFungibleTokenProxy must have the same amount as the locked token"
         }
