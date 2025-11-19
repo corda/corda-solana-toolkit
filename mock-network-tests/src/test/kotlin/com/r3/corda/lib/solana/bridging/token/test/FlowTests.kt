@@ -133,14 +133,14 @@ abstract class FlowTests {
         aliceSigner = Signer.random()
         testValidator.fundAccount(10, aliceSigner)
 
-        this@FlowTests.tokenMint = testValidator.createToken(mintAuthoritySigner, decimals = TOKEN_DECIMALS.toByte())
+        tokenMint = testValidator.createToken(mintAuthoritySigner, decimals = TOKEN_DECIMALS.toByte())
         aliceBridgeTokenAccount = AssociatedTokenProgram
             .deriveAddress(
                 aliceSigner.account,
                 Token2022.PROGRAM_ID.toPublicKey(),
-                this@FlowTests.tokenMint
+                tokenMint
             ).address()
-        aliceRedemptionTokenAccount = testValidator.createTokenAccount(bridgeAuthoritySigner, this@FlowTests.tokenMint)
+        aliceRedemptionTokenAccount = testValidator.createTokenAccount(bridgeAuthoritySigner, tokenMint)
     }
 
     fun stopTestValidator() {
@@ -156,7 +156,7 @@ abstract class FlowTests {
             "participants" to mapOf(aliceIdentity.name.toString() to aliceSigner.account.base58()),
             "redemptionHolders" to mapOf(aliceRedemptionTokenAccount.base58() to aliceIdentity.name.toString()),
             "bridgeRedemptionAddress" to bridgeAuthoritySigner.account.base58(),
-            "mints" to mapOf(msftDescriptor.tokenTypeIdentifier to this@FlowTests.tokenMint.base58()),
+            "mints" to mapOf(msftDescriptor.tokenTypeIdentifier to tokenMint.base58()),
             "mintAuthorities" to mapOf(msftDescriptor.tokenTypeIdentifier to mintAuthoritySigner.account.base58()),
             "lockingIdentityLabel" to UUID.randomUUID().toString(),
             "solanaNotaryName" to solanaNotaryName.toString(),
@@ -372,11 +372,10 @@ abstract class FlowTests {
     }
 
     private fun getAccountInfo(publicKey: PublicKey): AccountInfo? {
-        val clientResponse = testValidator
+        return testValidator
             .client
             .getAccountInfo(publicKey.base58(), testValidator.rpcParams)
-        val response = clientResponse.response ?: return null
-        return response
+            .checkResponse("getAccountInfo")
     }
 
     private fun assertAtaAccount(

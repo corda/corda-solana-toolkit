@@ -11,10 +11,11 @@ import net.corda.solana.notary.common.rpc.SolanaClientException
 import net.corda.solana.notary.common.rpc.checkResponse
 import net.corda.solana.sdk.internal.Token2022
 import net.corda.testing.solana.SolanaTestValidator
-import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Named
 import org.junit.jupiter.params.ParameterizedTest
@@ -25,6 +26,8 @@ import java.util.stream.Stream
 
 class TokenAccountServiceTest {
     companion object {
+        lateinit var testValidator: SolanaTestValidator
+
         @JvmStatic
         fun cacheImplementations(): Stream<Named<ExistingAtaCache>> = Stream.of(
             Named.of(
@@ -40,37 +43,43 @@ class TokenAccountServiceTest {
                 }
             )
         )
-    }
 
-    lateinit var testValidator: SolanaTestValidator
-    lateinit var mintAuthoritySigner: Signer
-    lateinit var tokenMint: PublicKey
-    lateinit var wallet: Signer
+        @BeforeAll
+        @JvmStatic
+        fun setup() {
+            testValidator = SolanaTestValidator()
 
-    @BeforeEach
-    fun setup() {
-        testValidator = SolanaTestValidator()
-        mintAuthoritySigner = Signer.random()
-        try {
-            testValidator.start()
-        } catch (e: IllegalStateException) {
-            if (e.message == "Another solana-test-validator instance is already running") {
-                // for these tests error is fine, tests create random new accounts
-            } else {
-                throw e
+            try {
+                testValidator.start()
+            } catch (e: IllegalStateException) {
+                if (e.message == "Another solana-test-validator instance is already running") {
+                    // for these tests error is fine, tests create random new accounts
+                } else {
+                    throw e
+                }
             }
         }
+
+        @AfterAll
+        @JvmStatic
+        fun tearDown() {
+            if (::testValidator.isInitialized) {
+                testValidator.close()
+            }
+        }
+    }
+
+    @BeforeEach
+    fun setupAccounts() {
+        mintAuthoritySigner = Signer.random()
         testValidator.fundAccount(10, mintAuthoritySigner)
         tokenMint = testValidator.createToken(mintAuthoritySigner, decimals = 3.toByte())
         wallet = Signer.random()
     }
 
-    @AfterEach
-    fun tearDown() {
-        if (::testValidator.isInitialized) {
-            testValidator.close()
-        }
-    }
+    lateinit var mintAuthoritySigner: Signer
+    lateinit var tokenMint: PublicKey
+    lateinit var wallet: Signer
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("cacheImplementations")
