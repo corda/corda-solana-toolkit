@@ -83,7 +83,9 @@ class RedeemVerificationTests {
                 tweak {
                     output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
                     input(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState.copy(amount = 9999))
-                    `fails with`("The amount in the RedeemState must match the amount in the FungibleToken state")
+                    `fails with`(
+                        "The amount in the FungibleTokenBurnReceipt must match the amount in the FungibleToken state"
+                    )
                 }
                 tweak {
                     output(
@@ -91,7 +93,9 @@ class RedeemVerificationTests {
                         FungibleToken(cordaTokenAmount, bridgeAuthority)
                     )
                     input(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState.copy(amount = 10001))
-                    `fails with`("The amount in the RedeemState must match the amount in the FungibleToken state")
+                    `fails with`(
+                        "The amount in the FungibleTokenBurnReceipt must match the amount in the FungibleToken state"
+                    )
                 }
                 tweak {
                     val overspendCordaIssuedTokenType = (10001 of TokenType("TEST", 0)).issuedBy(tokenIssuer)
