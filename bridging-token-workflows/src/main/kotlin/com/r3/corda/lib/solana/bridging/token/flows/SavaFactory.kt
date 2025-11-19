@@ -8,7 +8,6 @@ import software.sava.core.accounts.SolanaAccounts
 import software.sava.core.accounts.token.TokenAccount
 import software.sava.core.rpc.Filter
 import software.sava.rpc.json.http.client.SolanaRpcClient
-import software.sava.rpc.json.http.request.Commitment
 import software.sava.rpc.json.http.response.AccountInfo
 import software.sava.rpc.json.http.ws.SolanaRpcWebsocket
 import java.net.URI
@@ -27,7 +26,7 @@ object SavaFactory {
             val ownerKey = owner.toPublickey()
             logger.info("Attaching websocket for account owned by $owner")
             return socket.programSubscribe(
-                Commitment.CONFIRMED,
+                globalCommitmentLevelSava,
                 SolanaAccounts.MAIN_NET.token2022Program(),
                 listOf(Filter.createMemCompFilter(TokenAccount.OWNER_OFFSET, ownerKey)),
                 { _ ->
@@ -77,7 +76,7 @@ object SavaFactory {
             .webSocketBuilder(httpClient.newWebSocketBuilder())
             .uri(rpcUrl)
             .solanaAccounts(SolanaAccounts.MAIN_NET)
-            .commitment(Commitment.CONFIRMED)
+            .commitment(globalCommitmentLevelSava)
             .create()
 
         socket.connect().get()
