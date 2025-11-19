@@ -287,7 +287,7 @@ abstract class FlowTests {
             MOVE_QUANTITY.toRawAmount()
         )
         // We need to wait for the websocket listener to process the newly received event
-        Thread.sleep(5000)
+        Thread.sleep(10_000)
 
         assertEquals(
             ISSUING_QUANTITY,
