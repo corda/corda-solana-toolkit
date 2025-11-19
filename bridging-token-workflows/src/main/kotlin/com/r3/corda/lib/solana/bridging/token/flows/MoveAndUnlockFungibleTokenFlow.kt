@@ -17,7 +17,7 @@ import net.corda.core.transactions.TransactionBuilder
 class MoveAndUnlockFungibleTokenFlow
 @JvmOverloads
 constructor(
-    val redeemStateAndRef: StateAndRef<FungibleTokenBurnReceipt>,
+    val burnReceiptStateAndRef: StateAndRef<FungibleTokenBurnReceipt>,
     val bridgeAuthority: Party,
     val lockingHolder: Party,
     val amount: Amount<TokenType>,
@@ -58,7 +58,7 @@ constructor(
             "When redeeming a fungible token, only one token type can be moved at a time."
         }
 
-        transactionBuilder.addInputState(redeemStateAndRef)
+        transactionBuilder.addInputState(burnReceiptStateAndRef)
         val unlockTokenCommand = FungibleTokenRedemptionContract.RedeemCommand.UnlockToken(lockingHolder)
 
         outputGroups.forEach { (issuedTokenType: IssuedTokenType, _: List<AbstractToken>) ->

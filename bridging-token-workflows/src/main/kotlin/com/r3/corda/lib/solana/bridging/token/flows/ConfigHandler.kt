@@ -69,7 +69,7 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
             error("Could not find configuration entry '$notaryNameConfig'")
         }
         return requireNotNull(appServiceHub.networkMapCache.getNotary(notaryName)) {
-            "Cound not find Solana Notary '$notaryName' in the network parameters"
+            "Cound not find notary '$notaryName' in the network parameters"
         }
     }
 

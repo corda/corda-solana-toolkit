@@ -28,7 +28,7 @@ class FungibleTokenRedemptionContract : Contract {
      * The burn receipt that captures this event and is used later in the redemption flow.
      */
     private fun verifyUnlockToken(tx: LedgerTransaction, redeemCommand: RedeemCommand.UnlockToken) {
-        val redeemReceiptState = tx.inputsOfType<FungibleTokenBurnReceipt>().requireSingle {
+        val burnReceiptState = tx.inputsOfType<FungibleTokenBurnReceipt>().requireSingle {
             "Redemption requires exactly one input state for a FungibleTokenBurnReceipt"
         }
         val inputFungibleState = tx.inputsOfType<FungibleToken>().requireSingle {
@@ -46,12 +46,13 @@ class FungibleTokenRedemptionContract : Contract {
         val outputFungibleState = tx.outputsOfType<FungibleToken>().requireSingle {
             "UnlockToken requires exactly one output FungibleToken state"
         }
-        require(outputFungibleState.holder == redeemReceiptState.bridgeAuthority) {
-            "The holder of the output FungibleToken must be the bridge authority from the FungibleTokenBurnReceipt"
+        require(outputFungibleState.holder == burnReceiptState.bridgeAuthority) {
+            "The holder of the output FungibleToken must be the same identity that burned the FungibleTokenBurnReceipt"
         }
         // Assuming a single token to carry the amount equal to the redeemed amount
-        require(redeemReceiptState.amount == outputFungibleState.amount.quantity) {
-            "The amount in the RedeemState must match the amount in the FungibleToken state"
+        // TODO: Allow for multiple fungible states to cover the redeemed amount - ENT-14629
+        require(burnReceiptState.amount == outputFungibleState.amount.quantity) {
+            "The amount in the FungibleTokenBurnReceipt must match the amount in the FungibleToken state"
         }
         require(tx.commands.size == 2) {
             // Presence of individual commands had been verified till this point
@@ -63,13 +64,13 @@ class FungibleTokenRedemptionContract : Contract {
     }
 
     private fun verifyBurnOnSolana(tx: LedgerTransaction) {
-        val redeemReceiptState = tx.outputsOfType<FungibleTokenBurnReceipt>().requireSingle {
+        val burnReceiptState = tx.outputsOfType<FungibleTokenBurnReceipt>().requireSingle {
             "Redemption requires exactly one output FungibleTokenBurnReceipt"
         }
         require(tx.commands.size == 1) {
             "BurnOnSolana transaction must only contain a single command"
         }
-        require(tx.commands.single().signers.contains(redeemReceiptState.bridgeAuthority.owningKey)) {
+        require(tx.commands.single().signers.contains(burnReceiptState.bridgeAuthority.owningKey)) {
             "The bridge authority must sign the BurnOnSolana transaction"
         }
         require(tx.inputsOfType<FungibleTokenBurnReceipt>().isEmpty()) {
@@ -79,10 +80,10 @@ class FungibleTokenRedemptionContract : Contract {
             "Exactly one Solana instruction required"
         }
         val expectedInstruction = Token2022.burn(
-            redeemReceiptState.mint,
-            redeemReceiptState.burnAccount,
-            redeemReceiptState.redemptionWallet,
-            redeemReceiptState.amount
+            burnReceiptState.mint,
+            burnReceiptState.burnAccount,
+            burnReceiptState.redemptionWallet,
+            burnReceiptState.amount
         )
         require(solanaInstruction == expectedInstruction) {
             "The Solana instruction in the transaction not the expected burn instruction:\n" +
