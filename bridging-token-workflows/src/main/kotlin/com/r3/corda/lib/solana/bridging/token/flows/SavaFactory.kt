@@ -26,7 +26,6 @@ object SavaFactory {
             val ownerKey = owner.toPublickey()
             logger.info("Attaching websocket for account owned by $owner")
             return socket.programSubscribe(
-                globalCommitmentLevelSava,
                 SolanaAccounts.MAIN_NET.token2022Program(),
                 listOf(Filter.createMemCompFilter(TokenAccount.OWNER_OFFSET, ownerKey)),
                 { _ ->
@@ -59,7 +58,7 @@ object SavaFactory {
 
     fun getNonZeroTokenAccounts(owner: PublicKey, rpcUrl: String): List<AccountInfo<TokenAccount>> {
         val httpClient = HttpClient.newHttpClient()
-        val solanaClient = SolanaRpcClient.createClient(URI.create(rpcUrl), httpClient)
+        val solanaClient = SolanaRpcClient.createClient(URI.create(rpcUrl), httpClient, globalCommitmentLevelSava)
         logger.debug { "Checking for non-zero token accounts owned by $owner" }
         return solanaClient
             .getTokenAccountsForProgramByOwner(owner, SolanaAccounts.MAIN_NET.token2022Program())
