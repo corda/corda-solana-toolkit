@@ -48,7 +48,6 @@ class TokenAccountServiceTest {
         @JvmStatic
         fun setup() {
             testValidator = SolanaTestValidator()
-
             try {
                 testValidator.start()
             } catch (e: IllegalStateException) {

@@ -44,6 +44,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNotNull
 import org.junit.jupiter.api.assertNull
 import org.junit.jupiter.api.io.TempDir
+import java.lang.IllegalStateException
 import java.math.BigDecimal
 import java.nio.file.Path
 import java.util.Base64
@@ -125,7 +126,15 @@ abstract class FlowTests {
         mintAuthoritySigner = Signer.fromFile(randomKeypairFile(custodiedKeysDir))
         bridgeAuthorityWalletFile = randomKeypairFile(custodiedKeysDir)
         bridgeAuthoritySigner = Signer.fromFile(bridgeAuthorityWalletFile)
-        testValidator.start()
+        try {
+            testValidator.start()
+        } catch (e: IllegalStateException) {
+            if (e.message == "Another solana-test-validator instance is already running") {
+                // for these tests error is fine, tests create random new accounts
+            } else {
+                throw e
+            }
+        }
         testValidator.defaultNotaryProgramSetup(solanaNotaryKey.account)
         testValidator.fundAccount(10, mintAuthoritySigner)
         testValidator.fundAccount(10, bridgeAuthoritySigner)
