@@ -27,7 +27,7 @@ class TokenAccountService(
         private val logger = LoggerFactory.getLogger(TokenAccountService::class.java)
 
         // preflight required to avoid running transaction which will fail on chain
-        private val rpcParams = DefaultRpcParams(commitment, false)
+        private val rpcParams = DefaultRpcParams(globalCommitmentLevelLmax, false)
     }
 
     /**
