@@ -36,9 +36,11 @@ import net.corda.testing.node.TestCordapp
 import net.corda.testing.solana.SolanaTestValidator
 import net.corda.testing.solana.randomKeypairFile
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNotNull
@@ -82,11 +84,35 @@ abstract class FlowTests {
         private val ISSUING_QUANTITY = BigDecimal("2000.000")
         private val MOVE_QUANTITY = BigDecimal("10.250")
 
+        private lateinit var testValidator: SolanaTestValidator
         private val aliceIdentity = TestIdentity(ALICE_NAME)
         private val issuingBankIdentity = TestIdentity(DUMMY_BANK_A_NAME)
         private val bridgeAuthorityIdentity = TestIdentity(CordaX500Name("Bridge Authority", "New York", "US"))
         private val solanaNotaryName = CordaX500Name("Solana Notary Service", "London", "GB")
         private val generalNotaryName = CordaX500Name("Notary Service", "Zurich", "CH")
+
+        @BeforeAll
+        @JvmStatic
+        fun startTestValidatorOnly() {
+            testValidator = SolanaTestValidator()
+            try {
+                testValidator.start()
+            } catch (e: IllegalStateException) {
+                if (e.message == "Another solana-test-validator instance is already running") {
+                    // for these tests error is fine, tests create random new accounts
+                } else {
+                    throw e
+                }
+            }
+        }
+
+        @AfterAll
+        @JvmStatic
+        fun stopTestValidator() {
+            if (::testValidator.isInitialized) {
+                testValidator.close()
+            }
+        }
     }
 
     @TempDir
@@ -100,7 +126,6 @@ abstract class FlowTests {
     private lateinit var mintAuthoritySigner: Signer
     private lateinit var bridgeAuthoritySigner: Signer
     private lateinit var bridgeAuthorityWalletFile: Path
-    private lateinit var testValidator: SolanaTestValidator
 
     private lateinit var tokenMint: PublicKey
     private lateinit var aliceSigner: Signer
@@ -109,32 +134,16 @@ abstract class FlowTests {
 
     @BeforeEach
     fun setup() {
-        startTestValidator()
+        createAccounts()
         startCordaNetwork()
     }
 
-    @AfterEach
-    fun tearDown() {
-        stopCordaNetwork()
-        stopTestValidator()
-    }
-
-    private fun startTestValidator() {
-        testValidator = SolanaTestValidator()
+    private fun createAccounts() {
         solanaNotaryKeyFile = randomKeypairFile(generalDir)
         solanaNotaryKey = Signer.fromFile(solanaNotaryKeyFile)
         mintAuthoritySigner = Signer.fromFile(randomKeypairFile(custodiedKeysDir))
         bridgeAuthorityWalletFile = randomKeypairFile(custodiedKeysDir)
         bridgeAuthoritySigner = Signer.fromFile(bridgeAuthorityWalletFile)
-        try {
-            testValidator.start()
-        } catch (e: IllegalStateException) {
-            if (e.message == "Another solana-test-validator instance is already running") {
-                // for these tests error is fine, tests create random new accounts
-            } else {
-                throw e
-            }
-        }
         testValidator.defaultNotaryProgramSetup(solanaNotaryKey.account)
         testValidator.fundAccount(10, mintAuthoritySigner)
         testValidator.fundAccount(10, bridgeAuthoritySigner)
@@ -150,12 +159,6 @@ abstract class FlowTests {
                 tokenMint
             ).address()
         aliceRedemptionTokenAccount = testValidator.createTokenAccount(bridgeAuthoritySigner, tokenMint)
-    }
-
-    fun stopTestValidator() {
-        if (::testValidator.isInitialized) {
-            testValidator.close()
-        }
     }
 
     private fun startCordaNetwork() {
@@ -212,6 +215,7 @@ abstract class FlowTests {
         bridgeAuthorityParty = bridgeAuthority.info.legalIdentities.first()
     }
 
+    @AfterEach
     fun stopCordaNetwork() {
         if (::network.isInitialized) {
             network.stopNodes()
