@@ -1,7 +1,12 @@
 package com.r3.corda.lib.solana.bridging.token.test
 
 import com.lmax.solana4j.api.PublicKey
+import com.lmax.solana4j.client.api.AccountInfo
+import com.lmax.solana4j.encoding.SolanaEncoding
+import com.lmax.solana4j.programs.AssociatedTokenProgram
 import com.lmax.solana4j.programs.Token2022Program
+import com.r3.corda.lib.solana.bridging.token.flows.toPublicKey
+import com.r3.corda.lib.solana.bridging.token.flows.tokenProgramId
 import com.r3.corda.lib.solana.bridging.token.testing.QuerySimpleTokensFlow
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.contracts.types.TokenType
@@ -37,10 +42,13 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNotNull
+import org.junit.jupiter.api.assertNull
 import org.junit.jupiter.api.io.TempDir
+import java.lang.IllegalStateException
 import java.math.BigDecimal
 import java.nio.file.Path
-import java.util.*
+import java.util.Base64
+import java.util.UUID
 
 abstract class FlowTests {
     abstract val msftDescriptor: TokenTypeDescriptor
@@ -91,6 +99,7 @@ abstract class FlowTests {
     private lateinit var solanaNotaryKey: Signer
     private lateinit var mintAuthoritySigner: Signer
     private lateinit var bridgeAuthoritySigner: Signer
+    private lateinit var bridgeAuthorityWalletFile: Path
     private lateinit var testValidator: SolanaTestValidator
 
     private lateinit var tokenMint: PublicKey
@@ -115,8 +124,17 @@ abstract class FlowTests {
         solanaNotaryKeyFile = randomKeypairFile(generalDir)
         solanaNotaryKey = Signer.fromFile(solanaNotaryKeyFile)
         mintAuthoritySigner = Signer.fromFile(randomKeypairFile(custodiedKeysDir))
-        bridgeAuthoritySigner = Signer.fromFile(randomKeypairFile(custodiedKeysDir))
-        testValidator.start()
+        bridgeAuthorityWalletFile = randomKeypairFile(custodiedKeysDir)
+        bridgeAuthoritySigner = Signer.fromFile(bridgeAuthorityWalletFile)
+        try {
+            testValidator.start()
+        } catch (e: IllegalStateException) {
+            if (e.message == "Another solana-test-validator instance is already running") {
+                // for these tests error is fine, tests create random new accounts
+            } else {
+                throw e
+            }
+        }
         testValidator.defaultNotaryProgramSetup(solanaNotaryKey.account)
         testValidator.fundAccount(10, mintAuthoritySigner)
         testValidator.fundAccount(10, bridgeAuthoritySigner)
@@ -125,7 +143,12 @@ abstract class FlowTests {
         testValidator.fundAccount(10, aliceSigner)
 
         tokenMint = testValidator.createToken(mintAuthoritySigner, decimals = TOKEN_DECIMALS.toByte())
-        aliceBridgeTokenAccount = testValidator.createTokenAccount(aliceSigner, tokenMint)
+        aliceBridgeTokenAccount = AssociatedTokenProgram
+            .deriveAddress(
+                aliceSigner.account,
+                Token2022.PROGRAM_ID.toPublicKey(),
+                tokenMint
+            ).address()
         aliceRedemptionTokenAccount = testValidator.createTokenAccount(bridgeAuthoritySigner, tokenMint)
     }
 
@@ -139,7 +162,7 @@ abstract class FlowTests {
         val bridgingContractsCordapp = TestCordapp.findCordapp("com.r3.corda.lib.solana.bridging.token.contracts")
         val bridgingFlowsCordapp = TestCordapp.findCordapp("com.r3.corda.lib.solana.bridging.token.flows")
         val baConfig = mapOf(
-            "participants" to mapOf(aliceIdentity.name.toString() to aliceBridgeTokenAccount.base58()),
+            "participants" to mapOf(aliceIdentity.name.toString() to aliceSigner.account.base58()),
             "redemptionHolders" to mapOf(aliceRedemptionTokenAccount.base58() to aliceIdentity.name.toString()),
             "bridgeRedemptionAddress" to bridgeAuthoritySigner.account.base58(),
             "mints" to mapOf(msftDescriptor.tokenTypeIdentifier to tokenMint.base58()),
@@ -148,6 +171,7 @@ abstract class FlowTests {
             "solanaNotaryName" to solanaNotaryName.toString(),
             "solanaWsUrl" to SolanaTestValidator.WS_URL,
             "solanaRpcUrl" to SolanaTestValidator.RPC_URL,
+            "bridgeAuthorityWalletFile" to bridgeAuthorityWalletFile.toString(),
         )
         network = MockNetwork(
             MockNetworkParameters(
@@ -225,7 +249,7 @@ abstract class FlowTests {
         val msftTokenType = issuingBank.issue(msftDescriptor, ISSUING_QUANTITY, generalNotaryName)
         val aaplTokenType = issuingBank.issue(aaplDescriptor, ISSUING_QUANTITY, generalNotaryName)
 
-        assertEquals(BigDecimal.ZERO, getSolanaTokenBalance(aliceBridgeTokenAccount), "Nothing on Solana")
+        assertNull(getAccountInfo(aliceBridgeTokenAccount), "Alice ATA should not be created yet")
 
         move(issuingBank, aliceParty, ISSUING_QUANTITY, msftTokenType).get()
         move(issuingBank, aliceParty, ISSUING_QUANTITY, aaplTokenType).get()
@@ -259,8 +283,7 @@ abstract class FlowTests {
         assertTrue(
             msftFungibleToken.holder !in setOf(aliceParty, bridgeAuthorityParty),
             "Bridge Authority moved MSFT under Lock Identity (CI) ownership as neither BA nor Alice holds the token",
-        ) // Locking Identity is Confidential Identity, and we don't know its identity upfront,
-        // so indirect check to by proving no knows participant owns the token
+        ) // We don't know Confidential Identity upfront, so indirect check know participants do not own the token
         assertEquals(
             MOVE_QUANTITY,
             msftFungibleToken.amount.toDecimal(),
@@ -271,6 +294,9 @@ abstract class FlowTests {
             it.state.data.amount.token.tokenType == msftTokenType
         }
         assertNotNull(token)
+
+        val accountInfo = getAccountInfo(aliceBridgeTokenAccount)
+        assertAtaAccount(accountInfo, tokenMint, aliceSigner.account)
 
         // SPL Token RPC returns decimal strings with trailing zeros trimmed,
         // BigDecimal.equals is scale-sensitive (1.0 != 1.00), so we compare numeric value instead.
@@ -348,10 +374,34 @@ abstract class FlowTests {
     private fun getSolanaTokenBalance(publicKey: PublicKey): BigDecimal {
         return testValidator
             .client
-            .getTokenAccountBalance(publicKey.base58(), DefaultRpcParams())
+            .getTokenAccountBalance(publicKey.base58(), testValidator.rpcParams)
             .checkResponse("getTokenAccountBalance")!!
             .uiAmountString
             .toBigDecimal()
+    }
+
+    private fun getAccountInfo(publicKey: PublicKey): AccountInfo? {
+        return testValidator
+            .client
+            .getAccountInfo(publicKey.base58(), testValidator.rpcParams)
+            .checkResponse("getAccountInfo")
+    }
+
+    private fun assertAtaAccount(
+        accountInfo: AccountInfo?,
+        expectedMintAccount: PublicKey,
+        expectedOwnerAccount: PublicKey,
+    ) {
+        assertNotNull(accountInfo, "Account not found")
+        assertEquals(accountInfo.owner, tokenProgramId.base58(), "ATA programId should match Token 2022")
+        val encodedInfo = accountInfo.data?.accountInfoEncoded
+        assertNotNull(encodedInfo, "Account data missing")
+        assertTrue(encodedInfo.size >= 2, "Missing encoded account data")
+        val binaryData = Base64.getDecoder().decode(encodedInfo.first())
+        val mintAccount = SolanaEncoding.account(binaryData.copyOfRange(0, 32))
+        assertEquals(mintAccount, expectedMintAccount, "ATA mint account mismatch")
+        val ownerAccount = SolanaEncoding.account(binaryData.copyOfRange(32, 64))
+        assertEquals(ownerAccount, expectedOwnerAccount, "ATA owner account mismatch")
     }
 }
 

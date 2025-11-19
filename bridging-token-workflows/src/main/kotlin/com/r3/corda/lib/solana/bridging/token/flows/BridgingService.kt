@@ -1,5 +1,6 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
+import com.lmax.solana4j.client.jsonrpc.SolanaJsonRpcClient
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.workflows.utilities.toParty
 import net.corda.core.contracts.StateAndRef
@@ -12,6 +13,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.debug
 import net.corda.solana.sdk.instruction.Pubkey
 import org.slf4j.LoggerFactory
+import java.net.http.HttpClient
 import java.util.concurrent.Executors
 
 @CordaService
@@ -23,11 +25,15 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
     private val socket: SavaFactory.WebSocketWrapper
     private val executor = Executors.newSingleThreadExecutor()
     private val configHandler = ConfigHandler(appServiceHub)
+    private val rpcClient: SolanaJsonRpcClient
+    private val accountService: TokenAccountService
 
     init {
         socket = SavaFactory.WebSocketWrapper(configHandler.solanaRpcUrl, configHandler.solanaWsUrl)
         appServiceHub.registerUnloadHandler { onStop() }
         appServiceHub.register { onStartup(it) }
+        rpcClient = SolanaJsonRpcClient(HttpClient.newHttpClient(), configHandler.solanaRpcUrl)
+        accountService = TokenAccountService(rpcClient, configHandler.bridgeAuthoritySigner)
     }
 
     private fun onStop() {
@@ -77,6 +83,10 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
 
     fun getBridgingCoordinates(token: StateAndRef<FungibleToken>, originalHolder: Party) =
         configHandler.getBridgingCoordinates(token, originalHolder)
+
+    fun createAta(mint: Pubkey, owner: Pubkey) {
+        accountService.createAta(mint.toPublicKey(), owner.toPublicKey())
+    }
 
     private fun onTokenReceivedCallback(
         solanaOwner: Pubkey,
