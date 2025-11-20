@@ -82,7 +82,7 @@ class FungibleTokenBridgeContract : Contract {
         }
         val expectedMintInstruction = Token2022.mintTo(
             bridgedFungibleTokenProxy.mint,
-            bridgedFungibleTokenProxy.mintDestination,
+            bridgedFungibleTokenProxy.mintAccount,
             bridgedFungibleTokenProxy.mintAuthority,
             bridgedFungibleTokenProxy.amount,
         )

@@ -36,7 +36,7 @@ data class BridgingCoordinates(
             amount = token.amount.quantity,
             mint = this.mint,
             mintAuthority = this.mintAuthority,
-            mintDestination = tokenAccount,
+            mintAccount = tokenAccount,
             bridgeAuthority = bridgeAuthority,
         )
     }

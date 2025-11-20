@@ -83,7 +83,7 @@ class BridgeFungibleTokenFlow(
         val transactionBuilder = TransactionBuilder(solanaNotary)
         val instruction = Token2022.mintTo(
             bridgedFungibleTokenProxy.mint,
-            bridgedFungibleTokenProxy.mintDestination,
+            bridgedFungibleTokenProxy.mintAccount,
             bridgedFungibleTokenProxy.mintAuthority,
             bridgedFungibleTokenProxy.amount,
         )

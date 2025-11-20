@@ -16,8 +16,8 @@ import net.corda.solana.sdk.instruction.Pubkey
  * flows can operate on this proxy and keep the Solana-bridging data alongside the fungible quantity.
  *
  * @property amount Quantity of fungible tokens represented by this proxy.
- * been minted on Solana for [mintDestination].
- * @property mintDestination Token **wallet** public key that should receive the minted tokens on Solana.
+ * been minted on Solana for [mintAccount].
+ * @property mintAccount Token account public key that should receive the minted tokens on Solana.
  * @property mint Token **mint** public key on Solana (the asset definition).
  * @property mintAuthority Public key that is authorized to mint for [mint] on Solana
  * (address controlled by the bridge).
@@ -26,7 +26,7 @@ import net.corda.solana.sdk.instruction.Pubkey
 @BelongsToContract(FungibleTokenBridgeContract::class)
 data class BridgedFungibleTokenProxy(
     val amount: Long,
-    val mintDestination: Pubkey,
+    val mintAccount: Pubkey,
     val mint: Pubkey,
     val mintAuthority: Pubkey,
     val bridgeAuthority: Party,

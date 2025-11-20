@@ -106,13 +106,13 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
         val mintAuthority = checkNotNull(mintAuthorities[tokenTypeId]) {
             "No mint authority mapping found for token type id $tokenTypeId"
         }
-        val mintDestination = checkNotNull(participants[originalHolder.nameOrNull()]) {
+        val mintAccount = checkNotNull(participants[originalHolder.nameOrNull()]) {
             "No Solana account mapping found for previous owner ${originalHolder.nameOrNull()}"
         }
         return BridgingCoordinates(
             mint,
             mintAuthority,
-            mintDestination
+            mintAccount
         )
     }
 
