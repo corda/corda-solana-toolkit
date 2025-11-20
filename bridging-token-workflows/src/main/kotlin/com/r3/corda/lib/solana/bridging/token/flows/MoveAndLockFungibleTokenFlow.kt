@@ -56,7 +56,7 @@ constructor(
 
         transactionBuilder.addOutputState(bridgeState)
 
-        val bridgeCommand = FungibleTokenBridgeContract.BridgeCommand.LockToken(ourIdentity, lockingHolder)
+        val bridgeCommand = FungibleTokenBridgeContract.BridgeCommand.LockToken
 
         for (issuedTokenType in outputGroups.keys) {
             val inputGroup = requireNotNull(inputGroups[issuedTokenType]) {

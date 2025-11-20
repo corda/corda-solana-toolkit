@@ -40,7 +40,7 @@ val services = MockServices(
 val TOKEN_PROGRAM_ID: String = FungibleTokenContract.contractId
 val cordaTokenAmount = (10000 of TokenType("TEST", 0)).issuedBy(tokenIssuer)
 
-val mint = Pubkey(Signer.random().account.bytes())
+val mintAccount = Pubkey(Signer.random().account.bytes())
 val mintAuthority = Pubkey(Signer.random().account.bytes())
 val tokenAccount = Pubkey(Signer.random().account.bytes())
 
@@ -59,7 +59,7 @@ fun instructionWithWrongOperation(programId: Pubkey): SolanaInstruction {
     return SolanaInstruction(
         programId,
         listOf(
-            AccountMeta(mint, isSigner = false, isWritable = true),
+            AccountMeta(mintAccount, isSigner = false, isWritable = true),
             AccountMeta(destination, isSigner = false, isWritable = true),
             AccountMeta(mintAuthority, isSigner = true, isWritable = false),
         ),

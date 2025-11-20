@@ -22,7 +22,7 @@ import net.corda.solana.sdk.instruction.Pubkey
 /**
  * Flows bridges a fungible token redemption to Solana token burn.
  *
- * @param burnAccount the Solana account where the tokens will be burnt
+ * @param redeemTokenAccount the Solana account where the tokens will be burnt
  * @param redemptionHolder the Corda party to send the redeemed tokens to
  * @param tokenTypeId the identifier of the token being redeemed
  * @param amount the amount of tokens to redeem
@@ -33,7 +33,7 @@ import net.corda.solana.sdk.instruction.Pubkey
 @StartableByService
 @InitiatingFlow
 class RedeemFungibleTokenFlow(
-    val burnAccount: Pubkey,
+    val redeemTokenAccount: Pubkey,
     val redemptionHolder: Party,
     val tokenTypeId: String,
     val amount: Long,
@@ -49,7 +49,7 @@ class RedeemFungibleTokenFlow(
             BurnTokensOnSolanaFlow(
                 redemptionCoordinates,
                 solanaNotary,
-                burnAccount,
+                redeemTokenAccount,
                 amount
             )
         ).toLedgerTransaction(serviceHub).outRefsOfType<FungibleTokenBurnReceipt>().single()

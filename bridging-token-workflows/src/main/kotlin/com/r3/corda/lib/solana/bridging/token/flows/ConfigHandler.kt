@@ -100,28 +100,28 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
             is TokenPointer<*> -> tokenType.pointer.pointer.id.toString()
             else -> tokenType.tokenIdentifier
         }
-        val mint = checkNotNull(tokenIdToMintAccount[tokenTypeId]) {
-            "No mint mapping found for token type id $tokenTypeId"
+        val mintAccount = checkNotNull(tokenIdToMintAccount[tokenTypeId]) {
+            "No mint account mapping found for token type id $tokenTypeId"
         }
         val mintAuthority = checkNotNull(mintAuthorities[tokenTypeId]) {
             "No mint authority mapping found for token type id $tokenTypeId"
         }
-        val mintDestination = checkNotNull(participants[originalHolder.nameOrNull()]) {
-            "No Solana account mapping found for previous owner ${originalHolder.nameOrNull()}"
+        val mintWalletAccount = checkNotNull(participants[originalHolder.nameOrNull()]) {
+            "No Solana account mapping found for Corda original holder ${originalHolder.nameOrNull()}"
         }
         return BridgingCoordinates(
-            mint,
+            mintAccount,
             mintAuthority,
-            mintDestination
+            mintWalletAccount
         )
     }
 
     fun getRedemptionCoordinates(
         tokenTypeId: String,
     ): RedemptionCoordinates {
-        val mint = checkNotNull(tokenIdToMintAccount[tokenTypeId]) {
-            "No mint mapping found for token type id $tokenTypeId"
+        val mintAccount = checkNotNull(tokenIdToMintAccount[tokenTypeId]) {
+            "No mint account mapping found for token type id $tokenTypeId"
         }
-        return RedemptionCoordinates(mint, bridgeRedemptionAddress)
+        return RedemptionCoordinates(mintAccount, bridgeRedemptionAddress)
     }
 }

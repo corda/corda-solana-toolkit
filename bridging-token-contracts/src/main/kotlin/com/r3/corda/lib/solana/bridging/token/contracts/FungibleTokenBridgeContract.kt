@@ -6,8 +6,6 @@ import com.r3.corda.lib.tokens.contracts.commands.TokenCommand
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract
-import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.Party
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.solana.sdk.instruction.SolanaInstruction
 import net.corda.solana.sdk.internal.Token2022
@@ -25,13 +23,13 @@ class FungibleTokenBridgeContract : Contract {
         val bridgeCommand = bridgeCommands.requireSingle {
             "Bridging transactions must have a single bridge command"
         }
-        when (val cmdData = bridgeCommand.value) {
-            is BridgeCommand.LockToken -> verifyLockToken(tx, cmdData)
+        when (bridgeCommand.value) {
+            is BridgeCommand.LockToken -> verifyLockToken(tx)
             is BridgeCommand.MintToSolana -> verifyMintToSolana(tx)
         }
     }
 
-    private fun verifyLockToken(tx: LedgerTransaction, lockingCommand: BridgeCommand.LockToken) {
+    private fun verifyLockToken(tx: LedgerTransaction) {
         require(tx.inputs.size == 1) { "Lock transaction must have exactly one input state" }
         val inputToken = tx.inputsOfType<FungibleToken>().requireSingle {
             "Lock transaction must have exactly one FungibleState as input state"
@@ -48,14 +46,12 @@ class FungibleTokenBridgeContract : Contract {
             "Lock transaction must have exactly one BridgedFungibleTokenProxy as output"
         }
 
-        require(inputToken.holder == lockingCommand.bridgeAuthority) {
-            "The holder of the locked token must been the bridge authority"
+        require(inputToken.holder == tokenProxy.bridgeAuthority) {
+            "The holder of the locked token must match the bridge authority in the token proxy"
         }
-        require(outputToken.holder == lockingCommand.lockingIdentity) {
-            "The holder of the locked token must be the locking identity"
-        }
-        require(lockingCommand.bridgeAuthority == tokenProxy.bridgeAuthority) {
-            "Bridge authority must be a participant"
+
+        require(inputToken.holder != outputToken.holder) {
+            "The token holder must change when locking the token"
         }
 
         require(outputToken.amount.quantity == tokenProxy.amount) {
@@ -85,8 +81,8 @@ class FungibleTokenBridgeContract : Contract {
             "Exactly one Solana instruction required"
         }
         val expectedMintInstruction = Token2022.mintTo(
-            bridgedFungibleTokenProxy.mint,
-            bridgedFungibleTokenProxy.mintDestination,
+            bridgedFungibleTokenProxy.mintAccount,
+            bridgedFungibleTokenProxy.bridgeTokenAccount,
             bridgedFungibleTokenProxy.mintAuthority,
             bridgedFungibleTokenProxy.amount,
         )
@@ -115,24 +111,8 @@ class FungibleTokenBridgeContract : Contract {
         /**
          * Locks a Corda-side fungible token balance so it cannot be spent while the
          * equivalent amount is minted on Solana.
-         *
-         * @property bridgeAuthority The well-known Corda [Party] operating the bridge,
-         *   that owns a proxy of the fungible token [BridgedFungibleTokenProxy] to be used for minting on Solana.
-         * @property lockingIdentity The Corda identity (confidential) that owns
-         *   the token being locked prior to minting on Solana.
-         *
-         * @throws IllegalArgumentException if [bridgeAuthority] and [lockingIdentity] refer to the same party.
          */
-        data class LockToken(
-            val bridgeAuthority: Party,
-            val lockingIdentity: AbstractParty,
-        ) : BridgeCommand {
-            init {
-                require(bridgeAuthority != lockingIdentity) {
-                    "Locking identity must be different from the bridge authority"
-                }
-            }
-        }
+        object LockToken : BridgeCommand
 
         /**
          * Mints the bridged amount on Solana for the designated destination.
