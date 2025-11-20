@@ -9,15 +9,15 @@ import net.corda.solana.sdk.instruction.Pubkey
 /**
  * Holds the necessary metadata to bridge a Corda token to Solana Token.
  *
- * @property mint Token **mint** public key on Solana (the asset definition).
- * @property mintAuthority Public key that is authorized to mint for [mint] on Solana
+ * @property mintAccount Token **mint** public key on Solana (the asset definition).
+ * @property mintAuthority Public key that is authorized to mint for [mintAccount] on Solana
  * (address controlled by the bridge).
- * @property walletAccount Token **wallet** public key that should receive the minted tokens on Solana.
+ * @property mintWalletAccount Token **wallet** public key that should receive the minted tokens on Solana.
  */
 data class BridgingCoordinates(
-    val mint: Pubkey,
+    val mintAccount: Pubkey,
     val mintAuthority: Pubkey,
-    val walletAccount: Pubkey,
+    val mintWalletAccount: Pubkey,
 ) {
     /**
      * Creates an unminted [BridgedFungibleTokenProxy] with ATA destination to bridge to.
@@ -27,16 +27,16 @@ data class BridgingCoordinates(
     fun toBridgedFungibleTokenProxy(token: FungibleToken, bridgeAuthority: Party): BridgedFungibleTokenProxy {
         val tokenAccount = AssociatedTokenProgram
             .deriveAddress(
-                this.walletAccount.toPublicKey(),
+                this.mintWalletAccount.toPublicKey(),
                 tokenProgramId,
-                this.mint.toPublicKey(),
+                this.mintAccount.toPublicKey(),
             ).address()
             .toPubkey()
         return BridgedFungibleTokenProxy(
             amount = token.amount.quantity,
-            mint = this.mint,
+            mintAccount = this.mintAccount,
             mintAuthority = this.mintAuthority,
-            mintAccount = tokenAccount,
+            bridgeTokenAccount = tokenAccount,
             bridgeAuthority = bridgeAuthority,
         )
     }
