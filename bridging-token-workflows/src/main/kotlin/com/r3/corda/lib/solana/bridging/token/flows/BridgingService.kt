@@ -54,7 +54,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         configHandler.redeemWalletAccountToHolder.keys.forEach { redeemWalletAccount ->
             val subscribed = socket.onToken2022ByOwner(
                 redeemWalletAccount
-            ) { _, burnAccount, mint, amount ->
+            ) { _, redeemTokenAccount, mint, amount ->
                 // TODO perhaps move those to the flow so it can be tracked by the flow hospital
                 val tokenId = checkNotNull(configHandler.getTokenIdentifierByMint(mint)) {
                     "No token configured for mint $mint"
@@ -63,14 +63,14 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
                     "No Corda owner configured for Solana redemption account $redeemWalletAccount"
                 }
                 val cordaOwner = checkNotNull(appServiceHub.networkMapCache.getPeerByLegalName(cordaOwnerName)) {
-                    "No Corda owner found for Solana redemption account $burnAccount"
+                    "No Corda owner found for Solana redemption account $redeemTokenAccount"
                 }
                 onTokenReceivedCallback(
                     redeemWalletAccount,
                     cordaOwner,
                     amount,
                     tokenId,
-                    burnAccount
+                    redeemTokenAccount
                 )
             }
             if (!subscribed) {
@@ -94,21 +94,21 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
     }
 
     private fun onTokenReceivedCallback(
-        solanaOwner: Pubkey,
+        redeemWalletAccount: Pubkey,
         cordaOwner: Party,
         amount: Long,
         tokenId: String,
-        burnAccount: Pubkey,
+        redeemTokenAccount: Pubkey,
     ) {
-        logger.debug { "Web socket event for $solanaOwner amount $amount" }
+        logger.debug { "Web socket event for $redeemWalletAccount amount $amount" }
         if (amount == 0L) {
             return
         }
         val flowHandle = with(configHandler) {
             appServiceHub.startFlow(
                 RedeemFungibleTokenFlow(
-                    solanaOwner,
-                    burnAccount,
+                    redeemWalletAccount,
+                    redeemTokenAccount,
                     cordaOwner,
                     tokenId,
                     amount,
