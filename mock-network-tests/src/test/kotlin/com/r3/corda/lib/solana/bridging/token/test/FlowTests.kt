@@ -151,6 +151,7 @@ abstract class FlowTests {
                 Token2022.PROGRAM_ID.toPublicKey(),
                 tokenMint
             ).address()
+        // This will be ATA in real-life scenario. For the test we create it automatically.
         aliceRedemptionTokenAccount = testValidator.createTokenAccount(bridgeAuthoritySigner, tokenMint)
     }
 
@@ -165,6 +166,7 @@ abstract class FlowTests {
         val bridgingFlowsCordapp = TestCordapp.findCordapp("com.r3.corda.lib.solana.bridging.token.flows")
         val baConfig = mapOf(
             "participants" to mapOf(aliceIdentity.name.toString() to aliceSigner.account.base58()),
+            // In rea
             "redeemWalletAccountToHolder" to mapOf(
                 bridgeAuthoritySigner.account.base58() to aliceIdentity.name.toString()
             ),

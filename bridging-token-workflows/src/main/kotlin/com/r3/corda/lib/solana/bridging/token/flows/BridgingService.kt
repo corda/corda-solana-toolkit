@@ -65,13 +65,12 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
                 val cordaOwner = checkNotNull(appServiceHub.networkMapCache.getPeerByLegalName(cordaOwnerName)) {
                     "No Corda owner found for Solana redemption account $redeemTokenAccount"
                 }
-                onTokenReceivedCallback(
-                    redeemWalletAccount,
-                    cordaOwner,
-                    amount,
+                val redemptionCoordinates = configHandler.getRedemptionCoordinates(
                     tokenId,
-                    redeemTokenAccount
+                    redeemWalletAccount,
+                    redeemTokenAccount,
                 )
+                onTokenReceivedCallback(cordaOwner, amount, redemptionCoordinates)
             }
             if (!subscribed) {
                 logger.error(
@@ -81,11 +80,6 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         }
     }
 
-    fun getRedemptionCoordinates(
-        tokenTypeId: String,
-        redeemWalletAccount: Pubkey,
-    ) = configHandler.getRedemptionCoordinates(tokenTypeId, redeemWalletAccount)
-
     fun getBridgingCoordinates(token: StateAndRef<FungibleToken>, originalHolder: Party) =
         configHandler.getBridgingCoordinates(token, originalHolder)
 
@@ -94,23 +88,19 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
     }
 
     private fun onTokenReceivedCallback(
-        redeemWalletAccount: Pubkey,
         cordaOwner: Party,
         amount: Long,
-        tokenId: String,
-        redeemTokenAccount: Pubkey,
+        redemptionCoordinates: RedemptionCoordinates,
     ) {
-        logger.debug { "Web socket event for $redeemWalletAccount amount $amount" }
+        logger.debug { "Web socket event for redemption coordinates: $redemptionCoordinates, amount $amount" }
         if (amount == 0L) {
             return
         }
         val flowHandle = with(configHandler) {
             appServiceHub.startFlow(
                 RedeemFungibleTokenFlow(
-                    redeemWalletAccount,
-                    redeemTokenAccount,
+                    redemptionCoordinates,
                     cordaOwner,
-                    tokenId,
                     amount,
                     solanaNotary,
                     generalNotaryName,

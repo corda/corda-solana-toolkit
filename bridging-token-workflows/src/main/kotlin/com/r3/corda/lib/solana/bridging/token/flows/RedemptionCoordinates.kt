@@ -9,20 +9,22 @@ import net.corda.solana.sdk.instruction.Pubkey
  *
  * @property mintAccount Token **mint** public key on Solana (the asset definition).
  * @property redeemWalletAccount Public key that will own the redemption wallet on Solana
+ * @property redeemTokenAccount Token **token account** public key on Solana on which the tokens will be burnt
+ * @property tokenId The identifier of the Corda token that is being redeemed
  * and will be able to burn them during the redemption.
  */
 data class RedemptionCoordinates(
     val mintAccount: Pubkey,
     val redeemWalletAccount: Pubkey,
+    val redeemTokenAccount: Pubkey,
+    val tokenId: String,
 ) {
     /**
      * Creates a [FungibleTokenBurnReceipt].
-     * @param redeemTokenAccount the Solana wallet to which tokens are sent to be burnt/redeemed
      * @param amount the amount of tokens to redeem
      * @param bridgeAuthority the Corda party operating the bridge
      * */
     fun toRedeemReceiptState(
-        redeemTokenAccount: Pubkey,
         amount: Long,
         bridgeAuthority: Party,
     ) = FungibleTokenBurnReceipt(

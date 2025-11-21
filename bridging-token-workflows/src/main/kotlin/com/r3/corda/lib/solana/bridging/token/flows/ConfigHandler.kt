@@ -11,7 +11,7 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.AppServiceHub
 import net.corda.solana.notary.common.Signer
 import net.corda.solana.sdk.instruction.Pubkey
-import java.util.*
+import java.util.UUID
 import kotlin.io.path.Path
 
 class ConfigHandler(appServiceHub: AppServiceHub) {
@@ -121,10 +121,11 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
     fun getRedemptionCoordinates(
         tokenTypeId: String,
         redeemWalletAccount: Pubkey,
+        redeemTokenAccount: Pubkey,
     ): RedemptionCoordinates {
         val mintAccount = checkNotNull(tokenIdToMintAccount[tokenTypeId]) {
             "No mint account mapping found for token type id $tokenTypeId"
         }
-        return RedemptionCoordinates(mintAccount, redeemWalletAccount)
+        return RedemptionCoordinates(mintAccount, redeemWalletAccount, redeemTokenAccount, tokenTypeId)
     }
 }
