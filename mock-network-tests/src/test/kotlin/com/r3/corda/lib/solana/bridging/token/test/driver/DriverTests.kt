@@ -10,7 +10,6 @@ import net.corda.core.contracts.Amount
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.NetworkParameters
-import net.corda.core.node.NotaryInfo
 import net.corda.core.utilities.getOrThrow
 import net.corda.solana.notary.common.Signer
 import net.corda.solana.sdk.internal.Token2022
@@ -26,11 +25,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
-import java.sql.DriverManager
 import java.time.Duration
 import java.time.Instant
-import java.util.UUID
-import kotlin.use
 
 class DriverTests {
     private lateinit var msftDescriptor: TokenTypeDescriptor
@@ -145,8 +141,6 @@ class DriverTests {
             val page = node.rpc.vaultQueryByCriteria(criteria, FungibleToken::class.java)
             val balanceBefore: Amount<TokenType> = rowsToAmount(tokenType, page)
             assertEquals(100000, balanceBefore.quantity)
-
-
         }
     }
 }
