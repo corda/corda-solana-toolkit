@@ -33,6 +33,7 @@ import net.corda.solana.sdk.instruction.Pubkey
 @StartableByService
 @InitiatingFlow
 class RedeemFungibleTokenFlow(
+    val redeemWalletAccount: Pubkey,
     val redeemTokenAccount: Pubkey,
     val redemptionHolder: Party,
     val tokenTypeId: String,
@@ -44,7 +45,7 @@ class RedeemFungibleTokenFlow(
     @Suspendable
     override fun call(): SignedTransaction {
         val bridgingService = serviceHub.cordaService(BridgingService::class.java)
-        val redemptionCoordinates = bridgingService.getRedemptionCoordinates(tokenTypeId)
+        val redemptionCoordinates = bridgingService.getRedemptionCoordinates(tokenTypeId, redeemWalletAccount)
         val redeemStateAndRef = subFlow(
             BurnTokensOnSolanaFlow(
                 redemptionCoordinates,

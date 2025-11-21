@@ -11,7 +11,7 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.AppServiceHub
 import net.corda.solana.notary.common.Signer
 import net.corda.solana.sdk.instruction.Pubkey
-import java.util.UUID
+import java.util.*
 import kotlin.io.path.Path
 
 class ConfigHandler(appServiceHub: AppServiceHub) {
@@ -25,8 +25,7 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
     val bridgeAuthority: PartyAndCertificate
     val solanaWsUrl: String
     val solanaRpcUrl: String
-    val bridgeRedemptionAddress: Pubkey
-    val redemptionHolders: Map<Pubkey, CordaX500Name>
+    val redeemWalletAccountToHolder: Map<Pubkey, CordaX500Name>
     val bridgeAuthoritySigner: Signer
 
     init {
@@ -35,14 +34,17 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
         tokenIdToMintAccount = config.getMap("mints", { it }, Pubkey::fromBase58)
         mintAccountToTokenId = tokenIdToMintAccount.entries.associate { (k, v) -> v to k }
         mintAuthorities = config.getMap("mintAuthorities", { it }, Pubkey::fromBase58)
-        redemptionHolders = config.getMap("redemptionHolders", Pubkey::fromBase58, CordaX500Name::parse)
+        redeemWalletAccountToHolder = config.getMap(
+            "redeemWalletAccountToHolder",
+            Pubkey::fromBase58,
+            CordaX500Name::parse,
+        )
         bridgeAuthority = appServiceHub.myInfo.legalIdentitiesAndCerts.first()
         lockingIdentity = getLockingIdentity(config, appServiceHub)
         solanaNotary = getNotary("solanaNotaryName", config, appServiceHub)
         generalNotaryName = getNotary("generalNotaryName", config, appServiceHub)
         solanaWsUrl = config.getString("solanaWsUrl")
         solanaRpcUrl = config.getString("solanaRpcUrl")
-        bridgeRedemptionAddress = Pubkey.fromBase58(config.getString("bridgeRedemptionAddress"))
         bridgeAuthoritySigner = Signer.fromFile(Path(config.getString("bridgeAuthorityWalletFile")))
     }
 
@@ -118,10 +120,11 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
 
     fun getRedemptionCoordinates(
         tokenTypeId: String,
+        redeemWalletAccount: Pubkey,
     ): RedemptionCoordinates {
         val mintAccount = checkNotNull(tokenIdToMintAccount[tokenTypeId]) {
             "No mint account mapping found for token type id $tokenTypeId"
         }
-        return RedemptionCoordinates(mintAccount, bridgeRedemptionAddress)
+        return RedemptionCoordinates(mintAccount, redeemWalletAccount)
     }
 }

@@ -51,35 +51,40 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         listenForFungibleTokens(appServiceHub)
 
         // Redemption initialization
-        val subscribed = socket.onToken2022ByOwner(
-            configHandler.bridgeRedemptionAddress
-        ) { _, burnAccount, mint, amount ->
-            // TODO perhaps move those to the flow so it can be tracked by the flow hospital
-            val tokenId = checkNotNull(configHandler.getTokenIdentifierByMint(mint)) {
-                "No token configured for mint $mint"
+        configHandler.redeemWalletAccountToHolder.keys.forEach { redeemWalletAccount ->
+            val subscribed = socket.onToken2022ByOwner(
+                redeemWalletAccount
+            ) { _, burnAccount, mint, amount ->
+                // TODO perhaps move those to the flow so it can be tracked by the flow hospital
+                val tokenId = checkNotNull(configHandler.getTokenIdentifierByMint(mint)) {
+                    "No token configured for mint $mint"
+                }
+                val cordaOwnerName = checkNotNull(configHandler.redeemWalletAccountToHolder[redeemWalletAccount]) {
+                    "No Corda owner configured for Solana redemption account $redeemWalletAccount"
+                }
+                val cordaOwner = checkNotNull(appServiceHub.networkMapCache.getPeerByLegalName(cordaOwnerName)) {
+                    "No Corda owner found for Solana redemption account $burnAccount"
+                }
+                onTokenReceivedCallback(
+                    redeemWalletAccount,
+                    cordaOwner,
+                    amount,
+                    tokenId,
+                    burnAccount
+                )
             }
-            val cordaOwnerName = checkNotNull(configHandler.redemptionHolders[burnAccount]) {
-                "No Corda owner configured for Solana redemption account $burnAccount"
+            if (!subscribed) {
+                logger.error(
+                    "Failed to subscribe to ${socket.wsUrl} for wallet $redeemWalletAccount"
+                )
             }
-            val cordaOwner = checkNotNull(appServiceHub.networkMapCache.getPeerByLegalName(cordaOwnerName)) {
-                "No Corda owner found for Solana redemption account $burnAccount"
-            }
-            onTokenReceivedCallback(
-                configHandler.bridgeRedemptionAddress,
-                cordaOwner,
-                amount,
-                tokenId,
-                burnAccount
-            )
-        }
-        if (!subscribed) {
-            logger.error(
-                "Failed to subscribe to ${socket.wsUrl} for wallet ${configHandler.bridgeRedemptionAddress}"
-            )
         }
     }
 
-    fun getRedemptionCoordinates(tokenTypeId: String) = configHandler.getRedemptionCoordinates(tokenTypeId)
+    fun getRedemptionCoordinates(
+        tokenTypeId: String,
+        redeemWalletAccount: Pubkey,
+    ) = configHandler.getRedemptionCoordinates(tokenTypeId, redeemWalletAccount)
 
     fun getBridgingCoordinates(token: StateAndRef<FungibleToken>, originalHolder: Party) =
         configHandler.getBridgingCoordinates(token, originalHolder)
@@ -102,6 +107,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         val flowHandle = with(configHandler) {
             appServiceHub.startFlow(
                 RedeemFungibleTokenFlow(
+                    solanaOwner,
                     burnAccount,
                     cordaOwner,
                     tokenId,

@@ -165,8 +165,9 @@ abstract class FlowTests {
         val bridgingFlowsCordapp = TestCordapp.findCordapp("com.r3.corda.lib.solana.bridging.token.flows")
         val baConfig = mapOf(
             "participants" to mapOf(aliceIdentity.name.toString() to aliceSigner.account.base58()),
-            "redemptionHolders" to mapOf(aliceRedemptionTokenAccount.base58() to aliceIdentity.name.toString()),
-            "bridgeRedemptionAddress" to bridgeAuthoritySigner.account.base58(),
+            "redeemWalletAccountToHolder" to mapOf(
+                bridgeAuthoritySigner.account.base58() to aliceIdentity.name.toString()
+            ),
             "mints" to mapOf(msftDescriptor.tokenTypeIdentifier to tokenMint.base58()),
             "mintAuthorities" to mapOf(msftDescriptor.tokenTypeIdentifier to mintAuthoritySigner.account.base58()),
             "lockingIdentityLabel" to UUID.randomUUID().toString(),
