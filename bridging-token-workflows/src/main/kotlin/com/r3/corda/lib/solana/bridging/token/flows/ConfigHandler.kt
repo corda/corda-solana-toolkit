@@ -25,7 +25,7 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
     val bridgeAuthority: PartyAndCertificate
     val solanaWsUrl: String
     val solanaRpcUrl: String
-    val redeemWalletAccountToHolder: Map<Pubkey, CordaX500Name>
+    val redemptionWalletAccountToHolder: Map<Pubkey, CordaX500Name>
     val bridgeAuthoritySigner: Signer
 
     init {
@@ -34,8 +34,8 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
         tokenIdToMintAccount = config.getMap("mints", { it }, Pubkey::fromBase58)
         mintAccountToTokenId = tokenIdToMintAccount.entries.associate { (k, v) -> v to k }
         mintAuthorities = config.getMap("mintAuthorities", { it }, Pubkey::fromBase58)
-        redeemWalletAccountToHolder = config.getMap(
-            "redeemWalletAccountToHolder",
+        redemptionWalletAccountToHolder = config.getMap(
+            "redemptionWalletAccountToHolder",
             Pubkey::fromBase58,
             CordaX500Name::parse,
         )
@@ -120,12 +120,12 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
 
     fun getRedemptionCoordinates(
         tokenTypeId: String,
-        redeemWalletAccount: Pubkey,
-        redeemTokenAccount: Pubkey,
+        redemptionWalletAccount: Pubkey,
+        redemptionTokenAccount: Pubkey,
     ): RedemptionCoordinates {
         val mintAccount = checkNotNull(tokenIdToMintAccount[tokenTypeId]) {
             "No mint account mapping found for token type id $tokenTypeId"
         }
-        return RedemptionCoordinates(mintAccount, redeemWalletAccount, redeemTokenAccount, tokenTypeId)
+        return RedemptionCoordinates(mintAccount, redemptionWalletAccount, redemptionTokenAccount, tokenTypeId)
     }
 }

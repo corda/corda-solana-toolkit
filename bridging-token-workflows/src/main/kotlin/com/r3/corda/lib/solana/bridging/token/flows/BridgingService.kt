@@ -51,30 +51,32 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         listenForFungibleTokens(appServiceHub)
 
         // Redemption initialization
-        configHandler.redeemWalletAccountToHolder.keys.forEach { redeemWalletAccount ->
+        configHandler.redemptionWalletAccountToHolder.keys.forEach { redemptionWalletAccount ->
             val subscribed = socket.onToken2022ByOwner(
-                redeemWalletAccount
-            ) { _, redeemTokenAccount, mint, amount ->
+                redemptionWalletAccount
+            ) { _, redemptionTokenAccount, mint, amount ->
                 // TODO perhaps move those to the flow so it can be tracked by the flow hospital
                 val tokenId = checkNotNull(configHandler.getTokenIdentifierByMint(mint)) {
                     "No token configured for mint $mint"
                 }
-                val cordaOwnerName = checkNotNull(configHandler.redeemWalletAccountToHolder[redeemWalletAccount]) {
-                    "No Corda owner configured for Solana redemption account $redeemWalletAccount"
+                val cordaOwnerName = checkNotNull(
+                    configHandler.redemptionWalletAccountToHolder[redemptionWalletAccount]
+                ) {
+                    "No Corda owner configured for Solana redemption account $redemptionWalletAccount"
                 }
                 val cordaOwner = checkNotNull(appServiceHub.networkMapCache.getPeerByLegalName(cordaOwnerName)) {
-                    "No Corda owner found for Solana redemption account $redeemTokenAccount"
+                    "No Corda owner found for Solana redemption account $redemptionTokenAccount"
                 }
                 val redemptionCoordinates = configHandler.getRedemptionCoordinates(
                     tokenId,
-                    redeemWalletAccount,
-                    redeemTokenAccount,
+                    redemptionWalletAccount,
+                    redemptionTokenAccount,
                 )
                 onTokenReceivedCallback(cordaOwner, amount, redemptionCoordinates)
             }
             if (!subscribed) {
                 logger.error(
-                    "Failed to subscribe to ${socket.wsUrl} for wallet $redeemWalletAccount"
+                    "Failed to subscribe to ${socket.wsUrl} for wallet $redemptionWalletAccount"
                 )
             }
         }

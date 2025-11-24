@@ -20,8 +20,8 @@ class BurnTokensOnSolanaFlow(
         val instruction = with(redemptionCoordinates) {
             Token2022.burn(
                 mint = mintAccount,
-                owner = redeemWalletAccount,
-                source = redeemTokenAccount,
+                owner = redemptionWalletAccount,
+                source = redemptionTokenAccount,
                 amount = amount,
             )
         }
