@@ -46,7 +46,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNotNull
 import org.junit.jupiter.api.assertNull
 import org.junit.jupiter.api.io.TempDir
-import java.lang.IllegalStateException
 import java.math.BigDecimal
 import java.nio.file.Path
 import java.util.Base64
@@ -180,13 +179,15 @@ abstract class FlowTests {
             "redemptionWalletAccountToHolder" to mapOf(
                 bridgeAuthoritySigner.account.base58() to aliceIdentity.name.toString()
             ),
-            "mints" to mapOf(
-                msftDescriptor.tokenTypeIdentifier to msftTokenMint.base58(),
-                aaplDescriptor.tokenTypeIdentifier to aaplTokenMint.base58(),
-            ),
-            "mintAuthorities" to mapOf(
-                msftDescriptor.tokenTypeIdentifier to mintAuthoritySigner.account.base58(),
-                aaplDescriptor.tokenTypeIdentifier to mintAuthoritySigner.account.base58(),
+            "mintsWithAuthorities" to mapOf(
+                msftDescriptor.tokenTypeIdentifier to mapOf(
+                    "tokenMint" to msftTokenMint.base58(),
+                    "mintAuthority" to mintAuthoritySigner.account.base58(),
+                ),
+                aaplDescriptor.tokenTypeIdentifier to mapOf(
+                    "tokenMint" to aaplTokenMint.base58(),
+                    "mintAuthority" to mintAuthoritySigner.account.base58()
+                ),
             ),
             "lockingIdentityLabel" to UUID.randomUUID().toString(),
             "solanaNotaryName" to solanaNotaryName.toString(),
@@ -203,14 +204,8 @@ abstract class FlowTests {
                     TestCordapp.findCordapp("com.r3.corda.lib.solana.bridging.token.testing"),
                 ),
                 notarySpecs = listOf(
-                    MockNetworkNotarySpec(
-                        generalNotaryName,
-                        notaryConfig = createNotaryConfig(),
-                    ),
-                    MockNetworkNotarySpec(
-                        solanaNotaryName,
-                        notaryConfig = createSolanaNotaryConfig(),
-                    ),
+                    MockNetworkNotarySpec(generalNotaryName, notaryConfig = createNotaryConfig()),
+                    MockNetworkNotarySpec(solanaNotaryName, notaryConfig = createSolanaNotaryConfig()),
                 ),
                 networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
                 threadPerNode = true,

@@ -40,7 +40,6 @@ class RedeemFungibleTokenFlow(
 ) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
-        val bridgingService = serviceHub.cordaService(BridgingService::class.java)
         val redeemStateAndRef = subFlow(
             BurnTokensOnSolanaFlow(
                 redemptionCoordinates,

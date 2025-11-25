@@ -55,6 +55,9 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
             val subscribed = socket.onToken2022ByOwner(
                 redemptionWalletAccount
             ) { _, redemptionTokenAccount, mint, amount ->
+                if (amount == 0L) {
+                    return@onToken2022ByOwner
+                }
                 // TODO perhaps move those to the flow so it can be tracked by the flow hospital
                 val tokenId = checkNotNull(configHandler.getTokenIdentifierByMint(mint)) {
                     "No token configured for mint $mint"
@@ -95,9 +98,6 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         redemptionCoordinates: RedemptionCoordinates,
     ) {
         logger.debug { "Web socket event for redemption coordinates: $redemptionCoordinates, amount $amount" }
-        if (amount == 0L) {
-            return
-        }
         val flowHandle = with(configHandler) {
             appServiceHub.startFlow(
                 RedeemFungibleTokenFlow(
