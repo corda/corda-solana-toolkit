@@ -262,7 +262,6 @@ abstract class FlowTests {
         )
 
     @Test
-    @Suppress("LongMethod")
     fun e2eBridgeAndRedemption() {
         val msftTokenType = issuingBank.issue(msftDescriptor, ISSUING_QUANTITY, generalNotaryName)
         val aaplTokenType = issuingBank.issue(aaplDescriptor, ISSUING_QUANTITY, generalNotaryName)
@@ -272,113 +271,70 @@ abstract class FlowTests {
 
         move(issuingBank, aliceParty, ISSUING_QUANTITY, msftTokenType).get()
         move(issuingBank, aliceParty, ISSUING_QUANTITY, aaplTokenType).get()
-        move(alice, bridgeAuthorityParty, MOVE_QUANTITY, msftTokenType).get()
-        move(alice, bridgeAuthorityParty, MOVE_QUANTITY, aaplTokenType).get()
 
+        // Bridge phase
+        bridgeAndCheck(msftTokenType, aliceMsftBridgeTokenAccount, msftTokenMint)
+        bridgeAndCheck(aaplTokenType, aliceAaplBridgeTokenAccount, aaplTokenMint)
+        // Redemption phase
+        redeemAndCheck(msftTokenType, aliceMsftBridgeTokenAccount, aliceMsftRedemptionTokenAccount)
+        redeemAndCheck(aaplTokenType, aliceAaplBridgeTokenAccount, aliceAaplRedemptionTokenAccount)
+    }
+
+    private fun bridgeAndCheck(tokenType: TokenType, tokenAccount: PublicKey, tokenMint: PublicKey) {
+        move(alice, bridgeAuthorityParty, MOVE_QUANTITY, tokenType).get()
         assertEquals(
             ISSUING_QUANTITY - MOVE_QUANTITY,
-            alice.myTokenBalance(issuingBankParty, msftTokenType),
-            "Alice transferred some of MSFT shares",
+            alice.myTokenBalance(issuingBankParty, tokenType),
+            "Alice transferred some of ${tokenType.tokenIdentifier} shares",
         )
-
-        assertEquals(
-            ISSUING_QUANTITY - MOVE_QUANTITY,
-            alice.myTokenBalance(issuingBankParty, aaplTokenType),
-            "Alice transferred some of AAPL shares",
-        )
-
-        // We need to wait for the vault listener to process the newly received MSFT token
+        // We need to wait for the vault listener to process the newly received token
         eventually(duration = 5.seconds) {
             assertEquals(
                 BigDecimal.ZERO,
-                bridgeAuthority.myTokenBalance(issuingBankParty, msftTokenType),
-                "Bridge Authority has no longer MSFT shares, they are under Locking Identity"
-            )
-            assertEquals(
-                BigDecimal.ZERO,
-                bridgeAuthority.myTokenBalance(issuingBankParty, aaplTokenType),
-                "Bridge Authority has no longer AAPL shares, they are under Locking Identity"
+                bridgeAuthority.myTokenBalance(issuingBankParty, tokenType),
+                "Bridge Authority has no longer ${tokenType.tokenIdentifier} shares, they are under Locking Identity"
             )
         }
-
-        val msftFungibleToken = bridgeAuthority.getAllFungibleTokens(issuingBankParty, msftTokenType).singleOrNull()
-        val aaplFungibleToken = bridgeAuthority.getAllFungibleTokens(issuingBankParty, aaplTokenType).singleOrNull()
-        assertNotNull(msftFungibleToken, "There should be single MSFT fungible token in Bridge Authority vault")
-        assertNotNull(aaplFungibleToken, "There should be single AAPL fungible token in Bridge Authority vault")
+        val fungibleToken = bridgeAuthority.getAllFungibleTokens(issuingBankParty, tokenType).singleOrNull()
+        assertNotNull(
+            fungibleToken,
+            "There should be single ${tokenType.tokenIdentifier} fungible token in Bridge Authority vault",
+        )
         assertTrue(
-            msftFungibleToken.holder !in setOf(aliceParty, bridgeAuthorityParty),
-            "Bridge Authority moved MSFT under Lock Identity (CI) ownership as neither BA nor Alice holds the token",
+            fungibleToken.holder !in setOf(aliceParty, bridgeAuthorityParty),
+            "Bridge Authority moved ${tokenType.tokenIdentifier} under Lock Identity ownership",
         ) // We don't know Confidential Identity upfront, so indirect check know participants do not own the token
-        assertTrue(
-            aaplFungibleToken.holder !in setOf(aliceParty, bridgeAuthorityParty),
-            "Bridge Authority moved AAPL under Lock Identity (CI) ownership as neither BA nor Alice holds the token",
-        )
         assertEquals(
             MOVE_QUANTITY,
-            msftFungibleToken.amount.toDecimal(),
-            "Lock Identity received expected number of MSFT shares",
+            fungibleToken.toDecimal(),
+            "Lock Identity received expected number of ${tokenType.tokenIdentifier} shares",
         )
-        assertEquals(
-            MOVE_QUANTITY,
-            aaplFungibleToken.amount.toDecimal(),
-            "Lock Identity received expected number of AAPL shares",
-        )
-
-        val msftToken: StateAndRef<FungibleToken>? = bridgeAuthority.queryStates<FungibleToken>().firstOrNull {
-            it.state.data.amount.token.tokenType == msftTokenType
+        val token: StateAndRef<FungibleToken>? = bridgeAuthority.queryStates<FungibleToken>().firstOrNull {
+            it.state.data.amount.token.tokenType == tokenType
         }
-        assertNotNull(msftToken)
-        val aaplToken: StateAndRef<FungibleToken>? = bridgeAuthority.queryStates<FungibleToken>().firstOrNull {
-            it.state.data.amount.token.tokenType == aaplTokenType
-        }
-        assertNotNull(aaplToken)
-
-        val msftAccountInfo = getAccountInfo(aliceMsftBridgeTokenAccount)
-        assertAtaAccount(msftAccountInfo, msftTokenMint, aliceSigner.account)
-        val aaplAccountInfo = getAccountInfo(aliceAaplBridgeTokenAccount)
-        assertAtaAccount(aaplAccountInfo, aaplTokenMint, aliceSigner.account)
-
+        assertNotNull(token)
+        val accountInfo = getAccountInfo(tokenAccount)
+        assertAtaAccount(accountInfo, tokenMint, aliceSigner.account)
         // SPL Token RPC returns decimal strings with trailing zeros trimmed,
         // BigDecimal.equals is scale-sensitive (1.0 != 1.00), so we compare numeric value instead.
         eventually(duration = 5.seconds) {
-            assertThat(getSolanaTokenBalance(aliceMsftBridgeTokenAccount))
-                .describedAs("Solana MSFT token amount numerically equals Corda bridged amount")
+            assertThat(getSolanaTokenBalance(tokenAccount))
+                .describedAs("Solana ${tokenType.tokenIdentifier} token amount numerically equals Corda bridged amount")
                 .isEqualByComparingTo(MOVE_QUANTITY)
         }
-        eventually(duration = 5.seconds) {
-            assertThat(getSolanaTokenBalance(aliceAaplBridgeTokenAccount))
-                .describedAs("Solana AAPL token amount numerically equals Corda bridged amount")
-                .isEqualByComparingTo(MOVE_QUANTITY)
-        }
+    }
 
-        // Simulate redemption transfer for Alice MSFT account on Solana
-        transfer(aliceSigner, aliceMsftBridgeTokenAccount, aliceMsftRedemptionTokenAccount, MOVE_QUANTITY.toRawAmount())
-        // We need to wait for the websocket listener to process the newly received event
-        eventually(duration = 10.seconds) {
-            assertEquals(
-                ISSUING_QUANTITY,
-                alice.myTokenBalance(issuingBankParty, msftTokenType),
-                "Alice received redeemed MSFT shares back",
-            )
-        }
-        val msftFungibleTokens = bridgeAuthority.getAllFungibleTokens(issuingBankParty, msftTokenType)
-        assertTrue(msftFungibleTokens.isEmpty(), "No  MSFT shares left in Bridge Authority vault")
-
-        transfer(
-            aliceSigner,
-            aliceAaplBridgeTokenAccount,
-            aliceAaplRedemptionTokenAccount,
-            MOVE_QUANTITY.toRawAmount(),
-        )
+    private fun redeemAndCheck(tokenType: TokenType, fromTokenAccount: PublicKey, toTokenAccount: PublicKey) {
+        transfer(aliceSigner, fromTokenAccount, toTokenAccount, MOVE_QUANTITY.toRawAmount())
         eventually(duration = 5.seconds) {
             assertEquals(
                 ISSUING_QUANTITY,
-                alice.myTokenBalance(issuingBankParty, aaplTokenType),
-                "Alice received redeemed AAPL shares back",
+                alice.myTokenBalance(issuingBankParty, tokenType),
+                "Alice received redeemed ${tokenType.tokenIdentifier} shares back",
             )
         }
-        val aaplFungibleTokens = bridgeAuthority.getAllFungibleTokens(issuingBankParty, aaplTokenType)
-        assertTrue(aaplFungibleTokens.isEmpty(), "No  AAPL shares left in Bridge Authority vault")
+        val fungibleTokens = bridgeAuthority.getAllFungibleTokens(issuingBankParty, tokenType)
+        assertTrue(fungibleTokens.isEmpty(), "No  ${tokenType.tokenIdentifier} shares left in Bridge Authority vault")
     }
 
     private inline fun <reified T : ContractState> StartedMockNode.queryStates(): List<StateAndRef<T>> {
@@ -428,6 +384,8 @@ abstract class FlowTests {
     private fun BigDecimal.toRawAmount(): Long {
         return (this * BigDecimal(10L).pow(TOKEN_DECIMALS)).longValueExact()
     }
+
+    private fun FungibleToken.toDecimal() = this.amount.toDecimal()
 
     private fun getSolanaTokenBalance(publicKey: PublicKey): BigDecimal {
         return testValidator
