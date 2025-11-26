@@ -51,37 +51,37 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         listenForFungibleTokens(appServiceHub)
 
         // Redemption initialization
-        configHandler.redemptionWalletAccountToHolder.keys.forEach { redemptionWalletAccount ->
-            val subscribed = socket.onToken2022ByOwner(
-                redemptionWalletAccount
-            ) { _, redemptionTokenAccount, mint, amount ->
-                if (amount == 0L) {
-                    return@onToken2022ByOwner
-                }
-                // TODO perhaps move those to the flow so it can be tracked by the flow hospital
-                val tokenId = checkNotNull(configHandler.getTokenIdentifierByMint(mint)) {
-                    "No token configured for mint $mint"
-                }
-                val cordaOwnerName = checkNotNull(
-                    configHandler.redemptionWalletAccountToHolder[redemptionWalletAccount]
-                ) {
-                    "No Corda owner configured for Solana redemption account $redemptionWalletAccount"
-                }
-                val cordaOwner = checkNotNull(appServiceHub.networkMapCache.getPeerByLegalName(cordaOwnerName)) {
-                    "No Corda owner found for Solana redemption account $redemptionTokenAccount"
-                }
-                val redemptionCoordinates = configHandler.getRedemptionCoordinates(
-                    tokenId,
-                    redemptionWalletAccount,
-                    redemptionTokenAccount,
-                )
+        val subscribed = socket.onToken2022ByOwner(
+            configHandler.redemptionWalletAccountToHolder.keys
+        ) redemptionCallback@{ redemptionWalletAccount, redemptionTokenAccount, mint, amount ->
+            if (amount == 0L) {
+                return@redemptionCallback
+            }
+            // TODO perhaps move those to the flow so it can be tracked by the flow hospital
+            val tokenId = checkNotNull(configHandler.getTokenIdentifierByMint(mint)) {
+                "No token configured for mint $mint"
+            }
+            val cordaOwnerName = checkNotNull(
+                configHandler.redemptionWalletAccountToHolder[redemptionWalletAccount]
+            ) {
+                "No Corda owner configured for Solana redemption account $redemptionWalletAccount"
+            }
+            val cordaOwner = checkNotNull(appServiceHub.networkMapCache.getPeerByLegalName(cordaOwnerName)) {
+                "No Corda owner found for Solana redemption account $redemptionTokenAccount"
+            }
+            val redemptionCoordinates = configHandler.getRedemptionCoordinates(
+                tokenId,
+                redemptionWalletAccount,
+                redemptionTokenAccount,
+            )
+            executor.submit {
                 onTokenReceivedCallback(cordaOwner, amount, redemptionCoordinates)
             }
-            if (!subscribed) {
-                logger.error(
-                    "Failed to subscribe to ${socket.wsUrl} for wallet $redemptionWalletAccount"
-                )
-            }
+        }
+        if (!subscribed) {
+            logger.error(
+                "Failed to subscribe to ${socket.wsUrl}"
+            )
         }
     }
 

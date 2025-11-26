@@ -6,7 +6,9 @@ import com.r3.corda.lib.tokens.contracts.internal.schemas.PersistentFungibleToke
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.contracts.types.TokenType
 import com.r3.corda.lib.tokens.workflows.flows.rpc.MoveFungibleTokens
+import com.r3.corda.lib.tokens.workflows.types.PartyAndAmount
 import net.corda.core.contracts.Amount
+import net.corda.core.crypto.toStringShort
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.MoveNotaryFlow
@@ -15,6 +17,7 @@ import net.corda.core.identity.Party
 import net.corda.core.node.services.vault.Builder.equal
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.builder
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.toNonEmptySet
 
@@ -71,7 +74,16 @@ class RedeemFungibleTokenFlow(
                 unlockLedgerTx.outRefsOfType<FungibleToken>().map { it.ref }.toNonEmptySet()
             )
 
-        return subFlow(MoveFungibleTokens(moveAmount, redemptionHolder))
+        return subFlow(
+            MoveFungibleTokens(
+                partyAndAmount = PartyAndAmount(redemptionHolder, moveAmount),
+                queryCriteria = QueryCriteria.VaultCustomQueryCriteria(
+                    builder {
+                        PersistentFungibleToken::owningKeyHash.equal(ourIdentity.owningKey.toStringShort())
+                    }
+                )
+            )
+        )
     }
 
     private fun findTokenTypeOfFungibleTokenBy(tokenTypeIdentifier: String): TokenType {
