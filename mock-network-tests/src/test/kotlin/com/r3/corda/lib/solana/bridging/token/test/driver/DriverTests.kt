@@ -4,6 +4,7 @@ import com.lmax.solana4j.api.PublicKey
 import com.lmax.solana4j.client.api.AccountInfo
 import com.lmax.solana4j.encoding.SolanaEncoding
 import com.lmax.solana4j.programs.AssociatedTokenProgram
+import com.lmax.solana4j.programs.Token2022Program
 import com.r3.corda.lib.solana.bridging.token.flows.toPublicKey
 import com.r3.corda.lib.solana.bridging.token.flows.tokenProgramId
 import com.r3.corda.lib.solana.bridging.token.test.FlowTests.Companion.MSFT_TICKER
@@ -27,7 +28,9 @@ import net.corda.core.node.NetworkParameters
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.solana.notary.common.Signer
+import net.corda.solana.notary.common.rpc.DefaultRpcParams
 import net.corda.solana.notary.common.rpc.checkResponse
+import net.corda.solana.notary.common.rpc.sendAndConfirm
 import net.corda.solana.sdk.internal.Token2022
 import net.corda.testing.common.internal.eventually
 import net.corda.testing.core.ALICE_NAME
@@ -41,6 +44,7 @@ import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.User
 import net.corda.testing.solana.SolanaTestValidator
 import net.corda.testing.solana.randomKeypairFile
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -80,8 +84,6 @@ class DriverTests {
     private val generalNotaryName = CordaX500Name("Notary Service", "Zurich", "CH")
     val bridgingContractsCordapp = TestCordapp.findCordapp("com.r3.corda.lib.solana.bridging.token.contracts")
 
-    private val solanaNotaryIdentity = TestIdentity(CordaX500Name("Solana Notary Service", "London", "GB"))
-    private val generalNotaryIdentity = TestIdentity(CordaX500Name("Notary Service", "Zurich", "CH"))
     private lateinit var solanaNotaryKeyFile: Path
     private lateinit var testValidator: SolanaTestValidator
     private lateinit var solanaNotaryKey: Signer
@@ -155,26 +157,33 @@ class DriverTests {
         driver(
             DriverParameters(
                 inMemoryDB = false,
-                startNodesInProcess = true,
+                startNodesInProcess = false,
                 cordappsForAllNodes = listOf(
                     TestCordapp.findCordapp("com.r3.corda.lib.tokens.contracts"),
                     TestCordapp.findCordapp("com.r3.corda.lib.tokens.workflows"),
                     TestCordapp.findCordapp("com.r3.corda.lib.solana.bridging.token.testing"),
+                    bridgingContractsCordapp // this is needed for Alice to deserilize FungibleTokenBurnReceipt
                 ),
                 notarySpecs = listOf(
-                    NotarySpec(generalNotaryIdentity.name, validating = false),
+                    NotarySpec(generalNotaryName, validating = false, startInProcess = false),
                     NotarySpec(
-                        solanaNotaryIdentity.name,
+                        solanaNotaryName,
                         false,
                         customConfig = mapOf<String, Any>(
-                            "notary.validating" to false,
-                            "notary.notaryLegalIdentity" to "$solanaNotaryName",
-                            "notary.solana.rpcUrl" to "$SolanaTestValidator.RPC_URL",
-                            "notary.solana.notaryKeypairFile" to "$solanaNotaryKeyFile",
-                            "notary.solana.custodiedKeysDir" to "$custodiedKeysDir",
-                            "notary.solana.programWhitelist" to "[\"${Token2022.PROGRAM_ID}\"]",
+                            "notary" to mapOf(
+                                "validating" to false,
+                                // this doesn't work with Driver, because Driver doesn't create a distributed key
+                                // that is needed when serviceLegalName is in use
+                                // "serviceLegalName" to "$solanaNotaryName",
+                                "solana" to mapOf(
+                                    "rpcUrl" to SolanaTestValidator.RPC_URL,
+                                    "notaryKeypairFile" to "$solanaNotaryKeyFile",
+                                    "custodiedKeysDir" to "$custodiedKeysDir",
+                                    "programWhitelist" to listOf(Token2022.PROGRAM_ID.toPublicKey().base58()),
+                                )
+                            )
                         ),
-                        startInProcess = true,
+                        startInProcess = false,
                     ),
                 ),
                 networkParameters = NetworkParameters(
@@ -193,7 +202,6 @@ class DriverTests {
             )
         ) {
             val user = User("user1", "test", permissions = setOf("ALL"))
-
             alice = startNode(
                 providedName = aliceIdentity.name,
                 rpcUsers = listOf(user)
@@ -214,12 +222,10 @@ class DriverTests {
 
             assertNull(getAccountInfo(aliceBridgeTokenAccount), "Alice ATA should not be created yet")
 
-            val sig = alice.move(bridgeAuthorityParty, MOVE_QUANTITY, msftTokenType)
-            assertNotNull(sig)
+            alice.move(bridgeAuthorityParty, MOVE_QUANTITY, msftTokenType)
 
             val issuingBankParty = alice.nodeInfo.legalIdentities.first() // TODO
-            Thread.sleep(30.seconds.toMillis())
-            eventually(duration = 30.seconds) {
+            eventually(duration = 60.seconds, waitBetween = 1.seconds) {
                 assertEquals(
                     BigDecimal.ZERO,
                     bridgeAuthority.myTokenBalance(issuingBankParty, msftTokenType),
@@ -246,6 +252,27 @@ class DriverTests {
             assertNotNull(token)
             val accountInfo = getAccountInfo(aliceBridgeTokenAccount)
             assertAtaAccount(accountInfo, tokenMint, aliceSigner.account)
+
+            // SPL Token RPC returns decimal strings with trailing zeros trimmed,
+            // BigDecimal.equals is scale-sensitive (1.0 != 1.00), so we compare numeric value instead.
+            eventually(duration = 60.seconds, waitBetween = 1.seconds) {
+                assertThat(getSolanaTokenBalance(aliceBridgeTokenAccount))
+                    .describedAs("Solana token amount numerically equals Corda bridged amount")
+                    .isEqualByComparingTo(MOVE_QUANTITY)
+            }
+
+            // Simulate redemption transfer for Alice account on Solana
+            transfer(aliceSigner, aliceBridgeTokenAccount, aliceRedemptionTokenAccount, MOVE_QUANTITY.toRawAmount())
+            // We need to wait for the websocket listener to process the newly received event
+            eventually(duration = 60.seconds, waitBetween = 1.seconds) {
+                assertEquals(
+                    ISSUING_QUANTITY,
+                    alice.myTokenBalance(issuingBankParty, msftTokenType),
+                    "Alice received redeemed MSFT shares back",
+                )
+            }
+            val msftFungibleTokens = bridgeAuthority.getAllFungibleTokens(issuingBankParty, msftTokenType)
+            assertTrue(msftFungibleTokens.isEmpty(), "No  MSFT shares left in Bridge Authority vault")
         }
     }
 
@@ -322,17 +349,49 @@ class DriverTests {
     }
 
     private fun NodeHandle.move(toParty: Party, quantity: BigDecimal, tokenType: TokenType) =
-        rpc
-            .startFlow(
-                ::MoveFungibleTokens,
-                Amount.fromDecimal(quantity, tokenType),
-                toParty,
-            ).returnValue
-            .getOrThrow()
+        assertNotNull(
+            rpc
+                .startFlow(
+                    ::MoveFungibleTokens,
+                    Amount.fromDecimal(quantity, tokenType),
+                    toParty,
+                ).returnValue
+                .getOrThrow()
+        )
 
     private inline fun <reified T : ContractState> NodeHandle.queryStates(): List<StateAndRef<T>> {
         return rpc
             .vaultQueryBy<T>()
             .states
+    }
+
+    private fun getSolanaTokenBalance(publicKey: PublicKey): BigDecimal {
+        return testValidator
+            .client
+            .getTokenAccountBalance(publicKey.base58(), testValidator.rpcParams)
+            .checkResponse("getTokenAccountBalance")!!
+            .uiAmountString
+            .toBigDecimal()
+    }
+
+    private fun transfer(fromOwner: Signer, fromTokenAccount: PublicKey, toTokenAccount: PublicKey, amount: Long) {
+        testValidator.client.sendAndConfirm(
+            { txBuilder ->
+                Token2022Program.factory(txBuilder).transfer(
+                    fromTokenAccount,
+                    toTokenAccount,
+                    fromOwner.account,
+                    amount,
+                    emptyList()
+                )
+            },
+            fromOwner,
+            emptyList(),
+            DefaultRpcParams()
+        )
+    }
+
+    private fun BigDecimal.toRawAmount(): Long {
+        return (this * BigDecimal(10L).pow(TOKEN_DECIMALS)).longValueExact()
     }
 }
