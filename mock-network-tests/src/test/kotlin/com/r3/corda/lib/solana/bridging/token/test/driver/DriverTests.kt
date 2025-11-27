@@ -168,12 +168,11 @@ class DriverTests {
                     NotarySpec(generalNotaryName, validating = false, startInProcess = false),
                     NotarySpec(
                         solanaNotaryName,
-                        false,
-                        customConfig = mapOf<String, Any>(
+                        mapOf<String, Any>(
                             "notary" to mapOf(
                                 "validating" to false,
-                                // this doesn't work with Driver, because Driver doesn't create a distributed key
-                                // that is needed when serviceLegalName is in use
+                                // serviceLegalName doesn't work with Driver, because Driver doesn't create
+                                // a distributed key that is needed when serviceLegalName is in use
                                 // "serviceLegalName" to "$solanaNotaryName",
                                 "solana" to mapOf(
                                     "rpcUrl" to SolanaTestValidator.RPC_URL,
@@ -224,7 +223,7 @@ class DriverTests {
 
             alice.move(bridgeAuthorityParty, MOVE_QUANTITY, msftTokenType)
 
-            val issuingBankParty = alice.nodeInfo.legalIdentities.first() // TODO
+            val issuingBankParty = alice.nodeInfo.legalIdentities.first() // TODO align with MockTestNetwork
             eventually(duration = 60.seconds, waitBetween = 1.seconds) {
                 assertEquals(
                     BigDecimal.ZERO,
