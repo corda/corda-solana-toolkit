@@ -31,4 +31,9 @@ data class FungibleTokenBurnReceipt(
     val amount: Long,
     val bridgeAuthority: Party,
     override val participants: List<AbstractParty> = listOf(bridgeAuthority),
-) : ContractState
+) : ContractState {
+    init {
+        // extra check when object is deserialized by AMQP on a node that redeemed token and doesn't have this class
+        require(bridgeAuthority in participants) { "Bridge Authority is not present in participants list." }
+    }
+}
