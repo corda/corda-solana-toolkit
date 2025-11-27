@@ -51,37 +51,42 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         listenForFungibleTokens(appServiceHub)
 
         // Redemption initialization
-        val subscribed = socket.onToken2022ByOwner(
-            configHandler.redemptionWalletAccountToHolder.keys
-        ) redemptionCallback@{ redemptionWalletAccount, redemptionTokenAccount, mint, amount ->
-            if (amount == 0L) {
-                return@redemptionCallback
-            }
-            // TODO perhaps move those to the flow so it can be tracked by the flow hospital
-            val tokenId = checkNotNull(configHandler.getTokenIdentifierByMint(mint)) {
-                "No token configured for mint $mint"
-            }
-            val cordaOwnerName = checkNotNull(
-                configHandler.redemptionWalletAccountToHolder[redemptionWalletAccount]
-            ) {
-                "No Corda owner configured for Solana redemption account $redemptionWalletAccount"
-            }
-            val cordaOwner = checkNotNull(appServiceHub.networkMapCache.getPeerByLegalName(cordaOwnerName)) {
-                "No Corda owner found for Solana redemption account $redemptionTokenAccount"
-            }
-            val redemptionCoordinates = configHandler.getRedemptionCoordinates(
-                tokenId,
-                redemptionWalletAccount,
-                redemptionTokenAccount,
-            )
-            executor.submit {
-                onTokenReceivedCallback(cordaOwner, amount, redemptionCoordinates)
-            }
-        }
+        val subscribed = socket.onToken2022ByOwner(configHandler.redemptionWalletAccountToHolder.keys, ::onSolanaEvent)
         if (!subscribed) {
             logger.error(
                 "Failed to subscribe to ${socket.wsUrl}"
             )
+        }
+    }
+
+    fun onSolanaEvent(
+        redemptionWalletAccount: Pubkey,
+        redemptionTokenAccount: Pubkey,
+        mint: Pubkey,
+        amount: Long,
+    ) {
+        if (amount == 0L) {
+            return
+        }
+        // TODO perhaps move those to the flow so it can be tracked by the flow hospital
+        val tokenId = checkNotNull(configHandler.getTokenIdentifierByMint(mint)) {
+            "No token configured for mint $mint"
+        }
+        val cordaOwnerName = checkNotNull(
+            configHandler.redemptionWalletAccountToHolder[redemptionWalletAccount]
+        ) {
+            "No Corda owner configured for Solana redemption account $redemptionWalletAccount"
+        }
+        val cordaOwner = checkNotNull(appServiceHub.networkMapCache.getPeerByLegalName(cordaOwnerName)) {
+            "No Corda owner found for Solana redemption account $redemptionTokenAccount"
+        }
+        val redemptionCoordinates = configHandler.getRedemptionCoordinates(
+            tokenId,
+            redemptionWalletAccount,
+            redemptionTokenAccount,
+        )
+        executor.submit {
+            onTokenReceivedCallback(cordaOwner, amount, redemptionCoordinates)
         }
     }
 
