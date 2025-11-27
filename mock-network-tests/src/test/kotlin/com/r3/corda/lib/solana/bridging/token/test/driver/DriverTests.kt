@@ -162,7 +162,6 @@ class DriverTests {
                     TestCordapp.findCordapp("com.r3.corda.lib.tokens.contracts"),
                     TestCordapp.findCordapp("com.r3.corda.lib.tokens.workflows"),
                     TestCordapp.findCordapp("com.r3.corda.lib.solana.bridging.token.testing"),
-                    bridgingContractsCordapp // this is needed for Alice to deserilize FungibleTokenBurnReceipt
                 ),
                 notarySpecs = listOf(
                     NotarySpec(generalNotaryName, validating = false, startInProcess = false),

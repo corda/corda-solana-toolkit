@@ -30,7 +30,5 @@ data class FungibleTokenBurnReceipt(
     val mintAccount: Pubkey,
     val amount: Long,
     val bridgeAuthority: Party,
-) : ContractState {
-    override val participants: List<AbstractParty>
-        get() = listOf(bridgeAuthority)
-}
+    override val participants: List<AbstractParty> = listOf(bridgeAuthority),
+) : ContractState
