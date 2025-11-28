@@ -22,11 +22,11 @@ data class BridgeAuthorityInfo(
     private val redemptionTokenAccounts: Map<Party, List<AssociatedTokenAccountInfo>>,
 ) {
     companion object {
-        fun generate(
+        fun createAndInitialise(
             network: MockNetwork,
             identity: TestIdentity,
             keyDir: Path,
-            parties: List<CordaUserBridgingAccounts>,
+            parties: List<CordaNodeAndSolanaAccounts>,
             tokenDescriptorToMint: Map<TokenTypeDescriptor, PublicKey>,
             mintAuthority: PublicKey,
             testValidator: SolanaTestValidator,

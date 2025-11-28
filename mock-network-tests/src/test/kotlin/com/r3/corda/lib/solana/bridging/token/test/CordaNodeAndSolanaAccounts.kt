@@ -3,31 +3,31 @@ package com.r3.corda.lib.solana.bridging.token.test
 import com.lmax.solana4j.api.PublicKey
 import com.lmax.solana4j.programs.AssociatedTokenProgram
 import com.r3.corda.lib.solana.bridging.token.flows.toPublicKey
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.solana.notary.common.Signer
 import net.corda.solana.sdk.internal.Token2022
-import net.corda.testing.core.TestIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.StartedMockNode
 import net.corda.testing.solana.SolanaTestValidator
 
-data class CordaUserBridgingAccounts(
+data class CordaNodeAndSolanaAccounts private constructor(
     val node: StartedMockNode,
     val party: Party,
     val signer: Signer,
     val mintToAta: Map<PublicKey, PublicKey>,
 ) {
     companion object {
-        fun generate(
+        fun createAndInitialise(
             network: MockNetwork,
-            identity: TestIdentity,
+            cordaName: CordaX500Name,
             mints: List<PublicKey>,
             testValidator: SolanaTestValidator,
-        ): CordaUserBridgingAccounts {
+        ): CordaNodeAndSolanaAccounts {
             val signer = Signer.random()
             testValidator.fundAccount(10, signer)
-            val node = network.createPartyNode(identity.name)
-            return CordaUserBridgingAccounts(
+            val node = network.createPartyNode(cordaName)
+            return CordaNodeAndSolanaAccounts(
                 signer = signer,
                 mintToAta = mints.associateWith { mint ->
                     AssociatedTokenProgram

@@ -77,8 +77,6 @@ abstract class FlowTests {
         private val ISSUING_QUANTITY = BigDecimal("2000.000")
         private val MOVE_QUANTITY = BigDecimal("10.250")
 
-        private val aliceIdentity = TestIdentity(ALICE_NAME)
-        private val bobIdentity = TestIdentity(BOB_NAME)
         private val issuingBankIdentity = TestIdentity(DUMMY_BANK_A_NAME)
         private val bridgeAuthorityIdentity = TestIdentity(CordaX500Name("Bridge Authority", "New York", "US"))
     }
@@ -98,26 +96,26 @@ abstract class FlowTests {
     private lateinit var aaplTokenMint: PublicKey
 
     private lateinit var bridgeAuthority: BridgeAuthorityInfo
-    private lateinit var alice: CordaUserBridgingAccounts
-    private lateinit var bob: CordaUserBridgingAccounts
+    private lateinit var alice: CordaNodeAndSolanaAccounts
+    private lateinit var bob: CordaNodeAndSolanaAccounts
 
     @BeforeEach
     fun setup() {
         startTestValidator()
         startCordaNetwork()
-        alice = CordaUserBridgingAccounts.generate(
+        alice = CordaNodeAndSolanaAccounts.createAndInitialise(
             network,
-            aliceIdentity,
+            ALICE_NAME,
             listOf(msftTokenMint, aaplTokenMint),
             testValidator
         )
-        bob = CordaUserBridgingAccounts.generate(
+        bob = CordaNodeAndSolanaAccounts.createAndInitialise(
             network,
-            bobIdentity,
+            BOB_NAME,
             listOf(msftTokenMint, aaplTokenMint),
             testValidator
         )
-        bridgeAuthority = BridgeAuthorityInfo.generate(
+        bridgeAuthority = BridgeAuthorityInfo.createAndInitialise(
             network,
             bridgeAuthorityIdentity,
             custodiedKeysDir,
@@ -277,7 +275,7 @@ abstract class FlowTests {
         }
     }
 
-    private fun bridgeAndCheck(stakeholderInfo: CordaUserBridgingAccounts, tokenType: TokenType, mint: PublicKey) {
+    private fun bridgeAndCheck(stakeholderInfo: CordaNodeAndSolanaAccounts, tokenType: TokenType, mint: PublicKey) {
         val tokenAccount = requireNotNull(stakeholderInfo.mintToAta[mint]) { "Token account must not be null" }
         move(stakeholderInfo.node, bridgeAuthority.party, MOVE_QUANTITY, tokenType).get()
         val party = stakeholderInfo.node.party()
@@ -309,7 +307,7 @@ abstract class FlowTests {
         }
     }
 
-    private fun redeemAndCheck(stakeholderInfo: CordaUserBridgingAccounts, mint: PublicKey, tokenType: TokenType) {
+    private fun redeemAndCheck(stakeholderInfo: CordaNodeAndSolanaAccounts, mint: PublicKey, tokenType: TokenType) {
         val fromTokenAccount = requireNotNull(stakeholderInfo.mintToAta[mint]) {
             "Source token account must not be null"
         }
