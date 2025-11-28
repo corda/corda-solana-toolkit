@@ -22,7 +22,7 @@ import java.sql.DriverManager
 import kotlin.use
 
 // TODO this is an early test demonstrator
-class DriverTests {
+class RecoveryDriverTests {
     private val aliceIdentity = TestIdentity(ALICE_NAME)
     private val generalNotaryName = CordaX500Name("Notary Service", "Zurich", "CH")
 
