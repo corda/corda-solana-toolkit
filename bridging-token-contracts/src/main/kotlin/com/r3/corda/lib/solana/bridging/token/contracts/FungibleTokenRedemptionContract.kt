@@ -4,6 +4,7 @@ import com.r3.corda.lib.solana.bridging.token.states.FungibleTokenBurnReceipt
 import com.r3.corda.lib.tokens.contracts.commands.MoveTokenCommand
 import com.r3.corda.lib.tokens.contracts.commands.TokenCommand
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
+import com.r3.corda.lib.tokens.contracts.utilities.sumTokenStatesOrNull
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract
 import net.corda.core.identity.AbstractParty
@@ -31,28 +32,41 @@ class FungibleTokenRedemptionContract : Contract {
         val burnReceiptState = tx.inputsOfType<FungibleTokenBurnReceipt>().requireSingle {
             "Token burning transaction requires exactly one input state for a FungibleTokenBurnReceipt"
         }
-        val inputFungibleState = tx.inputsOfType<FungibleToken>().requireSingle {
-            "UnlockToken requires exactly one input FungibleToken state"
+        val inputFungibleStates = tx.inputsOfType<FungibleToken>()
+        require(inputFungibleStates.isNotEmpty()) {
+            "UnlockToken requires at least one input FungibleToken state"
         }
         require(tx.commandsOfType<TokenCommand>().singleOrNull()?.value is MoveTokenCommand) {
             "UnlockToken must have a single token command (Move Token)"
         }
-        require(inputFungibleState.holder == redeemCommand.lockingIdentity) {
-            "Only the identity that locked the fungible token may unlock it"
+        val inputFungibleTokenHolder = requireNotNull(inputFungibleStates.map { it.holder }.toSet().singleOrNull()) {
+            "All input FungibleToken states must have the same holder"
+        }
+        require(inputFungibleTokenHolder == redeemCommand.lockingIdentity) {
+            "Only the identity that locked the fungible tokens may unlock it"
         }
         require(tx.outputsOfType<FungibleTokenBurnReceipt>().isEmpty()) {
             "Transaction cannot have outputs of type FungibleTokenBurnReceipt"
         }
-        val outputFungibleState = tx.outputsOfType<FungibleToken>().requireSingle {
-            "UnlockToken requires exactly one output FungibleToken state"
+        val outputFungibleStates = tx.outputsOfType<FungibleToken>()
+        require(outputFungibleStates.isNotEmpty()) {
+            "UnlockToken requires at least one output FungibleToken state"
         }
-        require(outputFungibleState.holder == burnReceiptState.bridgeAuthority) {
-            "The holder of the output FungibleToken must be the same identity that burned the FungibleTokenBurnReceipt"
+        // There might be a change in that needs to be returned to the locking identity therefore we can have a set
+        val outputFungibleTokenHolders = outputFungibleStates.map { it.holder }.toSet()
+        require(outputFungibleTokenHolders.isNotEmpty()) {
+            "Output FungibleToken states must have at least one holder"
         }
-        // Assuming a single token to carry the amount equal to the redeemed amount
-        // TODO Allow for multiple fungible states to cover the redeemed amount - ENT-14629
-        require(burnReceiptState.amount == outputFungibleState.amount.quantity) {
-            "The amount in the FungibleTokenBurnReceipt must match the amount in the FungibleToken state"
+        require(burnReceiptState.bridgeAuthority in outputFungibleTokenHolders) {
+            "One of the output FungibleToken states must have the bridge authority as the holder"
+        }
+        val redeemedAmount = requireNotNull(
+            outputFungibleStates.filter { it.holder == burnReceiptState.bridgeAuthority }.sumTokenStatesOrNull()
+        ) {
+            "The output FungibleToken states must contain an amount for the same token type as in the burn receipt"
+        }
+        require(burnReceiptState.amount == redeemedAmount.quantity) {
+            "The amount in the FungibleTokenBurnReceipt must match the sum FungibleToken amounts"
         }
         require(tx.commands.size == 2) {
             // Presence of individual commands had been verified till this point

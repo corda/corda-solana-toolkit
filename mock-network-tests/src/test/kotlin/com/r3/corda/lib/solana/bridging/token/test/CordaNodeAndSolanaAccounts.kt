@@ -10,12 +10,15 @@ import net.corda.solana.sdk.internal.Token2022
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.StartedMockNode
 import net.corda.testing.solana.SolanaTestValidator
+import java.math.BigDecimal
 
 data class CordaNodeAndSolanaAccounts private constructor(
     val node: StartedMockNode,
     val party: Party,
     val signer: Signer,
     val mintToAta: Map<PublicKey, PublicKey>,
+    val mintToExpectedCordaBalance: MutableMap<PublicKey, BigDecimal>,
+    val mintToExpectedSolanaBalance: MutableMap<PublicKey, BigDecimal>,
 ) {
     companion object {
         fun createAndInitialise(
@@ -35,8 +38,28 @@ data class CordaNodeAndSolanaAccounts private constructor(
                         .address()
                 },
                 node = node,
-                party = node.info.legalIdentities.first()
+                party = node.info.legalIdentities.first(),
+                mintToExpectedCordaBalance = mints.associate { it to BigDecimal.ZERO }.toMutableMap(),
+                mintToExpectedSolanaBalance = mints.associate { it to BigDecimal.ZERO }.toMutableMap(),
             )
         }
+    }
+
+    fun setExpectedCordaBalance(mint: PublicKey, quantity: BigDecimal) {
+        mintToExpectedCordaBalance[mint] = quantity
+    }
+
+    fun setExpectedSolanaBalance(mint: PublicKey, quantity: BigDecimal) {
+        mintToExpectedSolanaBalance[mint] = quantity
+    }
+
+    fun redeemExpectedBalance(mint: PublicKey, quantity: BigDecimal) {
+        mintToExpectedSolanaBalance[mint] = mintToExpectedSolanaBalance.getValue(mint).subtract(quantity)
+        mintToExpectedCordaBalance[mint] = mintToExpectedCordaBalance.getValue(mint).add(quantity)
+    }
+
+    fun bridgeExpectedBalance(mint: PublicKey, quantity: BigDecimal) {
+        mintToExpectedSolanaBalance[mint] = mintToExpectedSolanaBalance.getValue(mint).add(quantity)
+        mintToExpectedCordaBalance[mint] = mintToExpectedCordaBalance.getValue(mint).subtract(quantity)
     }
 }

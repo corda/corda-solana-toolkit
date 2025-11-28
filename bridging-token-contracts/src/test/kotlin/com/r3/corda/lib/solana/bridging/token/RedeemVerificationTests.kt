@@ -84,7 +84,7 @@ class RedeemVerificationTests {
                     output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
                     input(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState.copy(amount = 9999))
                     `fails with`(
-                        "The amount in the FungibleTokenBurnReceipt must match the amount in the FungibleToken state"
+                        "The amount in the FungibleTokenBurnReceipt must match the sum FungibleToken amounts"
                     )
                 }
                 tweak {
@@ -94,7 +94,7 @@ class RedeemVerificationTests {
                     )
                     input(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState.copy(amount = 10001))
                     `fails with`(
-                        "The amount in the FungibleTokenBurnReceipt must match the amount in the FungibleToken state"
+                        "The amount in the FungibleTokenBurnReceipt must match the sum FungibleToken amounts"
                     )
                 }
                 tweak {
