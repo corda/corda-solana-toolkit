@@ -6,6 +6,7 @@ import com.r3.corda.lib.tokens.contracts.commands.IssueTokenCommand
 import com.r3.corda.lib.tokens.contracts.commands.MoveTokenCommand
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.contracts.types.TokenType
+import com.r3.corda.lib.tokens.contracts.utilities.amount
 import com.r3.corda.lib.tokens.contracts.utilities.issuedBy
 import com.r3.corda.lib.tokens.contracts.utilities.of
 import net.corda.solana.sdk.internal.Token2022
@@ -33,6 +34,30 @@ class RedeemVerificationTests {
                 command(
                     listOf(bridgeAuthority.owningKey, confidentialIdentity.owningKey),
                     MoveTokenCommand(cordaTokenAmount.token, listOf(0), listOf(0))
+                )
+                command(
+                    listOf(bridgeAuthority.owningKey),
+                    FungibleTokenRedemptionContract.RedeemCommand.UnlockToken(confidentialIdentity)
+                )
+                verifies()
+            }
+        }
+    }
+
+    @Test
+    fun successVerifyUnlockMultipleTokens() {
+        services.ledger {
+            transaction {
+                attachment(TOKEN_PROGRAM_ID)
+                attachment(FungibleTokenRedemptionContract.CONTRACT_ID)
+                input(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
+                input(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
+                input(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState.copy(amount = redeemState.amount * 2))
+                output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
+                output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
+                command(
+                    listOf(bridgeAuthority.owningKey, confidentialIdentity.owningKey),
+                    MoveTokenCommand(cordaTokenAmount.token, listOf(0, 1), listOf(0, 1))
                 )
                 command(
                     listOf(bridgeAuthority.owningKey),

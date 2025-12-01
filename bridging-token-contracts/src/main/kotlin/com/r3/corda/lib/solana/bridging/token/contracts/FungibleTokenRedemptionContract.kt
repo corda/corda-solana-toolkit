@@ -52,7 +52,7 @@ class FungibleTokenRedemptionContract : Contract {
         require(outputFungibleStates.isNotEmpty()) {
             "UnlockToken requires at least one output FungibleToken state"
         }
-        // There might be a change in that needs to be returned to the locking identity therefore we can have a set
+        // There might be a change that needs to be returned to the locking identity therefore we can have a set
         val outputFungibleTokenHolders = outputFungibleStates.map { it.holder }.toSet()
         require(outputFungibleTokenHolders.isNotEmpty()) {
             "Output FungibleToken states must have at least one holder"
