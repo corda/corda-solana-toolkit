@@ -6,7 +6,9 @@ import com.r3.corda.lib.tokens.contracts.internal.schemas.PersistentFungibleToke
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.contracts.types.TokenType
 import com.r3.corda.lib.tokens.workflows.flows.rpc.MoveFungibleTokens
+import com.r3.corda.lib.tokens.workflows.types.PartyAndAmount
 import net.corda.core.contracts.Amount
+import net.corda.core.crypto.toStringShort
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.MoveNotaryFlow
@@ -15,16 +17,15 @@ import net.corda.core.identity.Party
 import net.corda.core.node.services.vault.Builder.equal
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.builder
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.toNonEmptySet
-import net.corda.solana.sdk.instruction.Pubkey
 
 /**
  * Flows bridges a fungible token redemption to Solana token burn.
  *
- * @param redeemTokenAccount the Solana account where the tokens will be burnt
+ * @param redemptionCoordinates the Solana redemption coordinates
  * @param redemptionHolder the Corda party to send the redeemed tokens to
- * @param tokenTypeId the identifier of the token being redeemed
  * @param amount the amount of tokens to redeem
  * @param solanaNotary notary to perform bridging
  * @param generalNotary notary to use for Corda-side fungible token movement to the redemption holder
@@ -33,9 +34,8 @@ import net.corda.solana.sdk.instruction.Pubkey
 @StartableByService
 @InitiatingFlow
 class RedeemFungibleTokenFlow(
-    val redeemTokenAccount: Pubkey,
+    val redemptionCoordinates: RedemptionCoordinates,
     val redemptionHolder: Party,
-    val tokenTypeId: String,
     val amount: Long,
     val solanaNotary: Party,
     val generalNotary: Party,
@@ -43,13 +43,10 @@ class RedeemFungibleTokenFlow(
 ) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
-        val bridgingService = serviceHub.cordaService(BridgingService::class.java)
-        val redemptionCoordinates = bridgingService.getRedemptionCoordinates(tokenTypeId)
         val redeemStateAndRef = subFlow(
             BurnTokensOnSolanaFlow(
                 redemptionCoordinates,
                 solanaNotary,
-                redeemTokenAccount,
                 amount
             )
         ).toLedgerTransaction(serviceHub).outRefsOfType<FungibleTokenBurnReceipt>().single()
@@ -58,7 +55,7 @@ class RedeemFungibleTokenFlow(
         ).single()
 
         // Unlock the fungible tokens from the locking holder
-        val moveAmount = Amount(amount, findTokenTypeOfFungibleTokenBy(tokenTypeId))
+        val moveAmount = Amount(amount, findTokenTypeOfFungibleTokenBy(redemptionCoordinates.tokenId))
         val lockCapture = FungibleTokenLockCapture()
         val unlockLedgerTx = subFlow(
             MoveAndUnlockFungibleTokenFlow(
@@ -77,7 +74,16 @@ class RedeemFungibleTokenFlow(
                 unlockLedgerTx.outRefsOfType<FungibleToken>().map { it.ref }.toNonEmptySet()
             )
 
-        return subFlow(MoveFungibleTokens(moveAmount, redemptionHolder))
+        return subFlow(
+            MoveFungibleTokens(
+                partyAndAmount = PartyAndAmount(redemptionHolder, moveAmount),
+                queryCriteria = QueryCriteria.VaultCustomQueryCriteria(
+                    builder {
+                        PersistentFungibleToken::owningKeyHash.equal(ourIdentity.owningKey.toStringShort())
+                    }
+                )
+            )
+        )
     }
 
     private fun findTokenTypeOfFungibleTokenBy(tokenTypeIdentifier: String): TokenType {

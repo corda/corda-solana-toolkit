@@ -20,38 +20,43 @@ object SavaFactory {
         private val socket = createWebSocket(wsUrl)
 
         fun onToken2022ByOwner(
-            owner: Pubkey,
+            owners: Set<Pubkey>,
             onAccountChanged: (owner: Pubkey, account: Pubkey, tokenMint: Pubkey, amount: Long) -> Unit,
         ): Boolean {
-            val ownerKey = owner.toPublickey()
-            logger.info("Attaching websocket for account owned by $owner")
+            logger.info("Attaching websocket for account owned by: $owners")
             return socket.programSubscribe(
                 SolanaAccounts.MAIN_NET.token2022Program(),
-                listOf(Filter.createMemCompFilter(TokenAccount.OWNER_OFFSET, ownerKey)),
+                owners.map { Filter.createMemCompFilter(TokenAccount.OWNER_OFFSET, it.toPublickey()) },
                 { _ ->
-                    getNonZeroTokenAccounts(ownerKey, rpcUrl).forEach {
-                        logger.debug {
-                            "WebSocketWrapper::onSub found non zero account ${it.pubKey} owned by ${it.data.owner}"
-                        }
-                        try {
-                            onAccountChanged(
-                                owner,
-                                it.pubKey.toPubkey(),
-                                it.data.mint.toPubkey(),
-                                it.data.amount(),
-                            )
-                        } catch (e: Exception) {
-                            logger.error(
-                                "Tried to process account ${it.pubKey} with amount ${it.data.amount} " +
-                                    "but processing threw:",
-                                e
-                            )
+                    owners.forEach { owner ->
+                        val ownerKey = owner.toPublickey()
+                        getNonZeroTokenAccounts(ownerKey, rpcUrl).forEach {
+                            logger.debug {
+                                "WebSocketWrapper::onSub found non zero account ${it.pubKey} owned by ${it.data.owner}"
+                            }
+                            try {
+                                onAccountChanged(
+                                    owner,
+                                    it.pubKey.toPubkey(),
+                                    it.data.mint.toPubkey(),
+                                    it.data.amount(),
+                                )
+                            } catch (e: Exception) {
+                                logger.error(
+                                    "Tried to process account ${it.pubKey} with amount ${it.data.amount} " +
+                                        "but processing threw:",
+                                    e
+                                )
+                            }
                         }
                     }
                 }
             ) { accountInfo ->
                 val token = TokenAccount.read(accountInfo.pubKey, accountInfo.data)
-                onAccountChanged(owner, accountInfo.pubKey.toPubkey(), token.mint.toPubkey(), token.amount)
+                val ownerKey = accountInfo.pubKey.toPubkey()
+                val accountKey = accountInfo.pubKey.toPubkey()
+                val mintKey = token.mint.toPubkey()
+                onAccountChanged(ownerKey, accountKey, mintKey, token.amount)
             }
         }
     }
