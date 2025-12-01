@@ -6,7 +6,6 @@ import com.r3.corda.lib.tokens.contracts.commands.IssueTokenCommand
 import com.r3.corda.lib.tokens.contracts.commands.MoveTokenCommand
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.contracts.types.TokenType
-import com.r3.corda.lib.tokens.contracts.utilities.amount
 import com.r3.corda.lib.tokens.contracts.utilities.issuedBy
 import com.r3.corda.lib.tokens.contracts.utilities.of
 import net.corda.solana.sdk.internal.Token2022
@@ -86,6 +85,46 @@ class RedeemVerificationTests {
                     Token2022.burn(mintAccount, tokenAccount, bridgeAuthorityWallet, 10000)
                 )
                 verifies()
+            }
+        }
+    }
+
+    @Test
+    fun unlockMultipleTokensHolderErrors() {
+        services.ledger {
+            transaction {
+                attachment(TOKEN_PROGRAM_ID)
+                attachment(FungibleTokenRedemptionContract.CONTRACT_ID)
+                input(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
+                input(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState.copy(amount = redeemState.amount * 2))
+                command(
+                    listOf(bridgeAuthority.owningKey),
+                    FungibleTokenRedemptionContract.RedeemCommand.UnlockToken(confidentialIdentity)
+                )
+                tweak {
+                    input(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
+                    output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
+                    output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
+                    command(
+                        listOf(bridgeAuthority.owningKey, confidentialIdentity.owningKey),
+                        MoveTokenCommand(cordaTokenAmount.token, listOf(0, 2), listOf(0, 1))
+                    )
+                    `fails with`(
+                        "All input FungibleToken states must have the same holder"
+                    )
+                }
+                tweak {
+                    input(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
+                    output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
+                    output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
+                    command(
+                        listOf(bridgeAuthority.owningKey, confidentialIdentity.owningKey),
+                        MoveTokenCommand(cordaTokenAmount.token, listOf(0, 2), listOf(0, 1))
+                    )
+                    `fails with`(
+                        "One of the output FungibleToken states must have the bridge authority as the holder"
+                    )
+                }
             }
         }
     }
