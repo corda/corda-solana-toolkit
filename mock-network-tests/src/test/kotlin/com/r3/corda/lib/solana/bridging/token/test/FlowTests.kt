@@ -319,8 +319,8 @@ abstract class FlowTests {
         val toTokenAccount = bridgeAuthority.redemptionTokenAccountForPartyAndMint(stakeholderInfo.party, mint)
         transfer(stakeholderInfo.signer, fromTokenAccount, toTokenAccount, MOVE_QUANTITY.toRawAmount())
         val party = stakeholderInfo.node.party()
-        val balance = getSolanaTokenBalance(toTokenAccount)
         eventually(duration = 10.seconds) {
+            val balance = getSolanaTokenBalance(toTokenAccount)
             assertEquals(
                 0,
                 balance.compareTo(MOVE_QUANTITY),
