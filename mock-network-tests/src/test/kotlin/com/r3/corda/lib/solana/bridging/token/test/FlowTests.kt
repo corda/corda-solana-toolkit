@@ -296,6 +296,11 @@ abstract class FlowTests {
         assertTrue(fungibleTokens.isNotEmpty()) {
             "There should be at least one ${tokenType.tokenIdentifier} fungible token in Bridge Authority vault"
         }
+        val holder = fungibleTokens.map { it.holder }.toSet().single()
+        assertTrue(
+            holder !in listOf(stakeholderInfo.party, bridgeAuthority.party),
+            "Fungible token holder should be Locking Identity, but was $holder"
+        )
         val accountInfo = getAccountInfo(tokenAccount)
         assertAtaAccount(accountInfo, mint, stakeholderInfo.signer.account)
         // SPL Token RPC returns decimal strings with trailing zeros trimmed,
