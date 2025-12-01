@@ -44,7 +44,7 @@ import org.junit.jupiter.api.assertNull
 import org.junit.jupiter.api.io.TempDir
 import java.math.BigDecimal
 import java.nio.file.Path
-import java.util.*
+import java.util.Base64
 
 val solanaNotaryName = CordaX500Name("Solana Notary Service", "London", "GB")
 val generalNotaryName = CordaX500Name("Notary Service", "Zurich", "CH")
@@ -293,7 +293,7 @@ abstract class FlowTests {
             )
         }
         val fungibleTokens = bridgeAuthority.node.getAllFungibleTokens(issuingBankParty, tokenType)
-        assert(fungibleTokens.isNotEmpty()) {
+        assertTrue(fungibleTokens.isNotEmpty()) {
             "There should be at least one ${tokenType.tokenIdentifier} fungible token in Bridge Authority vault"
         }
         val accountInfo = getAccountInfo(tokenAccount)
@@ -316,8 +316,9 @@ abstract class FlowTests {
         val party = stakeholderInfo.node.party()
         val balance = getSolanaTokenBalance(toTokenAccount)
         eventually(duration = 10.seconds) {
-            assert(
-                balance.compareTo(MOVE_QUANTITY) == 0,
+            assertEquals(
+                0,
+                balance.compareTo(MOVE_QUANTITY),
             ) { "Redemption token account has $balance instead $MOVE_QUANTITY after transfer - party ${party.name}" }
         }
         eventually(duration = 10.seconds) {
