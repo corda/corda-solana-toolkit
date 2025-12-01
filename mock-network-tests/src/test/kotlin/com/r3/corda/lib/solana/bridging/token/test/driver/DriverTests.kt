@@ -143,10 +143,9 @@ class DriverTests {
 
         val baConfig = mapOf(
             "participants" to mapOf(aliceIdentity.name.toString() to aliceSigner.account.base58()),
-            "redemptionHolders" to mapOf(aliceRedemptionTokenAccount.base58() to aliceIdentity.name.toString()),
-            "bridgeRedemptionAddress" to bridgeAuthoritySigner.account.base58(),
-            "mints" to mapOf(msftDescriptor.tokenTypeIdentifier to tokenMint.base58()),
-            "mintAuthorities" to mapOf(msftDescriptor.tokenTypeIdentifier to mintAuthoritySigner.account.base58()),
+            "redemptionWalletAccountToHolder" to mapOf(aliceRedemptionTokenAccount.base58() to aliceIdentity.name.toString()),
+            "mintsWithAuthorities" to mapOf(msftDescriptor.tokenTypeIdentifier to
+                mapOf("tokenMint" to tokenMint.base58() , "mintAuthority" to mintAuthoritySigner.account.base58())),
             "lockingIdentityLabel" to UUID.randomUUID().toString(),
             "solanaNotaryName" to solanaNotaryName.toString(),
             "generalNotaryName" to generalNotaryName.toString(),
