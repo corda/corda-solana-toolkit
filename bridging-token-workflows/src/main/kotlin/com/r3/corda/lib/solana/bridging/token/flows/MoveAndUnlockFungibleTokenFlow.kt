@@ -3,6 +3,7 @@ package com.r3.corda.lib.solana.bridging.token.flows
 import co.paralleluniverse.fibers.Suspendable
 import com.r3.corda.lib.solana.bridging.token.contracts.FungibleTokenRedemptionContract
 import com.r3.corda.lib.solana.bridging.token.states.FungibleTokenBurnReceipt
+import com.r3.corda.lib.tokens.contracts.internal.schemas.PersistentFungibleToken
 import com.r3.corda.lib.tokens.contracts.states.AbstractToken
 import com.r3.corda.lib.tokens.contracts.types.IssuedTokenType
 import com.r3.corda.lib.tokens.contracts.types.TokenType
@@ -10,8 +11,11 @@ import com.r3.corda.lib.tokens.workflows.flows.move.AbstractMoveTokensFlow
 import com.r3.corda.lib.tokens.workflows.flows.move.addMoveFungibleTokens
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.StateAndRef
+import net.corda.core.crypto.toStringShort
 import net.corda.core.flows.FlowSession
 import net.corda.core.identity.Party
+import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.builder
 import net.corda.core.transactions.TransactionBuilder
 
 class MoveAndUnlockFungibleTokenFlow
@@ -32,8 +36,21 @@ constructor(
             serviceHub = serviceHub,
             amount = amount,
             holder = bridgeAuthority,
-            changeHolder = lockingHolder
+            changeHolder = lockingHolder,
+            queryCriteria = QueryCriteria.VaultCustomQueryCriteria(
+                builder {
+                    PersistentFungibleToken::owningKeyHash.equal(lockingHolder.owningKey.toStringShort())
+                }
+            )
         )
+
+        transactionBuilder.inputStates().forEach { inputState ->
+            val tokenState = serviceHub.toStateAndRef<AbstractToken>(inputState).state.data
+            require(tokenState.holder == lockingHolder) {
+                "Locking holder $lockingHolder must be the holder of all input token states when unlocking tokens. " +
+                    "Found input token state with holder ${tokenState.holder}."
+            }
+        }
 
         // Capture the lockId generated during move to use it later to unlock tokens
         lockCapture.lockId = transactionBuilder.lockId

@@ -14,35 +14,39 @@ import net.corda.solana.sdk.instruction.Pubkey
 import java.util.UUID
 import kotlin.io.path.Path
 
-class ConfigHandler(appServiceHub: AppServiceHub) {
+class ConfigHandler(private val appServiceHub: AppServiceHub) {
     private val participants: Map<CordaX500Name, Pubkey>
-    private val tokenIdToMintAccount: Map<String, Pubkey>
+    private val mintsWithAuthorities: Map<String, MintWithAuthority>
     private val mintAccountToTokenId: Map<Pubkey, String>
-    private val mintAuthorities: Map<String, Pubkey>
     val lockingIdentity: Party
     val solanaNotary: Party
     val generalNotaryName: Party
     val bridgeAuthority: PartyAndCertificate
     val solanaWsUrl: String
     val solanaRpcUrl: String
-    val bridgeRedemptionAddress: Pubkey
-    val redemptionHolders: Map<Pubkey, CordaX500Name>
+    val redemptionWalletAccountToHolder: Map<Pubkey, CordaX500Name>
     val bridgeAuthoritySigner: Signer
 
     init {
         val config = appServiceHub.getAppContext().config
         participants = config.getMap("participants", CordaX500Name::parse, Pubkey::fromBase58)
-        tokenIdToMintAccount = config.getMap("mints", { it }, Pubkey::fromBase58)
-        mintAccountToTokenId = tokenIdToMintAccount.entries.associate { (k, v) -> v to k }
-        mintAuthorities = config.getMap("mintAuthorities", { it }, Pubkey::fromBase58)
-        redemptionHolders = config.getMap("redemptionHolders", Pubkey::fromBase58, CordaX500Name::parse)
+        mintsWithAuthorities = config.getMapOfObjects(
+            "mintsWithAuthorities",
+            { it },
+            ::toMintWithAuthority,
+        )
+        mintAccountToTokenId = mintsWithAuthorities.entries.associate { (k, v) -> v.tokenMint to k }
+        redemptionWalletAccountToHolder = config.getMap(
+            "redemptionWalletAccountToHolder",
+            Pubkey::fromBase58,
+            CordaX500Name::parse,
+        )
         bridgeAuthority = appServiceHub.myInfo.legalIdentitiesAndCerts.first()
         lockingIdentity = getLockingIdentity(config, appServiceHub)
         solanaNotary = getNotary("solanaNotaryName", config, appServiceHub)
         generalNotaryName = getNotary("generalNotaryName", config, appServiceHub)
         solanaWsUrl = config.getString("solanaWsUrl")
         solanaRpcUrl = config.getString("solanaRpcUrl")
-        bridgeRedemptionAddress = Pubkey.fromBase58(config.getString("bridgeRedemptionAddress"))
         bridgeAuthoritySigner = Signer.fromFile(Path(config.getString("bridgeAuthorityWalletFile")))
     }
 
@@ -79,6 +83,31 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
 
     fun getTokenIdentifierByMint(mint: Pubkey) = mintAccountToTokenId[mint]
 
+    private fun toMintWithAuthority(data: Map<String, String>): MintWithAuthority {
+        val mint = Pubkey.fromBase58(
+            checkNotNull(data[MintWithAuthority::tokenMint.name]) {
+                "${MintWithAuthority::tokenMint.name} is missing in mintWithAuthority config"
+            }
+        )
+        val authority = Pubkey.fromBase58(
+            checkNotNull(data[MintWithAuthority::mintAuthority.name]) {
+                "${MintWithAuthority::mintAuthority.name} is missing in mintWithAuthority config"
+            }
+        )
+        return MintWithAuthority(mint, authority)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private inline fun <K, V> CordappConfig.getMapOfObjects(
+        configName: String,
+        transformKey: (String) -> K,
+        transformValue: (Map<String, String>) -> V,
+    ): Map<K, V> {
+        return (get(configName) as Map<String, Map<String, String>>)
+            .map { (key, value) -> transformKey(key) to transformValue(value) }
+            .toMap()
+    }
+
     @Suppress("UNCHECKED_CAST")
     private inline fun <K, V> CordappConfig.getMap(
         configName: String,
@@ -100,28 +129,34 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
             is TokenPointer<*> -> tokenType.pointer.pointer.id.toString()
             else -> tokenType.tokenIdentifier
         }
-        val mintAccount = checkNotNull(tokenIdToMintAccount[tokenTypeId]) {
-            "No mint account mapping found for token type id $tokenTypeId"
-        }
-        val mintAuthority = checkNotNull(mintAuthorities[tokenTypeId]) {
-            "No mint authority mapping found for token type id $tokenTypeId"
+        val mintWithAuthority = checkNotNull(mintsWithAuthorities[tokenTypeId]) {
+            "No mint with authority mapping found for token type id $tokenTypeId"
         }
         val mintWalletAccount = checkNotNull(participants[originalHolder.nameOrNull()]) {
             "No Solana account mapping found for Corda original holder ${originalHolder.nameOrNull()}"
         }
         return BridgingCoordinates(
-            mintAccount,
-            mintAuthority,
+            mintWithAuthority.tokenMint,
+            mintWithAuthority.mintAuthority,
             mintWalletAccount
         )
     }
 
     fun getRedemptionCoordinates(
         tokenTypeId: String,
+        redemptionWalletAccount: Pubkey,
+        redemptionTokenAccount: Pubkey,
     ): RedemptionCoordinates {
-        val mintAccount = checkNotNull(tokenIdToMintAccount[tokenTypeId]) {
-            "No mint account mapping found for token type id $tokenTypeId"
+        val mintWithAuthority = checkNotNull(mintsWithAuthorities[tokenTypeId]) {
+            "No mint with authority mapping found for token type id $tokenTypeId"
         }
-        return RedemptionCoordinates(mintAccount, bridgeRedemptionAddress)
+        return RedemptionCoordinates(
+            mintWithAuthority.tokenMint,
+            redemptionWalletAccount,
+            redemptionTokenAccount,
+            tokenTypeId
+        )
     }
 }
+
+private data class MintWithAuthority(val tokenMint: Pubkey, val mintAuthority: Pubkey)

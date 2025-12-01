@@ -7,13 +7,11 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.solana.sdk.instruction.Pubkey
 import net.corda.solana.sdk.internal.Token2022
 
 class BurnTokensOnSolanaFlow(
     private val redemptionCoordinates: RedemptionCoordinates,
     private val solanaNotary: Party,
-    private val redeemTokenAccount: Pubkey,
     private val amount: Long,
 ) : FlowLogic<SignedTransaction>() {
     @Suspendable
@@ -22,8 +20,8 @@ class BurnTokensOnSolanaFlow(
         val instruction = with(redemptionCoordinates) {
             Token2022.burn(
                 mint = mintAccount,
-                owner = redeemWalletAccount,
-                source = redeemTokenAccount,
+                owner = redemptionWalletAccount,
+                source = redemptionTokenAccount,
                 amount = amount,
             )
         }
@@ -34,7 +32,6 @@ class BurnTokensOnSolanaFlow(
         )
         // We issue FungibleTokenBurnReceipt state to record burning of tokens on Solana
         val redeemReceiptState = redemptionCoordinates.toRedeemReceiptState(
-            redeemTokenAccount = redeemTokenAccount,
             amount = amount,
             bridgeAuthority = ourIdentity
         )
