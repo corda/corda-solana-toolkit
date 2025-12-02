@@ -8,8 +8,11 @@ import com.r3.corda.lib.tokens.workflows.utilities.sessionsForParties
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.HospitalizeFlowException
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.MoveNotaryFlow
+import net.corda.core.flows.NotaryError
+import net.corda.core.flows.NotaryException
 import net.corda.core.flows.StartableByService
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
@@ -46,36 +49,49 @@ class BridgeFungibleTokenFlow(
 ) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
-        val bridgingService = serviceHub.cordaService(BridgingService::class.java)
-        val bridgingCoordinates = bridgingService.getBridgingCoordinates(token, originalHolder)
+        try {
+            val bridgingService = serviceHub.cordaService(BridgingService::class.java)
+            val bridgingCoordinates = bridgingService.getBridgingCoordinates(token, originalHolder)
 
-        // Idempotent creation, safe to invoke again if the flow restarts from a checkpoint.
-        bridgingService.createAta(bridgingCoordinates.mintAccount, bridgingCoordinates.mintWalletAccount)
+            // Idempotent creation, safe to invoke again if the flow restarts from a checkpoint.
+            bridgingService.createAta(bridgingCoordinates.mintAccount, bridgingCoordinates.mintWalletAccount)
 
-        // Move the token from ourIdentity (implied BridgeAuthority) to the lock holder (confidential identity).
-        // Also, create a proxy of Fungible Token that will be later used to mint a token on Solana
-        val moveTx = subFlow(
-            MoveAndLockFungibleTokenFlow(
-                token,
-                bridgingCoordinates,
-                lockingHolder,
-                participantSessions = sessionsForParties(listOf(lockingHolder)),
-                observerSessions = sessionsForParties(observers),
+            // Move the token from ourIdentity (implied BridgeAuthority) to the lock holder (confidential identity).
+            // Also, create a proxy of Fungible Token that will be later used to mint a token on Solana
+            val moveTx = subFlow(
+                MoveAndLockFungibleTokenFlow(
+                    token,
+                    bridgingCoordinates,
+                    lockingHolder,
+                    participantSessions = sessionsForParties(listOf(lockingHolder)),
+                    observerSessions = sessionsForParties(observers),
+                )
             )
-        )
 
-        // Change notary to Solana notary
-        val bridgedFungibleTokenProxy =
-            moveTx.toLedgerTransaction(serviceHub).outRefsOfType<BridgedFungibleTokenProxy>().single()
-        val tokenProxyOnSolanaNotary = subFlow(
-            MoveNotaryFlow(listOf(bridgedFungibleTokenProxy), solanaNotary)
-        ).single()
+            // Change notary to Solana notary
+            val bridgedFungibleTokenProxy =
+                moveTx.toLedgerTransaction(serviceHub).outRefsOfType<BridgedFungibleTokenProxy>().single()
+            val tokenProxyOnSolanaNotary = subFlow(
+                MoveNotaryFlow(listOf(bridgedFungibleTokenProxy), solanaNotary)
+            ).single()
 
-        // Mint on Solana
-        val mintTx = createMintTransaction(tokenProxyOnSolanaNotary)
-
-        // TODO ENT-14346 Shouldn't the observer sessions be passed to finality of this transaction?
-        return subFlow(FinalityFlow(mintTx, emptyList()))
+            // Mint on Solana
+            val mintTx = createMintTransaction(tokenProxyOnSolanaNotary)
+            // TODO ENT-14346 Shouldn't the observer sessions be passed to finality of this transaction?
+            return subFlow(FinalityFlow(mintTx, emptyList()))
+        } catch (e: NotaryException) {
+            if (e.error is NotaryError.Conflict) {
+                // Notary conflict error is considered as failure of already bridged state, so it can be ignored
+                logger.warn("Skipping BridgeFungibleTokenFlow for ${token.state.data} due to ${e.message}.", e)
+                throw e
+            } else { // errors: TimeWindowInvalid, TransactionInvalid, WrongNotary, RequestSignatureInvalid, General
+                logger.error("Unexpected notary error received by BridgeFungibleTokenFlow, sending to hospital", e)
+                throw HospitalizeFlowException("Unexpected notary error received by BridgeFungibleTokenFlow", e)
+            }
+        } catch (e: Throwable) {
+            logger.error("Unexpected error in BridgeFungibleTokenFlow, sending to hospital", e)
+            throw HospitalizeFlowException("Unexpected error in BridgeFungibleTokenFlow", e)
+        }
     }
 
     private fun createMintTransaction(tokenProxyRef: StateAndRef<BridgedFungibleTokenProxy>): SignedTransaction {

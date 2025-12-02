@@ -42,13 +42,15 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
 
     private fun onStartup(event: ServiceLifecycleEvent) {
         if (event != ServiceLifecycleEvent.STATE_MACHINE_STARTED) return
+
+        listenForFungibleTokens(appServiceHub)
+
         // Retrieve unprocessed fungible tokens received while the node was offline
         val receivedStates = appServiceHub.vaultService.queryBy(FungibleToken::class.java).states
 
         receivedStates.forEach { token ->
             callBridgeFlow(appServiceHub, token)
         }
-        listenForFungibleTokens(appServiceHub)
 
         // Redemption initialization
         val subscribed = socket.onToken2022ByOwner(configHandler.redemptionWalletAccountToHolder.keys, ::onSolanaEvent)
@@ -139,19 +141,15 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
             }
             logger.info("Starting flow to bridge ${token.state.data} to Solana for $previousHolder")
             executor.submit {
-                try {
-                    appServiceHub.startFlow(
-                        BridgeFungibleTokenFlow(
-                            lockingIdentity,
-                            previousHolder.toParty(appServiceHub),
-                            token,
-                            solanaNotary,
-                            emptyList(), // TODO ENT-14346 an observer is not a generic concept in tokens
-                        )
+                appServiceHub.startFlow(
+                    BridgeFungibleTokenFlow(
+                        lockingIdentity,
+                        previousHolder.toParty(appServiceHub),
+                        token,
+                        solanaNotary,
+                        emptyList(), // TODO ENT-14346 an observer is not a generic concept in tokens
                     )
-                } catch (e: Exception) {
-                    logger.error("Unable to start BridgeFungibleTokenFlow for $token", e)
-                }
+                )
             }
         }
     }
