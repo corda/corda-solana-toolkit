@@ -51,17 +51,21 @@ class FungibleTokenRedemptionContract : Contract {
         val outputFungibleStates = tx.outputsOfType<FungibleToken>()
         require(outputFungibleStates.isNotEmpty()) {
             /*
-             * Expected to get one output state for redemption and at most one output state with a change,
+             * Expected to get one output state for redemption and optionally some other states with a change,
              * however keeping it more relax for forward compatibility in case Tokes SDK would change behavior of tokens
              * selection. Token SDK specific checks are verified by Token contracts.
              */
             "UnlockToken requires at least one output FungibleToken state"
         }
+        val unexpectedHolders = outputFungibleStates.filter {
+            it.holder !in listOf(burnReceiptState.bridgeAuthority, redeemCommand.lockingIdentity)
+        }
+        require(unexpectedHolders.isEmpty()) {
+            "Output FungibleToken states must have either the bridge authority or the locking identity as the holder"
+        }
         // There might be a change that needs to be returned to the locking identity therefore we can have a set
         val outputFungibleTokensHeldByBridgeAuthority = outputFungibleStates
-            .filter {
-                it.holder == burnReceiptState.bridgeAuthority
-            }
+            .filter { it.holder == burnReceiptState.bridgeAuthority }
         require(outputFungibleTokensHeldByBridgeAuthority.isNotEmpty()) {
             "At least one of the output FungibleToken states must have the bridge authority as the holder"
         }
@@ -76,10 +80,8 @@ class FungibleTokenRedemptionContract : Contract {
         require(burnReceiptState.amount == redeemedAmount.quantity) {
             "The amount in the FungibleTokenBurnReceipt must match the sum FungibleToken amounts"
         }
-        require(tx.commands.size == 2) {
-            // Presence of individual commands had been verified till this point
-            "UnlockToken transaction must only contain two commands"
-        }
+        // Presence of individual commands had been verified till this point
+        require(tx.commands.size == 2) { "UnlockToken transaction must only contain two commands" }
 
         val noSolanaInstructions = tx.notaryInstructions.none { it is SolanaInstruction }
         require(noSolanaInstructions) { "No Solana instructions allowed" }
@@ -89,9 +91,7 @@ class FungibleTokenRedemptionContract : Contract {
         val burnReceiptState = tx.outputsOfType<FungibleTokenBurnReceipt>().requireSingle {
             "Token burning transaction requires exactly one output FungibleTokenBurnReceipt"
         }
-        require(tx.commands.size == 1) {
-            "BurnOnSolana transaction must only contain a single command"
-        }
+        require(tx.commands.size == 1) { "BurnOnSolana transaction must only contain a single command" }
         require(tx.commands.single().signers.contains(burnReceiptState.bridgeAuthority.owningKey)) {
             "The bridge authority must sign the BurnOnSolana transaction"
         }
