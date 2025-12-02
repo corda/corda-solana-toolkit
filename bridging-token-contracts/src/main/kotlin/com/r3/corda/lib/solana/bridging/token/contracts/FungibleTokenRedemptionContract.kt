@@ -4,6 +4,7 @@ import com.r3.corda.lib.solana.bridging.token.states.FungibleTokenBurnReceipt
 import com.r3.corda.lib.tokens.contracts.commands.MoveTokenCommand
 import com.r3.corda.lib.tokens.contracts.commands.TokenCommand
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
+import com.r3.corda.lib.tokens.contracts.utilities.sumTokenStatesOrThrow
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract
 import net.corda.core.identity.AbstractParty
@@ -31,33 +32,56 @@ class FungibleTokenRedemptionContract : Contract {
         val burnReceiptState = tx.inputsOfType<FungibleTokenBurnReceipt>().requireSingle {
             "Token burning transaction requires exactly one input state for a FungibleTokenBurnReceipt"
         }
-        val inputFungibleState = tx.inputsOfType<FungibleToken>().requireSingle {
-            "UnlockToken requires exactly one input FungibleToken state"
+        val inputFungibleStates = tx.inputsOfType<FungibleToken>()
+        require(inputFungibleStates.isNotEmpty()) {
+            "UnlockToken requires at least one input FungibleToken state"
         }
         require(tx.commandsOfType<TokenCommand>().singleOrNull()?.value is MoveTokenCommand) {
             "UnlockToken must have a single token command (Move Token)"
         }
-        require(inputFungibleState.holder == redeemCommand.lockingIdentity) {
-            "Only the identity that locked the fungible token may unlock it"
+        val inputFungibleTokenHolder = requireNotNull(inputFungibleStates.map { it.holder }.toSet().singleOrNull()) {
+            "All input FungibleToken states must have the same holder"
+        }
+        require(inputFungibleTokenHolder == redeemCommand.lockingIdentity) {
+            "Only the identity that locked the fungible tokens may unlock it"
         }
         require(tx.outputsOfType<FungibleTokenBurnReceipt>().isEmpty()) {
             "Transaction cannot have outputs of type FungibleTokenBurnReceipt"
         }
-        val outputFungibleState = tx.outputsOfType<FungibleToken>().requireSingle {
-            "UnlockToken requires exactly one output FungibleToken state"
+        val outputFungibleStates = tx.outputsOfType<FungibleToken>()
+        require(outputFungibleStates.isNotEmpty()) {
+            /*
+             * Expected to get one output state for redemption and optionally some other states with a change,
+             * however keeping it more relax for forward compatibility in case Tokes SDK would change behavior of tokens
+             * selection. Token SDK specific checks are verified by Token contracts.
+             */
+            "UnlockToken requires at least one output FungibleToken state"
         }
-        require(outputFungibleState.holder == burnReceiptState.bridgeAuthority) {
-            "The holder of the output FungibleToken must be the same identity that burned the FungibleTokenBurnReceipt"
+        val unexpectedHolders = outputFungibleStates.filter {
+            it.holder !in listOf(burnReceiptState.bridgeAuthority, redeemCommand.lockingIdentity)
         }
-        // Assuming a single token to carry the amount equal to the redeemed amount
-        // TODO Allow for multiple fungible states to cover the redeemed amount - ENT-14629
-        require(burnReceiptState.amount == outputFungibleState.amount.quantity) {
-            "The amount in the FungibleTokenBurnReceipt must match the amount in the FungibleToken state"
+        require(unexpectedHolders.isEmpty()) {
+            "Output FungibleToken states must have either the bridge authority or the locking identity as the holder"
         }
-        require(tx.commands.size == 2) {
-            // Presence of individual commands had been verified till this point
-            "UnlockToken transaction must only contain two commands"
+        // There might be a change that needs to be returned to the locking identity therefore we can have a set
+        val outputFungibleTokensHeldByBridgeAuthority = outputFungibleStates
+            .filter { it.holder == burnReceiptState.bridgeAuthority }
+        require(outputFungibleTokensHeldByBridgeAuthority.isNotEmpty()) {
+            "At least one of the output FungibleToken states must have the bridge authority as the holder"
         }
+        val redeemedAmount = try {
+            outputFungibleTokensHeldByBridgeAuthority.sumTokenStatesOrThrow()
+        } catch (e: Exception) {
+            throw IllegalArgumentException(
+                "Could not count amounts in FungibleToken states moved to the bridge authority due to ${e.message}",
+                e
+            )
+        }
+        require(burnReceiptState.amount == redeemedAmount.quantity) {
+            "The amount in the FungibleTokenBurnReceipt must match the sum FungibleToken amounts"
+        }
+        // Presence of individual commands had been verified till this point
+        require(tx.commands.size == 2) { "UnlockToken transaction must only contain two commands" }
 
         val noSolanaInstructions = tx.notaryInstructions.none { it is SolanaInstruction }
         require(noSolanaInstructions) { "No Solana instructions allowed" }
@@ -67,9 +91,7 @@ class FungibleTokenRedemptionContract : Contract {
         val burnReceiptState = tx.outputsOfType<FungibleTokenBurnReceipt>().requireSingle {
             "Token burning transaction requires exactly one output FungibleTokenBurnReceipt"
         }
-        require(tx.commands.size == 1) {
-            "BurnOnSolana transaction must only contain a single command"
-        }
+        require(tx.commands.size == 1) { "BurnOnSolana transaction must only contain a single command" }
         require(tx.commands.single().signers.contains(burnReceiptState.bridgeAuthority.owningKey)) {
             "The bridge authority must sign the BurnOnSolana transaction"
         }
