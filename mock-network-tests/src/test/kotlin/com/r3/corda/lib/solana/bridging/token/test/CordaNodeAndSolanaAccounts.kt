@@ -12,13 +12,13 @@ import net.corda.testing.node.StartedMockNode
 import net.corda.testing.solana.SolanaTestValidator
 import java.math.BigDecimal
 
-data class CordaNodeAndSolanaAccounts private constructor(
+data class CordaNodeAndSolanaAccounts(
     val node: StartedMockNode,
     val party: Party,
     val signer: Signer,
     val mintToAta: Map<PublicKey, PublicKey>,
-    val mintToExpectedCordaBalance: MutableMap<PublicKey, BigDecimal>,
-    val mintToExpectedSolanaBalance: MutableMap<PublicKey, BigDecimal>,
+    val expectedCordaBalance: MutableMap<PublicKey, BigDecimal>,
+    val expectedSolanaBalance: MutableMap<PublicKey, BigDecimal>,
 ) {
     companion object {
         fun createAndInitialise(
@@ -39,27 +39,35 @@ data class CordaNodeAndSolanaAccounts private constructor(
                 },
                 node = node,
                 party = node.info.legalIdentities.first(),
-                mintToExpectedCordaBalance = mints.associate { it to BigDecimal.ZERO }.toMutableMap(),
-                mintToExpectedSolanaBalance = mints.associate { it to BigDecimal.ZERO }.toMutableMap(),
+                expectedCordaBalance = mints.associateWith { BigDecimal.ZERO }.toMutableMap(),
+                expectedSolanaBalance = mints.associateWith { BigDecimal.ZERO }.toMutableMap(),
             )
         }
     }
 
     fun setExpectedCordaBalance(mint: PublicKey, quantity: BigDecimal) {
-        mintToExpectedCordaBalance[mint] = quantity
+        expectedCordaBalance[mint] = quantity
     }
 
     fun setExpectedSolanaBalance(mint: PublicKey, quantity: BigDecimal) {
-        mintToExpectedSolanaBalance[mint] = quantity
+        expectedSolanaBalance[mint] = quantity
     }
 
     fun redeemExpectedBalance(mint: PublicKey, quantity: BigDecimal) {
-        mintToExpectedSolanaBalance[mint] = mintToExpectedSolanaBalance.getValue(mint).subtract(quantity)
-        mintToExpectedCordaBalance[mint] = mintToExpectedCordaBalance.getValue(mint).add(quantity)
+        val currentSolanaBalance = expectedSolanaBalance.getValue(mint)
+        check(currentSolanaBalance >= quantity) {
+            "Insufficient expected Solana balance for mint $mint: current $currentSolanaBalance, required $quantity"
+        }
+        expectedSolanaBalance[mint] = currentSolanaBalance.subtract(quantity)
+        expectedCordaBalance[mint] = expectedCordaBalance.getValue(mint).add(quantity)
     }
 
     fun bridgeExpectedBalance(mint: PublicKey, quantity: BigDecimal) {
-        mintToExpectedSolanaBalance[mint] = mintToExpectedSolanaBalance.getValue(mint).add(quantity)
-        mintToExpectedCordaBalance[mint] = mintToExpectedCordaBalance.getValue(mint).subtract(quantity)
+        val currentCordaBalance = expectedCordaBalance.getValue(mint)
+        check(currentCordaBalance >= quantity) {
+            "Insufficient expected Corda balance for mint $mint: current $currentCordaBalance, required $quantity"
+        }
+        expectedSolanaBalance[mint] = expectedSolanaBalance.getValue(mint).add(quantity)
+        expectedCordaBalance[mint] = currentCordaBalance.subtract(quantity)
     }
 }

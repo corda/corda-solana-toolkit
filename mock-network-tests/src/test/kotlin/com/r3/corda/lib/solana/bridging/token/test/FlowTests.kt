@@ -77,6 +77,7 @@ abstract class FlowTests {
         private val ISSUING_QUANTITY = BigDecimal("2000.000")
         private val MOVE_QUANTITY_1 = BigDecimal("10.250")
         private val MOVE_QUANTITY_2 = BigDecimal("10.200")
+        private val MOVE_QUANTITY_3 = BigDecimal("7.025")
         private val MOVE_TOTAL_QUANTITY = MOVE_QUANTITY_1 + MOVE_QUANTITY_2
 
         private val issuingBankIdentity = TestIdentity(DUMMY_BANK_A_NAME)
@@ -239,7 +240,8 @@ abstract class FlowTests {
         bob.setExpectedCordaBalance(msftTokenMint, ISSUING_QUANTITY)
         bob.setExpectedCordaBalance(aaplTokenMint, ISSUING_QUANTITY)
 
-        // Bridge phase
+        // Bridge phase. We are moving different amounts to ensure multiple token states (including changes)
+        // are created and handled correctly.
         bridgeAndCheck(alice, msftTokenType, msftTokenMint, MOVE_QUANTITY_1)
         bridgeAndCheck(alice, msftTokenType, msftTokenMint, MOVE_QUANTITY_2)
         bridgeAndCheck(alice, aaplTokenType, aaplTokenMint, MOVE_QUANTITY_1)
@@ -257,10 +259,11 @@ abstract class FlowTests {
         ensureLockedAmount(msftTokenType, MOVE_TOTAL_QUANTITY)
         redeemAndCheck(alice, aaplTokenMint, aaplTokenType, MOVE_TOTAL_QUANTITY)
         ensureLockedAmount(aaplTokenType, MOVE_TOTAL_QUANTITY)
-        redeemAndCheck(bob, msftTokenMint, msftTokenType, MOVE_TOTAL_QUANTITY)
-        ensureLockedAmount(msftTokenType, BigDecimal.ZERO)
-        redeemAndCheck(bob, aaplTokenMint, aaplTokenType, MOVE_TOTAL_QUANTITY)
-        ensureLockedAmount(aaplTokenType, BigDecimal.ZERO)
+        // Bob redeems MOVE_QUANTITY_3 to force change outputs to be created and handled correctly
+        redeemAndCheck(bob, msftTokenMint, msftTokenType, MOVE_QUANTITY_3)
+        ensureLockedAmount(msftTokenType, MOVE_TOTAL_QUANTITY - MOVE_QUANTITY_3)
+        redeemAndCheck(bob, aaplTokenMint, aaplTokenType, MOVE_QUANTITY_3)
+        ensureLockedAmount(aaplTokenType, MOVE_TOTAL_QUANTITY - MOVE_QUANTITY_3)
     }
 
     private fun ensureLockedAmount(tokenType: TokenType, expectedLockedAmount: BigDecimal) {
@@ -299,7 +302,7 @@ abstract class FlowTests {
         val party = stakeholderInfo.node.party()
         eventually(duration = 5.seconds) {
             assertEquals(
-                stakeholderInfo.mintToExpectedCordaBalance[mint],
+                stakeholderInfo.expectedCordaBalance[mint],
                 stakeholderInfo.node.myTokenBalance(issuingBankParty, tokenType),
                 "${party.name} transferred some of ${tokenType.tokenIdentifier} shares",
             )
@@ -326,7 +329,7 @@ abstract class FlowTests {
         assertAtaAccount(accountInfo, mint, stakeholderInfo.signer.account)
         // SPL Token RPC returns decimal strings with trailing zeros trimmed,
         // BigDecimal.equals is scale-sensitive (1.0 != 1.00), so we compare numeric value instead.
-        val expectedSolanaBalanceAfter = stakeholderInfo.mintToExpectedSolanaBalance[mint]
+        val expectedSolanaBalanceAfter = stakeholderInfo.expectedSolanaBalance[mint]
         eventually(duration = 10.seconds) {
             assertThat(getSolanaTokenBalance(tokenAccount))
                 .describedAs("Solana ${tokenType.tokenIdentifier} token amount equals to $expectedSolanaBalanceAfter")
@@ -356,7 +359,7 @@ abstract class FlowTests {
         }
         eventually(duration = 10.seconds) {
             assertEquals(
-                ISSUING_QUANTITY,
+                stakeholderInfo.expectedCordaBalance[mint],
                 stakeholderInfo.node.myTokenBalance(issuingBankParty, tokenType),
                 "${party.name} received redeemed ${tokenType.tokenIdentifier} shares back",
             )

@@ -22,7 +22,7 @@ class RedeemVerificationTests {
     )
 
     @Test
-    fun successVerifyUnlockToken() {
+    fun `successful verification of a single fungible token unlocking`() {
         services.ledger {
             transaction {
                 attachment(TOKEN_PROGRAM_ID)
@@ -44,7 +44,7 @@ class RedeemVerificationTests {
     }
 
     @Test
-    fun successVerifyUnlockMultipleTokens() {
+    fun `successful verification of multiple fungible tokens unlocking`() {
         services.ledger {
             transaction {
                 attachment(TOKEN_PROGRAM_ID)
@@ -68,7 +68,7 @@ class RedeemVerificationTests {
     }
 
     @Test
-    fun successVerifyBurnOnSolana() {
+    fun `successful verification of the solana burn command`() {
         services.ledger {
             transaction {
                 attachment(TOKEN_PROGRAM_ID)
@@ -90,7 +90,7 @@ class RedeemVerificationTests {
     }
 
     @Test
-    fun unlockMultipleTokensHolderErrors() {
+    fun `multiple fungible tokens unlock fails with holder related errors`() {
         services.ledger {
             transaction {
                 attachment(TOKEN_PROGRAM_ID)
@@ -130,7 +130,7 @@ class RedeemVerificationTests {
     }
 
     @Test
-    fun unlockTokenAmountErrors() {
+    fun `fungible token unlocking fails with amount related errors`() {
         services.ledger {
             transaction {
                 attachment(TOKEN_PROGRAM_ID)
@@ -184,7 +184,7 @@ class RedeemVerificationTests {
     }
 
     @Test
-    fun unlockTokenCommandErrors() {
+    fun `fungible token unlocking fails with command related errors`() {
         services.ledger {
             transaction {
                 attachment(TOKEN_PROGRAM_ID)
@@ -236,7 +236,7 @@ class RedeemVerificationTests {
     }
 
     @Test
-    fun unlockTokenInstructionError() {
+    fun `fungible token unlocking fails with instruction related errors`() {
         services.ledger {
             transaction {
                 attachment(TOKEN_PROGRAM_ID)
@@ -263,7 +263,7 @@ class RedeemVerificationTests {
     }
 
     @Test
-    fun burnOnSolanaAmountErrors() {
+    fun `burning fungible tokens fails with amount related errors`() {
         services.ledger {
             transaction {
                 attachment(FungibleTokenRedemptionContract.CONTRACT_ID)
@@ -290,7 +290,7 @@ class RedeemVerificationTests {
     }
 
     @Test
-    fun burnOnSolanaCommandErrors() {
+    fun `burning fungible tokens fails with command related errors`() {
         services.ledger {
             transaction {
                 attachment(FungibleTokenRedemptionContract.CONTRACT_ID)
@@ -329,7 +329,7 @@ class RedeemVerificationTests {
     }
 
     @Test
-    fun burnOnSolanaInstructionErrors() {
+    fun `burning fungible tokens fail with instruction related errors`() {
         services.ledger {
             transaction {
                 attachment(FungibleTokenRedemptionContract.CONTRACT_ID)
