@@ -4,7 +4,7 @@ import com.r3.corda.lib.solana.bridging.token.states.FungibleTokenBurnReceipt
 import com.r3.corda.lib.tokens.contracts.commands.MoveTokenCommand
 import com.r3.corda.lib.tokens.contracts.commands.TokenCommand
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
-import com.r3.corda.lib.tokens.contracts.utilities.sumTokenStatesOrNull
+import com.r3.corda.lib.tokens.contracts.utilities.sumTokenStatesOrThrow
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract
 import net.corda.core.identity.AbstractParty
@@ -50,20 +50,28 @@ class FungibleTokenRedemptionContract : Contract {
         }
         val outputFungibleStates = tx.outputsOfType<FungibleToken>()
         require(outputFungibleStates.isNotEmpty()) {
+            /*
+             * Expected to get one output state for redemption and at most one output state with a change,
+             * however keeping it more relax for forward compatibility in case Tokes SDK would change behavior of tokens
+             * selection. Token SDK specific checks are verified by Token contracts.
+             */
             "UnlockToken requires at least one output FungibleToken state"
         }
         // There might be a change that needs to be returned to the locking identity therefore we can have a set
-        val outputFungibleTokenHolders = outputFungibleStates.map { it.holder }.toSet()
-        require(outputFungibleTokenHolders.isNotEmpty()) {
-            "Output FungibleToken states must have at least one holder"
+        val outputFungibleTokensHeldByBridgeAuthority = outputFungibleStates
+            .filter {
+                it.holder == burnReceiptState.bridgeAuthority
+            }
+        require(outputFungibleTokensHeldByBridgeAuthority.isNotEmpty()) {
+            "At least one of the output FungibleToken states must have the bridge authority as the holder"
         }
-        require(burnReceiptState.bridgeAuthority in outputFungibleTokenHolders) {
-            "One of the output FungibleToken states must have the bridge authority as the holder"
-        }
-        val redeemedAmount = requireNotNull(
-            outputFungibleStates.filter { it.holder == burnReceiptState.bridgeAuthority }.sumTokenStatesOrNull()
-        ) {
-            "The output FungibleToken states must contain an amount for the same token type as in the burn receipt"
+        val redeemedAmount = try {
+            outputFungibleTokensHeldByBridgeAuthority.sumTokenStatesOrThrow()
+        } catch (e: Exception) {
+            throw IllegalArgumentException(
+                "Could not count amounts in FungibleToken states moved to the bridge authority due to ${e.message}",
+                e
+            )
         }
         require(burnReceiptState.amount == redeemedAmount.quantity) {
             "The amount in the FungibleTokenBurnReceipt must match the sum FungibleToken amounts"
