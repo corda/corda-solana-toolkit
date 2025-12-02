@@ -77,6 +77,7 @@ class BridgeFungibleTokenFlow(
 
             // Mint on Solana
             val mintTx = createMintTransaction(tokenProxyOnSolanaNotary)
+
             // TODO ENT-14346 Shouldn't the observer sessions be passed to finality of this transaction?
             return subFlow(FinalityFlow(mintTx, emptyList()))
         } catch (e: NotaryException) {
