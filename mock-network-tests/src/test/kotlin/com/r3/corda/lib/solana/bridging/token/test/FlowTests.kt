@@ -75,7 +75,10 @@ abstract class FlowTests {
 
         // Whole token amounts
         private val ISSUING_QUANTITY = BigDecimal("2000.000")
-        private val MOVE_QUANTITY = BigDecimal("10.250")
+        private val MOVE_QUANTITY_1 = BigDecimal("10.250")
+        private val MOVE_QUANTITY_2 = BigDecimal("10.200")
+        private val MOVE_QUANTITY_3 = BigDecimal("7.025")
+        private val MOVE_TOTAL_QUANTITY = MOVE_QUANTITY_1 + MOVE_QUANTITY_2
 
         private val issuingBankIdentity = TestIdentity(DUMMY_BANK_A_NAME)
         private val bridgeAuthorityIdentity = TestIdentity(CordaX500Name("Bridge Authority", "New York", "US"))
@@ -231,24 +234,36 @@ abstract class FlowTests {
         move(issuingBank, bob.party, ISSUING_QUANTITY, msftTokenType).get()
         move(issuingBank, bob.party, ISSUING_QUANTITY, aaplTokenType).get()
 
-        // Bridge phase
-        bridgeAndCheck(alice, msftTokenType, msftTokenMint)
-        bridgeAndCheck(alice, aaplTokenType, aaplTokenMint)
-        bridgeAndCheck(bob, msftTokenType, msftTokenMint)
-        bridgeAndCheck(bob, aaplTokenType, aaplTokenMint)
+        // Set expected balances
+        alice.setExpectedCordaBalance(msftTokenMint, ISSUING_QUANTITY)
+        alice.setExpectedCordaBalance(aaplTokenMint, ISSUING_QUANTITY)
+        bob.setExpectedCordaBalance(msftTokenMint, ISSUING_QUANTITY)
+        bob.setExpectedCordaBalance(aaplTokenMint, ISSUING_QUANTITY)
 
-        ensureLockedAmount(msftTokenType, MOVE_QUANTITY * BigDecimal(2))
-        ensureLockedAmount(aaplTokenType, MOVE_QUANTITY * BigDecimal(2))
+        // Bridge phase. We are moving different amounts to ensure multiple token states (including changes)
+        // are created and handled correctly.
+        bridgeAndCheck(alice, msftTokenType, msftTokenMint, MOVE_QUANTITY_1)
+        bridgeAndCheck(alice, msftTokenType, msftTokenMint, MOVE_QUANTITY_2)
+        bridgeAndCheck(alice, aaplTokenType, aaplTokenMint, MOVE_QUANTITY_1)
+        bridgeAndCheck(alice, aaplTokenType, aaplTokenMint, MOVE_QUANTITY_2)
+        bridgeAndCheck(bob, msftTokenType, msftTokenMint, MOVE_QUANTITY_1)
+        bridgeAndCheck(bob, msftTokenType, msftTokenMint, MOVE_QUANTITY_2)
+        bridgeAndCheck(bob, aaplTokenType, aaplTokenMint, MOVE_QUANTITY_1)
+        bridgeAndCheck(bob, aaplTokenType, aaplTokenMint, MOVE_QUANTITY_2)
+
+        ensureLockedAmount(msftTokenType, MOVE_TOTAL_QUANTITY * BigDecimal(2))
+        ensureLockedAmount(aaplTokenType, MOVE_TOTAL_QUANTITY * BigDecimal(2))
 
         // Redemption phase
-        redeemAndCheck(alice, msftTokenMint, msftTokenType)
-        ensureLockedAmount(msftTokenType, MOVE_QUANTITY)
-        redeemAndCheck(alice, aaplTokenMint, aaplTokenType)
-        ensureLockedAmount(aaplTokenType, MOVE_QUANTITY)
-        redeemAndCheck(bob, msftTokenMint, msftTokenType)
-        ensureLockedAmount(msftTokenType, BigDecimal.ZERO)
-        redeemAndCheck(bob, aaplTokenMint, aaplTokenType)
-        ensureLockedAmount(aaplTokenType, BigDecimal.ZERO)
+        redeemAndCheck(alice, msftTokenMint, msftTokenType, MOVE_TOTAL_QUANTITY)
+        ensureLockedAmount(msftTokenType, MOVE_TOTAL_QUANTITY)
+        redeemAndCheck(alice, aaplTokenMint, aaplTokenType, MOVE_TOTAL_QUANTITY)
+        ensureLockedAmount(aaplTokenType, MOVE_TOTAL_QUANTITY)
+        // Bob redeems MOVE_QUANTITY_3 to force change outputs to be created and handled correctly
+        redeemAndCheck(bob, msftTokenMint, msftTokenType, MOVE_QUANTITY_3)
+        ensureLockedAmount(msftTokenType, MOVE_TOTAL_QUANTITY - MOVE_QUANTITY_3)
+        redeemAndCheck(bob, aaplTokenMint, aaplTokenType, MOVE_QUANTITY_3)
+        ensureLockedAmount(aaplTokenType, MOVE_TOTAL_QUANTITY - MOVE_QUANTITY_3)
     }
 
     private fun ensureLockedAmount(tokenType: TokenType, expectedLockedAmount: BigDecimal) {
@@ -275,15 +290,23 @@ abstract class FlowTests {
         }
     }
 
-    private fun bridgeAndCheck(stakeholderInfo: CordaNodeAndSolanaAccounts, tokenType: TokenType, mint: PublicKey) {
+    private fun bridgeAndCheck(
+        stakeholderInfo: CordaNodeAndSolanaAccounts,
+        tokenType: TokenType,
+        mint: PublicKey,
+        moveQuantity: BigDecimal,
+    ) {
+        stakeholderInfo.bridgeExpectedBalance(mint, moveQuantity)
         val tokenAccount = requireNotNull(stakeholderInfo.mintToAta[mint]) { "Token account must not be null" }
-        move(stakeholderInfo.node, bridgeAuthority.party, MOVE_QUANTITY, tokenType).get()
+        move(stakeholderInfo.node, bridgeAuthority.party, moveQuantity, tokenType).get()
         val party = stakeholderInfo.node.party()
-        assertEquals(
-            ISSUING_QUANTITY - MOVE_QUANTITY,
-            stakeholderInfo.node.myTokenBalance(issuingBankParty, tokenType),
-            "${party.name} transferred some of ${tokenType.tokenIdentifier} shares",
-        )
+        eventually(duration = 5.seconds) {
+            assertEquals(
+                stakeholderInfo.expectedCordaBalance[mint],
+                stakeholderInfo.node.myTokenBalance(issuingBankParty, tokenType),
+                "${party.name} transferred some of ${tokenType.tokenIdentifier} shares",
+            )
+        }
         // We need to wait for the vault listener to process the newly received token
         eventually(duration = 10.seconds) {
             assertEquals(
@@ -296,7 +319,8 @@ abstract class FlowTests {
         assertTrue(fungibleTokens.isNotEmpty()) {
             "There should be at least one ${tokenType.tokenIdentifier} fungible token in Bridge Authority vault"
         }
-        val holder = fungibleTokens.map { it.holder }.toSet().single()
+        val holder = fungibleTokens.map { it.holder }.toSet().singleOrNull()
+        requireNotNull(holder) { "Selected fungible tokens should have the same holder" }
         assertTrue(
             holder !in listOf(stakeholderInfo.party, bridgeAuthority.party),
             "Fungible token holder should be Locking Identity, but was $holder"
@@ -305,30 +329,37 @@ abstract class FlowTests {
         assertAtaAccount(accountInfo, mint, stakeholderInfo.signer.account)
         // SPL Token RPC returns decimal strings with trailing zeros trimmed,
         // BigDecimal.equals is scale-sensitive (1.0 != 1.00), so we compare numeric value instead.
+        val expectedSolanaBalanceAfter = stakeholderInfo.expectedSolanaBalance[mint]
         eventually(duration = 10.seconds) {
             assertThat(getSolanaTokenBalance(tokenAccount))
-                .describedAs("Solana ${tokenType.tokenIdentifier} token amount numerically equals Corda bridged amount")
-                .isEqualByComparingTo(MOVE_QUANTITY)
+                .describedAs("Solana ${tokenType.tokenIdentifier} token amount equals to $expectedSolanaBalanceAfter")
+                .isEqualByComparingTo(expectedSolanaBalanceAfter)
         }
     }
 
-    private fun redeemAndCheck(stakeholderInfo: CordaNodeAndSolanaAccounts, mint: PublicKey, tokenType: TokenType) {
+    private fun redeemAndCheck(
+        stakeholderInfo: CordaNodeAndSolanaAccounts,
+        mint: PublicKey,
+        tokenType: TokenType,
+        moveQuantity: BigDecimal,
+    ) {
+        stakeholderInfo.redeemExpectedBalance(mint, moveQuantity)
         val fromTokenAccount = requireNotNull(stakeholderInfo.mintToAta[mint]) {
             "Source token account must not be null"
         }
         val toTokenAccount = bridgeAuthority.redemptionTokenAccountForPartyAndMint(stakeholderInfo.party, mint)
-        transfer(stakeholderInfo.signer, fromTokenAccount, toTokenAccount, MOVE_QUANTITY.toRawAmount())
+        transfer(stakeholderInfo.signer, fromTokenAccount, toTokenAccount, moveQuantity.toRawAmount())
         val party = stakeholderInfo.node.party()
         eventually(duration = 10.seconds) {
             val balance = getSolanaTokenBalance(toTokenAccount)
             assertEquals(
                 0,
-                balance.compareTo(MOVE_QUANTITY),
-            ) { "Redemption token account has $balance instead $MOVE_QUANTITY after transfer - party ${party.name}" }
+                balance.compareTo(moveQuantity),
+            ) { "Redemption token account has $balance instead $moveQuantity after transfer - party ${party.name}" }
         }
         eventually(duration = 10.seconds) {
             assertEquals(
-                ISSUING_QUANTITY,
+                stakeholderInfo.expectedCordaBalance[mint],
                 stakeholderInfo.node.myTokenBalance(issuingBankParty, tokenType),
                 "${party.name} received redeemed ${tokenType.tokenIdentifier} shares back",
             )

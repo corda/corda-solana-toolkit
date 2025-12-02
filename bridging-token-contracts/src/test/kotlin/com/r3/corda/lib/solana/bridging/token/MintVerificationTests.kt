@@ -22,7 +22,7 @@ class MintVerificationTests {
     )
 
     @Test
-    fun successfulLockVerification() {
+    fun `locking tokens is successful`() {
         services.ledger {
             transaction {
                 attachment(TOKEN_PROGRAM_ID)
@@ -53,7 +53,7 @@ class MintVerificationTests {
     }
 
     @Test
-    fun successfulMintVerification() {
+    fun `minting tokens is successful`() {
         services.ledger {
             transaction {
                 attachment(FungibleTokenBridgeContract.CONTRACT_ID)
@@ -73,7 +73,7 @@ class MintVerificationTests {
     }
 
     @Test
-    fun lockAmountErrors() {
+    fun `locking tokens fails with amount releated errors`() {
         services.ledger {
             transaction {
                 attachment(TOKEN_PROGRAM_ID)
@@ -127,7 +127,7 @@ class MintVerificationTests {
     }
 
     @Test
-    fun lockCommandErrors() {
+    fun `locking tokens fails with command related errors`() {
         services.ledger {
             transaction {
                 attachment(TOKEN_PROGRAM_ID)
@@ -184,7 +184,7 @@ class MintVerificationTests {
     // TODO test with a surplus dummy unrelated state and contracts
 
     @Test
-    fun lockInstructionError() {
+    fun `locking tokens fails with instruction related errors`() {
         services.ledger {
             transaction {
                 attachment(TOKEN_PROGRAM_ID)
@@ -212,7 +212,7 @@ class MintVerificationTests {
     }
 
     @Test
-    fun mintAmountErrors() {
+    fun `minting tokens fails with amount related errors`() {
         services.ledger {
             transaction {
                 attachment(FungibleTokenBridgeContract.CONTRACT_ID)
@@ -239,7 +239,7 @@ class MintVerificationTests {
     }
 
     @Test
-    fun mintCommandErrors() {
+    fun `minting tokens fails with command related errors`() {
         services.ledger {
             transaction {
                 attachment(FungibleTokenBridgeContract.CONTRACT_ID)
@@ -280,7 +280,7 @@ class MintVerificationTests {
     }
 
     @Test
-    fun mintInstructionErrors() {
+    fun `minting tokens fails with instruction related errors`() {
         services.ledger {
             transaction {
                 attachment(FungibleTokenBridgeContract.CONTRACT_ID)

@@ -22,7 +22,7 @@ class RedeemVerificationTests {
     )
 
     @Test
-    fun successVerifyUnlockToken() {
+    fun `successful verification of a single fungible token unlocking`() {
         services.ledger {
             transaction {
                 attachment(TOKEN_PROGRAM_ID)
@@ -44,7 +44,31 @@ class RedeemVerificationTests {
     }
 
     @Test
-    fun successVerifyBurnOnSolana() {
+    fun `successful verification of multiple fungible tokens unlocking`() {
+        services.ledger {
+            transaction {
+                attachment(TOKEN_PROGRAM_ID)
+                attachment(FungibleTokenRedemptionContract.CONTRACT_ID)
+                input(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
+                input(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
+                input(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState.copy(amount = redeemState.amount * 2))
+                output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
+                output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
+                command(
+                    listOf(bridgeAuthority.owningKey, confidentialIdentity.owningKey),
+                    MoveTokenCommand(cordaTokenAmount.token, listOf(0, 1), listOf(0, 1))
+                )
+                command(
+                    listOf(bridgeAuthority.owningKey),
+                    FungibleTokenRedemptionContract.RedeemCommand.UnlockToken(confidentialIdentity)
+                )
+                verifies()
+            }
+        }
+    }
+
+    @Test
+    fun `successful verification of the solana burn command`() {
         services.ledger {
             transaction {
                 attachment(TOKEN_PROGRAM_ID)
@@ -66,7 +90,47 @@ class RedeemVerificationTests {
     }
 
     @Test
-    fun unlockTokenAmountErrors() {
+    fun `multiple fungible tokens unlock fails with holder related errors`() {
+        services.ledger {
+            transaction {
+                attachment(TOKEN_PROGRAM_ID)
+                attachment(FungibleTokenRedemptionContract.CONTRACT_ID)
+                input(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
+                input(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState.copy(amount = redeemState.amount * 2))
+                command(
+                    listOf(bridgeAuthority.owningKey),
+                    FungibleTokenRedemptionContract.RedeemCommand.UnlockToken(confidentialIdentity)
+                )
+                tweak {
+                    input(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
+                    output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
+                    output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
+                    command(
+                        listOf(bridgeAuthority.owningKey, confidentialIdentity.owningKey),
+                        MoveTokenCommand(cordaTokenAmount.token, listOf(0, 2), listOf(0, 1))
+                    )
+                    `fails with`(
+                        "All input FungibleToken states must have the same holder"
+                    )
+                }
+                tweak {
+                    input(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
+                    output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
+                    output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
+                    command(
+                        listOf(bridgeAuthority.owningKey, confidentialIdentity.owningKey),
+                        MoveTokenCommand(cordaTokenAmount.token, listOf(0, 2), listOf(0, 1))
+                    )
+                    `fails with`(
+                        "One of the output FungibleToken states must have the bridge authority as the holder"
+                    )
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `fungible token unlocking fails with amount related errors`() {
         services.ledger {
             transaction {
                 attachment(TOKEN_PROGRAM_ID)
@@ -84,7 +148,7 @@ class RedeemVerificationTests {
                     output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
                     input(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState.copy(amount = 9999))
                     `fails with`(
-                        "The amount in the FungibleTokenBurnReceipt must match the amount in the FungibleToken state"
+                        "The amount in the FungibleTokenBurnReceipt must match the sum FungibleToken amounts"
                     )
                 }
                 tweak {
@@ -94,7 +158,7 @@ class RedeemVerificationTests {
                     )
                     input(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState.copy(amount = 10001))
                     `fails with`(
-                        "The amount in the FungibleTokenBurnReceipt must match the amount in the FungibleToken state"
+                        "The amount in the FungibleTokenBurnReceipt must match the sum FungibleToken amounts"
                     )
                 }
                 tweak {
@@ -120,7 +184,7 @@ class RedeemVerificationTests {
     }
 
     @Test
-    fun unlockTokenCommandErrors() {
+    fun `fungible token unlocking fails with command related errors`() {
         services.ledger {
             transaction {
                 attachment(TOKEN_PROGRAM_ID)
@@ -172,7 +236,7 @@ class RedeemVerificationTests {
     }
 
     @Test
-    fun unlockTokenInstructionError() {
+    fun `fungible token unlocking fails with instruction related errors`() {
         services.ledger {
             transaction {
                 attachment(TOKEN_PROGRAM_ID)
@@ -199,7 +263,7 @@ class RedeemVerificationTests {
     }
 
     @Test
-    fun burnOnSolanaAmountErrors() {
+    fun `burning fungible tokens fails with amount related errors`() {
         services.ledger {
             transaction {
                 attachment(FungibleTokenRedemptionContract.CONTRACT_ID)
@@ -226,7 +290,7 @@ class RedeemVerificationTests {
     }
 
     @Test
-    fun burnOnSolanaCommandErrors() {
+    fun `burning fungible tokens fails with command related errors`() {
         services.ledger {
             transaction {
                 attachment(FungibleTokenRedemptionContract.CONTRACT_ID)
@@ -265,7 +329,7 @@ class RedeemVerificationTests {
     }
 
     @Test
-    fun burnOnSolanaInstructionErrors() {
+    fun `burning fungible tokens fail with instruction related errors`() {
         services.ledger {
             transaction {
                 attachment(FungibleTokenRedemptionContract.CONTRACT_ID)
