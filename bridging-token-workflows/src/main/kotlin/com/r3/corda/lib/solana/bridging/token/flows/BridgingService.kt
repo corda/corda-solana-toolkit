@@ -141,15 +141,19 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
             }
             logger.info("Starting flow to bridge ${token.state.data} to Solana for $previousHolder")
             executor.submit {
-                appServiceHub.startFlow(
-                    BridgeFungibleTokenFlow(
-                        lockingIdentity,
-                        previousHolder.toParty(appServiceHub),
-                        token,
-                        solanaNotary,
-                        emptyList(), // TODO ENT-14346 an observer is not a generic concept in tokens
+                try {
+                    appServiceHub.startFlow(
+                        BridgeFungibleTokenFlow(
+                            lockingIdentity,
+                            previousHolder.toParty(appServiceHub),
+                            token,
+                            solanaNotary,
+                            emptyList(), // TODO ENT-14346 an observer is not a generic concept in tokens
+                        )
                     )
-                )
+                } catch (e: Exception) {
+                    logger.error("Unable to start BridgeFungibleTokenFlow for $token", e)
+                }
             }
         }
     }
