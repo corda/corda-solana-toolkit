@@ -80,18 +80,15 @@ class BridgeFungibleTokenFlow(
 
             // TODO ENT-14346 Shouldn't the observer sessions be passed to finality of this transaction?
             return subFlow(FinalityFlow(mintTx, emptyList()))
-        } catch (e: NotaryException) {
-            if (e.error is NotaryError.Conflict) {
-                // Notary conflict error is considered as failure of already bridged state, so it can be ignored
+        } catch (e: Exception) {
+            if (e is NotaryException && e.error is NotaryError.Conflict) {
+                // Conflict is considered as notarization failure of state that is already bridged, it can be ignored
                 logger.warn("Skipping BridgeFungibleTokenFlow for ${token.state.data} due to ${e.message}.", e)
                 throw e
-            } else { // errors: TimeWindowInvalid, TransactionInvalid, WrongNotary, RequestSignatureInvalid, General
-                logger.error("Unexpected notary error received by BridgeFungibleTokenFlow, sending to hospital", e)
+            } else {
+                logger.error("Unexpected error in BridgeFungibleTokenFlow, sending to hospital", e)
                 throw HospitalizeFlowException("Unexpected notary error received by BridgeFungibleTokenFlow", e)
             }
-        } catch (e: Throwable) {
-            logger.error("Unexpected error in BridgeFungibleTokenFlow, sending to hospital", e)
-            throw HospitalizeFlowException("Unexpected error in BridgeFungibleTokenFlow", e)
         }
     }
 
