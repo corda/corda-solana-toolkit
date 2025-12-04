@@ -54,7 +54,7 @@ pipeline {
         stage('Build') {
             steps {
                 authenticateGradleWrapper()
-                sh 'if pkill -9 solana-test-validator; then echo "solana-test-validator process killed." else echo "No solana-test-validator process was running." fi'
+                sh 'if pkill -9 solana-test-validator; then echo "solana-test-validator process killed."; else echo "No solana-test-validator process was running."; fi'
                 sh script: ['./gradlew', COMMON_GRADLE_PARAMS, 'build'].join(' ')
             }
         }
