@@ -42,13 +42,15 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
 
     private fun onStartup(event: ServiceLifecycleEvent) {
         if (event != ServiceLifecycleEvent.STATE_MACHINE_STARTED) return
+
+        listenForFungibleTokens(appServiceHub)
+
         // Retrieve unprocessed fungible tokens received while the node was offline
         val receivedStates = appServiceHub.vaultService.queryBy(FungibleToken::class.java).states
 
         receivedStates.forEach { token ->
             callBridgeFlow(appServiceHub, token)
         }
-        listenForFungibleTokens(appServiceHub)
 
         // Redemption initialization
         val subscribed = socket.onToken2022ByOwner(configHandler.redemptionWalletAccountToHolder.keys, ::onSolanaEvent)
