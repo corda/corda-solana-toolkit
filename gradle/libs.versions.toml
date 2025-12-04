@@ -1,8 +1,8 @@
 [versions]
 kotlin = "1.9.25"  # Use the same minor version of Kotlin as Corda
-corda-os = "4.14-20251114.000800-32"
-corda-os-shell = "4.14-20251114.004300-59" # for a sample Corddap deployment
-corda-ent = "4.14-20251114.004000-20"
+corda-os = "4.14-20251204.000801-46"
+corda-os-shell = "4.14-20251204.004300-79" # for a sample Corddap deployment
+corda-ent = "4.14-20251204.004000-34"
 tokens-sdk = "1.3.2"
 artifactory = "6.0.2"
 detekt = "2.0.0-alpha.0"
@@ -14,9 +14,11 @@ caffeine-cache = "3.2.3"
 corda-core = { module = "net.corda:corda-core", version.ref = "corda-os" }
 os-corda-node = { module = "net.corda:corda-node", version.ref = "corda-os" }
 ent-corda-node = { module = "com.r3.corda:corda-node", version.ref = "corda-ent" }
-os-corda-core-test-utils = { module = "net.corda:corda-core-test-utils", version.ref = "corda-os" }
+ent-corda-node-api = { module = "com.r3.corda:corda-node-api", version.ref = "corda-ent" }
+ent-corda-core-test-utils = { module = "com.r3.corda:corda-core-test-utils", version.ref = "corda-ent" }
 ent-corda-solana-notary-common = { module = "net.corda.solana.notary:common", version = "0.1.2" }
 ent-corda-solana-sdk = { module = "com.r3.corda:corda-solana-sdk", version.ref = "corda-ent" }
+ent-corda-test-common = { module = "com.r3.corda:corda-test-common", version.ref = "corda-ent" }
 ent-corda-test-utils = { module = "com.r3.corda:corda-test-utils", version.ref = "corda-ent" }
 ent-corda-node-driver = { module = "com.r3.corda:corda-node-driver", version.ref = "corda-ent" }
 tokens-contracts = { module = "com.r3.corda.lib.tokens:tokens-contracts", version.ref = "tokens-sdk" }
