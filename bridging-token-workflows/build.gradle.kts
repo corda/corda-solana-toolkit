@@ -23,6 +23,7 @@ dependencies {
 
     testImplementation(libs.ent.corda.test.utils)
     testImplementation(libs.os.corda.core.test.utils)
+    testImplementation(libs.os.corda.solana.notary.test)
 }
 
 cordapp {

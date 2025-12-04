@@ -16,6 +16,7 @@ os-corda-node = { module = "net.corda:corda-node", version.ref = "corda-os" }
 ent-corda-node = { module = "com.r3.corda:corda-node", version.ref = "corda-ent" }
 os-corda-core-test-utils = { module = "net.corda:corda-core-test-utils", version.ref = "corda-os" }
 ent-corda-solana-notary-common = { module = "net.corda.solana.notary:common", version = "0.1.2" }
+os-corda-solana-notary-test = { module = "net.corda.solana.notary:notary-test", version = "0.1.2" }
 ent-corda-solana-sdk = { module = "com.r3.corda:corda-solana-sdk", version.ref = "corda-ent" }
 ent-corda-test-utils = { module = "com.r3.corda:corda-test-utils", version.ref = "corda-ent" }
 ent-corda-node-driver = { module = "com.r3.corda:corda-node-driver", version.ref = "corda-ent" }
