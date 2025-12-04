@@ -14,7 +14,7 @@ dependencies {
     detektPlugins(libs.detekt.ktlint.wrapper)
 
     testImplementation(libs.ent.corda.node.driver)
-    testImplementation(libs.os.corda.core.test.utils)
+    testImplementation(libs.ent.corda.core.test.utils)
     testImplementation(libs.ent.corda.test.utils)
     testImplementation(libs.ent.corda.solana.notary.common)
     testImplementation(libs.mockito.core)
