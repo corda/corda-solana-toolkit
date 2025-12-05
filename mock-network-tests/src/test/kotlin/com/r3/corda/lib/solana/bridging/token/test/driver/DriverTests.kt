@@ -111,8 +111,6 @@ class DriverTests {
             whitelistedContractImplementations = emptyMap(),
             eventHorizon = Duration.ofDays(30),
             packageOwnership = emptyMap(),
-            recoveryMaximumBackupInterval = null,
-            confidentialIdentityMinimumBackupInterval = null,
         )
     }
 
