@@ -15,6 +15,10 @@ import java.util.UUID
 import kotlin.io.path.Path
 
 class ConfigHandler(private val appServiceHub: AppServiceHub) {
+    companion object {
+        private const val DEFAULT_REDEMPTION_CHECK_INTERVAL_SECONDS = 10L
+    }
+
     private val participants: Map<CordaX500Name, Pubkey>
     private val mintsWithAuthorities: Map<String, MintWithAuthority>
     private val mintAccountToTokenId: Map<Pubkey, String>
@@ -26,6 +30,7 @@ class ConfigHandler(private val appServiceHub: AppServiceHub) {
     val solanaRpcUrl: String
     val redemptionWalletAccountToHolder: Map<Pubkey, CordaX500Name>
     val bridgeAuthoritySigner: Signer
+    val redemptionCheckIntervalSeconds: Long
 
     init {
         val config = appServiceHub.getAppContext().config
@@ -48,6 +53,11 @@ class ConfigHandler(private val appServiceHub: AppServiceHub) {
         solanaWsUrl = config.getString("solanaWsUrl")
         solanaRpcUrl = config.getString("solanaRpcUrl")
         bridgeAuthoritySigner = Signer.fromFile(Path(config.getString("bridgeAuthorityWalletFile")))
+        redemptionCheckIntervalSeconds = if (config.exists("redemptionCheckIntervalSeconds")) {
+            config.getLong("redemptionCheckIntervalSeconds")
+        } else {
+            DEFAULT_REDEMPTION_CHECK_INTERVAL_SECONDS
+        }
     }
 
     private fun getLockingIdentity(config: CordappConfig, appServiceHub: AppServiceHub): Party {

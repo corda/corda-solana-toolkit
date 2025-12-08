@@ -26,11 +26,10 @@ object SavaFactory {
             logger.info("Attaching websocket for account owned by: $owners")
             return socket.programSubscribe(
                 SolanaAccounts.MAIN_NET.token2022Program(),
-                owners.map { Filter.createMemCompFilter(TokenAccount.OWNER_OFFSET, it.toPublickey()) },
+                owners.map { Filter.createMemCompFilter(TokenAccount.OWNER_OFFSET, it.toPublicKey()) },
                 { _ ->
                     owners.forEach { owner ->
-                        val ownerKey = owner.toPublickey()
-                        getNonZeroTokenAccounts(ownerKey, rpcUrl).forEach {
+                        getNonZeroTokenAccounts(owner).forEach {
                             logger.debug {
                                 "WebSocketWrapper::onSub found non zero account ${it.pubKey} owned by ${it.data.owner}"
                             }
@@ -59,18 +58,18 @@ object SavaFactory {
                 onAccountChanged(ownerKey, accountKey, mintKey, token.amount)
             }
         }
-    }
 
-    fun getNonZeroTokenAccounts(owner: PublicKey, rpcUrl: String): List<AccountInfo<TokenAccount>> {
-        val httpClient = HttpClient.newHttpClient()
-        val solanaClient = SolanaRpcClient.createClient(URI.create(rpcUrl), httpClient, globalCommitmentLevelSava)
-        logger.debug { "Checking for non-zero token accounts owned by $owner" }
-        return solanaClient
-            .getTokenAccountsForProgramByOwner(owner, SolanaAccounts.MAIN_NET.token2022Program())
-            .join()
-            .filter {
-                it.data.amount > 0
-            }
+        fun getNonZeroTokenAccounts(owner: Pubkey): List<AccountInfo<TokenAccount>> {
+            val httpClient = HttpClient.newHttpClient()
+            val solanaClient = SolanaRpcClient.createClient(URI.create(rpcUrl), httpClient, globalCommitmentLevelSava)
+            logger.debug { "Checking for non-zero token accounts owned by $owner" }
+            return solanaClient
+                .getTokenAccountsForProgramByOwner(owner.toPublicKey(), SolanaAccounts.MAIN_NET.token2022Program())
+                .join()
+                .filter {
+                    it.data.amount > 0
+                }
+        }
     }
 
     fun createWebSocket(rpcUrl: String): SolanaRpcWebsocket {
@@ -87,7 +86,7 @@ object SavaFactory {
         return socket
     }
 
-    fun Pubkey.toPublickey(): PublicKey = PublicKey.createPubKey(bytes)
+    fun Pubkey.toPublicKey(): PublicKey = PublicKey.createPubKey(bytes)
 
     fun PublicKey.toPubkey() = Pubkey(copyByteArray())
 }

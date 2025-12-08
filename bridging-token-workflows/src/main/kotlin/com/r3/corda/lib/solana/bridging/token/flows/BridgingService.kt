@@ -1,6 +1,7 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
 import com.lmax.solana4j.client.jsonrpc.SolanaJsonRpcClient
+import com.r3.corda.lib.solana.bridging.token.flows.SavaFactory.toPubkey
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.workflows.utilities.toParty
 import net.corda.core.contracts.StateAndRef
@@ -10,11 +11,11 @@ import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.ServiceLifecycleEvent
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.utilities.debug
 import net.corda.solana.sdk.instruction.Pubkey
 import org.slf4j.LoggerFactory
 import java.net.http.HttpClient
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 @CordaService
 class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSerializeAsToken() {
@@ -23,7 +24,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
     }
 
     private val socket: SavaFactory.WebSocketWrapper
-    private val executor = Executors.newSingleThreadExecutor()
+    private val executor = Executors.newSingleThreadScheduledExecutor()
     private val configHandler = ConfigHandler(appServiceHub)
     private val rpcClient: SolanaJsonRpcClient
     private val accountService: TokenAccountService
@@ -40,20 +41,36 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         executor.shutdown()
     }
 
+    fun getBridgingCoordinates(token: StateAndRef<FungibleToken>, originalHolder: Party) =
+        configHandler.getBridgingCoordinates(token, originalHolder)
+
     private fun onStartup(event: ServiceLifecycleEvent) {
         if (event != ServiceLifecycleEvent.STATE_MACHINE_STARTED) return
+        checkAndListenForBridging()
+        checkAndListenForRedemption()
+    }
 
-        listenForFungibleTokens(appServiceHub)
-
-        // Retrieve unprocessed fungible tokens received while the node was offline
-        val receivedStates = appServiceHub.vaultService.queryBy(FungibleToken::class.java).states
-
-        receivedStates.forEach { token ->
+    private fun checkAndListenForBridging() {
+        // `trackBy` is atomic and ensures we don't miss any states between the snapshot and the updates
+        val feed = appServiceHub.vaultService.trackBy(FungibleToken::class.java)
+        feed.snapshot.states.forEach { token ->
             callBridgeFlow(appServiceHub, token)
         }
+        feed.updates.subscribe {
+            for (newToken in it.produced) {
+                callBridgeFlow(appServiceHub, newToken)
+            }
+        }
+    }
 
-        // Redemption initialization
-        val subscribed = socket.onToken2022ByOwner(configHandler.redemptionWalletAccountToHolder.keys, ::onSolanaEvent)
+    private fun checkAndListenForRedemption() {
+        // First check existing balances in the redemption addresses
+        checkAllBalancesForRedemption()
+        // Now add listener for new redemption events
+        val subscribed = socket.onToken2022ByOwner(
+            configHandler.redemptionWalletAccountToHolder.keys,
+            ::processRedemptionEvent,
+        )
         if (!subscribed) {
             logger.error(
                 "Failed to subscribe to ${socket.wsUrl}"
@@ -61,7 +78,23 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         }
     }
 
-    fun onSolanaEvent(
+    private fun checkAllBalancesForRedemption() {
+        executor.scheduleAtFixedRate({
+            logger.info("Checking all balances for redemption")
+            configHandler.redemptionWalletAccountToHolder.keys.forEach { redemptionWallet ->
+                socket.getNonZeroTokenAccounts(redemptionWallet).forEach { tokenAccountInfo ->
+                    processRedemptionEvent(
+                        redemptionWallet,
+                        tokenAccountInfo.pubKey.toPubkey(),
+                        tokenAccountInfo.data.mint.toPubkey(),
+                        tokenAccountInfo.data.amount()
+                    )
+                }
+            }
+        }, 0, configHandler.redemptionCheckIntervalSeconds, TimeUnit.SECONDS)
+    }
+
+    fun processRedemptionEvent(
         redemptionWalletAccount: Pubkey,
         redemptionTokenAccount: Pubkey,
         mint: Pubkey,
@@ -87,24 +120,26 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
             redemptionWalletAccount,
             redemptionTokenAccount,
         )
-        executor.submit {
-            onTokenReceivedCallback(cordaOwner, amount, redemptionCoordinates)
-        }
+        callRedemptionFlow(
+            cordaOwner,
+            amount,
+            redemptionCoordinates,
+        )
     }
-
-    fun getBridgingCoordinates(token: StateAndRef<FungibleToken>, originalHolder: Party) =
-        configHandler.getBridgingCoordinates(token, originalHolder)
 
     fun createAta(mint: Pubkey, owner: Pubkey) {
         accountService.createAta(mint.toPublicKey(), owner.toPublicKey())
     }
 
-    private fun onTokenReceivedCallback(
+    private fun callRedemptionFlow(
         cordaOwner: Party,
         amount: Long,
         redemptionCoordinates: RedemptionCoordinates,
     ) {
-        logger.debug { "Web socket event for redemption coordinates: $redemptionCoordinates, amount $amount" }
+        logger.debug("Web socket event for redemption coordinates: $redemptionCoordinates, amount $amount")
+        if (amount == 0L) {
+            return
+        }
         val flowHandle = with(configHandler) {
             appServiceHub.startFlow(
                 RedeemFungibleTokenFlow(
@@ -118,14 +153,6 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
             )
         }
         flowHandle.returnValue.get()
-    }
-
-    private fun listenForFungibleTokens(appServiceHub: AppServiceHub) {
-        appServiceHub.vaultService.trackBy(FungibleToken::class.java).updates.subscribe {
-            for (newToken in it.produced) {
-                callBridgeFlow(appServiceHub, newToken)
-            }
-        }
     }
 
     private fun callBridgeFlow(appServiceHub: AppServiceHub, token: StateAndRef<FungibleToken>) {
