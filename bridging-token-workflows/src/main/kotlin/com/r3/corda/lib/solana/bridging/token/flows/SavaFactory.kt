@@ -59,6 +59,8 @@ object SavaFactory {
             }
         }
 
+        fun isClosed(): Boolean = socket.closed()
+
         fun getNonZeroTokenAccounts(owner: Pubkey): List<AccountInfo<TokenAccount>> {
             val httpClient = HttpClient.newHttpClient()
             val solanaClient = SolanaRpcClient.createClient(URI.create(rpcUrl), httpClient, globalCommitmentLevelSava)
