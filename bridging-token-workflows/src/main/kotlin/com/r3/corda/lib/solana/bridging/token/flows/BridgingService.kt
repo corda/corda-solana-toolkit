@@ -51,17 +51,16 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
     }
 
     private fun checkAndListenForBridging() {
-        // Retrieve unprocessed fungible tokens received while the node was offline
-        val receivedStates = appServiceHub.vaultService.queryBy(FungibleToken::class.java).states
-        receivedStates.forEach { token ->
-            callBridgeFlow(appServiceHub, token)
-        }
-
         // Now listen for new fungible tokens being received
-        appServiceHub.vaultService.trackBy(FungibleToken::class.java).updates.subscribe {
+        val feed = appServiceHub.vaultService.trackBy(FungibleToken::class.java)
+        feed.updates.subscribe {
             for (newToken in it.produced) {
                 callBridgeFlow(appServiceHub, newToken)
             }
+        }
+        // Handle unprocessed fungible tokens received while the node was offline
+        feed.snapshot.states.forEach { token ->
+            callBridgeFlow(appServiceHub, token)
         }
     }
 
