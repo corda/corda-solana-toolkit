@@ -397,6 +397,10 @@ abstract class FlowTests {
     fun BigDecimal.toRawAmount(): Long = this.toRawAmount(TOKEN_DECIMALS)
 }
 
+fun BigDecimal.toRawAmount(decimals: Int): Long {
+    return (this * BigDecimal(10L).pow(decimals)).longValueExact()
+}
+
 fun SolanaTestValidator.transfer(
     fromOwner: Signer,
     fromTokenAccount: PublicKey,
@@ -419,10 +423,6 @@ fun SolanaTestValidator.transfer(
             DefaultRpcParams()
         ).metadata.err
     assertNull(error, "Token transfer failed with error: $error")
-}
-
-fun BigDecimal.toRawAmount(decimals: Int): Long {
-    return (this * BigDecimal(10L).pow(decimals)).longValueExact()
 }
 
 fun SolanaTestValidator.getSolanaTokenBalance(publicKey: PublicKey): BigDecimal {
