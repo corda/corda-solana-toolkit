@@ -16,8 +16,10 @@ import java.net.http.HttpClient
 object SavaFactory {
     val logger = loggerFor<SavaFactory>()
 
-    class WebSocketWrapper(val rpcUrl: String, val wsUrl: String) {
-        private val socket = createWebSocket(wsUrl)
+    class WebSocketWrapper(val rpcUrl: String, val wsUrl: String, onWebSocketClose: (Int, String) -> Unit) {
+        private val socket = createWebSocket(wsUrl) { _, errorCode, reason ->
+            onWebSocketClose(errorCode, reason)
+        }
 
         fun onToken2022ByOwner(
             owners: Set<Pubkey>,
@@ -59,8 +61,6 @@ object SavaFactory {
             }
         }
 
-        fun isClosed(): Boolean = socket.closed()
-
         fun getNonZeroTokenAccounts(owner: Pubkey): List<AccountInfo<TokenAccount>> {
             val httpClient = HttpClient.newHttpClient()
             val solanaClient = SolanaRpcClient.createClient(URI.create(rpcUrl), httpClient, globalCommitmentLevelSava)
@@ -72,9 +72,14 @@ object SavaFactory {
                     it.data.amount > 0
                 }
         }
+
+        fun reconnect(): Boolean {
+            logger.info("Reconnecting Solana websocket...")
+            return socket.connect().get() != null
+        }
     }
 
-    fun createWebSocket(rpcUrl: String): SolanaRpcWebsocket {
+    fun createWebSocket(rpcUrl: String, onClose: (SolanaRpcWebsocket, Int, String) -> Unit): SolanaRpcWebsocket {
         val httpClient = HttpClient.newHttpClient()
         val socket = SolanaRpcWebsocket
             .build()
@@ -82,6 +87,7 @@ object SavaFactory {
             .uri(rpcUrl)
             .solanaAccounts(SolanaAccounts.MAIN_NET)
             .commitment(globalCommitmentLevelSava)
+            .onClose(onClose)
             .create()
 
         socket.connect().get()

@@ -33,7 +33,11 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
     private val accountService: TokenAccountService
 
     init {
-        socket = SavaFactory.WebSocketWrapper(configHandler.solanaRpcUrl, configHandler.solanaWsUrl)
+        socket = SavaFactory.WebSocketWrapper(
+            configHandler.solanaRpcUrl,
+            configHandler.solanaWsUrl,
+            ::onSocketClosed
+        )
         appServiceHub.registerUnloadHandler { onStop() }
         appServiceHub.register { onStartup(it) }
         rpcClient = SolanaJsonRpcClient(HttpClient.newHttpClient(), configHandler.solanaRpcUrl)
@@ -42,6 +46,47 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
 
     private fun onStop() {
         executor.shutdown()
+    }
+
+    private fun onSocketClosed(errorCode: Int, reason: String) {
+        logger.info("WebSocket closed: $errorCode, $reason. Reconnecting...")
+        executor.submit { attemptSocketReconnect() }
+    }
+
+    private fun attemptSocketReconnect(remainingAttempts: Int = MAXIMUM_CONNECTION_ATTEMPTS) {
+        val connected = socket.reconnect()
+        when {
+            connected -> {
+                logger.info("Reconnected Solana websocket")
+            }
+            remainingAttempts > 0 -> {
+                logger.error("Failed to reconnect to ${socket.wsUrl}. Trying again...")
+                val attemptNumber = MAXIMUM_CONNECTION_ATTEMPTS - remainingAttempts + 1
+                val backOffSeconds = attemptNumber
+                logger.info("Retrying to reconnect in $backOffSeconds seconds (attempt $attemptNumber)")
+                executor.schedule(
+                    {
+                        attemptSocketReconnect(remainingAttempts - 1)
+                    },
+                    backOffSeconds.toLong(),
+                    TimeUnit.SECONDS
+                )
+            }
+            else -> {
+                logger.info(
+                    """Failed to reconnect to ${socket.wsUrl}.
+                        |Trying again in $MAXIMUM_CONNECTION_ATTEMPTS seconds
+                    """.trimMargin()
+                )
+                executor.schedule(
+                    {
+                        attemptSocketReconnect(0)
+                    },
+                    MAXIMUM_CONNECTION_ATTEMPTS.toLong(),
+                    TimeUnit.SECONDS
+                )
+            }
+        }
     }
 
     fun getBridgingCoordinates(token: StateAndRef<FungibleToken>, originalHolder: Party) =
@@ -76,45 +121,31 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
             configHandler.redemptionWalletAccountToHolder.keys,
             ::processRedemptionEvent,
         )
-        if (subscribed) {
-            logger.info("Successfully subscribed to ${socket.wsUrl}")
-            if (remainingAttempts >= 0) {
+        when {
+            subscribed -> {
                 logger.info(
-                    "Scheduling redemption balance checks every ${configHandler.redemptionCheckIntervalSeconds} seconds"
+                    """Successfully subscribed to ${socket.wsUrl}. Scheduling redemption balance checks every
+                        |${configHandler.redemptionCheckIntervalSeconds} seconds"
+                    """.trimMargin()
                 )
                 executor.scheduleAtFixedRate({
-                    if (socket.isClosed()) {
-                        logger.warn("Redemption wallet is closed. Reconnecting websocket...")
-                        attemptToSubscribeToWebsocket(0)
-                    } else {
-                        checkAllBalancesForRedemption()
-                    }
+                    checkAllBalancesForRedemption()
                 }, 0, configHandler.redemptionCheckIntervalSeconds, TimeUnit.SECONDS)
-            } else {
-                // No need to do anything as in this case the method was called from the periodic balance check task
             }
-        } else {
-            when {
-                remainingAttempts > 0 -> {
-                    logger.error("Failed to subscribe to ${socket.wsUrl}. Trying again...")
-                    val attemptNumber = MAXIMUM_CONNECTION_ATTEMPTS - remainingAttempts + 1
-                    val backOffSeconds = attemptNumber
-                    logger.info("Retrying to connect in $backOffSeconds seconds (attempt $attemptNumber)")
-                    executor.schedule(
-                        {
-                            attemptToSubscribeToWebsocket(remainingAttempts - 1)
-                        },
-                        backOffSeconds.toLong(),
-                        TimeUnit.SECONDS
-                    )
-                }
-
-                remainingAttempts == 0 -> logger.error("No remaining attempts to connect to ${socket.wsUrl}")
-                else -> {
-                    // When remainingAttempts < 0 we do nothing as this is the call from the periodic balance check task
-                    logger.error("Failed to subscribe to ${socket.wsUrl} during interval Solana balance check.")
-                }
+            remainingAttempts > 0 -> {
+                logger.error("Failed to subscribe to ${socket.wsUrl}. Trying again...")
+                val attemptNumber = MAXIMUM_CONNECTION_ATTEMPTS - remainingAttempts + 1
+                val backOffSeconds = attemptNumber
+                logger.info("Retrying to connect in $backOffSeconds seconds (attempt $attemptNumber)")
+                executor.schedule(
+                    {
+                        attemptToSubscribeToWebsocket(remainingAttempts - 1)
+                    },
+                    backOffSeconds.toLong(),
+                    TimeUnit.SECONDS
+                )
             }
+            else -> logger.error("No remaining attempts to connect to ${socket.wsUrl}")
         }
     }
 
