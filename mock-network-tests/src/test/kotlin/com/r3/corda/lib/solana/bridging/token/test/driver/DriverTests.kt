@@ -5,7 +5,6 @@ import com.lmax.solana4j.programs.AssociatedTokenProgram
 import com.r3.corda.lib.solana.bridging.token.flows.toPublicKey
 import com.r3.corda.lib.solana.bridging.token.test.FlowTests.Companion.APPL_TICKER
 import com.r3.corda.lib.solana.bridging.token.test.FlowTests.Companion.MSFT_TICKER
-import com.r3.corda.lib.solana.bridging.token.test.FlowTests.Companion.TOKEN_DECIMALS
 import com.r3.corda.lib.solana.bridging.token.test.SimpleDescriptor
 import com.r3.corda.lib.solana.bridging.token.test.TokenTypeDescriptor
 import com.r3.corda.lib.solana.bridging.token.test.assertAtaAccount
@@ -111,6 +110,7 @@ class Participant(val name: CordaX500Name) {
 
 class DriverTests {
     companion object {
+        const val TOKEN_DECIMALS = 3
         private val ISSUING_QUANTITY = BigDecimal("2000.000")
         private val MOVE_QUANTITY = BigDecimal("10.250")
         private val networkParameters = NetworkParameters(
@@ -367,7 +367,7 @@ class DriverTests {
             participant.wallet,
             stockAccounts.tokenAccount,
             stockAccounts.redemptionTokenAccount,
-            quantity.toRawAmount()
+            quantity.toRawAmount(TOKEN_DECIMALS)
         )
         val expectedLockedAmount = MOVE_QUANTITY - quantity
         // We need to wait for the websocket listener to process the newly received event
@@ -382,7 +382,7 @@ class DriverTests {
             bridgeAuthority.getAllFungibleTokens(issuingBankParty, stockAccounts.cordaTokenType).filter {
                 it.holder !in listOf(alice.identity, bob.identity, bridgeAuthority.identity) // CI holds tokens
             }
-        if (expectedLockedAmount.toRawAmount() == BigDecimal.ZERO.toRawAmount()) {
+        if (expectedLockedAmount.toRawAmount(TOKEN_DECIMALS) == BigDecimal.ZERO.toRawAmount(TOKEN_DECIMALS)) {
             assertTrue(
                 fungibleTokens.isEmpty(),
                 "No ${stockAccounts.cordaTokenIdentifier} shares left in Bridge Authority vault"
