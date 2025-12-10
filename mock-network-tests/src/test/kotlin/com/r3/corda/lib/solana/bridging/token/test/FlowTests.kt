@@ -394,27 +394,12 @@ abstract class FlowTests {
     }
 
     private fun StartedMockNode.party() = this.info.legalIdentities.first()
+
+    fun BigDecimal.toRawAmount(): Long = this.toRawAmount(TOKEN_DECIMALS)
 }
 
-fun BigDecimal.toRawAmount(): Long {
-    return (this * BigDecimal(10L).pow(TOKEN_DECIMALS)).longValueExact()
-}
-
-fun SolanaTestValidator.getSolanaTokenBalance(publicKey: PublicKey): BigDecimal {
-    return this
-        .client
-        .getTokenAccountBalance(publicKey.base58(), this.rpcParams)
-        .checkResponse("getTokenAccountBalance")!!
-        .uiAmountString
-        .toBigDecimal()
-}
-
-fun SolanaTestValidator.getAccountInfo(publicKey: PublicKey?): AccountInfo? {
-    requireNotNull(publicKey) { "PublicKey must not be null" }
-    return this
-        .client
-        .getAccountInfo(publicKey.base58(), this.rpcParams)
-        .checkResponse("getAccountInfo")
+fun BigDecimal.toRawAmount(decimals: Int): Long {
+    return (this * BigDecimal(10L).pow(decimals)).longValueExact()
 }
 
 fun SolanaTestValidator.transfer(
@@ -439,6 +424,23 @@ fun SolanaTestValidator.transfer(
             DefaultRpcParams()
         ).metadata.err
     assertNull(error, "Token transfer failed with error: $error")
+}
+
+fun SolanaTestValidator.getSolanaTokenBalance(publicKey: PublicKey): BigDecimal {
+    return this
+        .client
+        .getTokenAccountBalance(publicKey.base58(), this.rpcParams)
+        .checkResponse("getTokenAccountBalance")!!
+        .uiAmountString
+        .toBigDecimal()
+}
+
+fun SolanaTestValidator.getAccountInfo(publicKey: PublicKey?): AccountInfo? {
+    requireNotNull(publicKey) { "PublicKey must not be null" }
+    return this
+        .client
+        .getAccountInfo(publicKey.base58(), this.rpcParams)
+        .checkResponse("getAccountInfo")
 }
 
 fun assertAtaAccount(
