@@ -90,7 +90,7 @@ abstract class FlowTests {
     @TempDir
     lateinit var custodiedKeysDir: Path
 
-    private lateinit var testValidator: SolanaTestValidator
+    private lateinit var validator: SolanaTestValidator
     private var closeTestValidator = true
 
     private lateinit var solanaNotaryKeyFile: Path
@@ -111,13 +111,13 @@ abstract class FlowTests {
             network,
             ALICE_NAME,
             listOf(msftTokenMint, aaplTokenMint),
-            testValidator
+            validator
         )
         bob = CordaNodeAndSolanaAccounts.createAndInitialise(
             network,
             BOB_NAME,
             listOf(msftTokenMint, aaplTokenMint),
-            testValidator
+            validator
         )
         bridgeAuthority = BridgeAuthorityInfo.createAndInitialise(
             network,
@@ -129,7 +129,7 @@ abstract class FlowTests {
                 aaplDescriptor to aaplTokenMint,
             ),
             mintAuthoritySigner.account,
-            testValidator,
+            validator,
         )
     }
 
@@ -140,12 +140,12 @@ abstract class FlowTests {
     }
 
     private fun startTestValidator() {
-        testValidator = SolanaTestValidator()
+        validator = SolanaTestValidator()
         solanaNotaryKeyFile = randomKeypairFile(generalDir)
         solanaNotaryKey = Signer.fromFile(solanaNotaryKeyFile)
         mintAuthoritySigner = Signer.fromFile(randomKeypairFile(custodiedKeysDir))
         try {
-            testValidator.start()
+            validator.start()
         } catch (e: IllegalStateException) {
             if (e.message == "Another solana-test-validator instance is already running") {
                 // for these tests error is fine, tests create random new accounts
@@ -155,16 +155,16 @@ abstract class FlowTests {
                 throw e
             }
         }
-        testValidator.defaultNotaryProgramSetup(solanaNotaryKey.account)
-        testValidator.fundAccount(10, mintAuthoritySigner)
+        validator.defaultNotaryProgramSetup(solanaNotaryKey.account)
+        validator.fundAccount(10, mintAuthoritySigner)
 
-        msftTokenMint = testValidator.createToken(mintAuthoritySigner, decimals = TOKEN_DECIMALS.toByte())
-        aaplTokenMint = testValidator.createToken(mintAuthoritySigner, decimals = TOKEN_DECIMALS.toByte())
+        msftTokenMint = validator.createToken(mintAuthoritySigner, decimals = TOKEN_DECIMALS.toByte())
+        aaplTokenMint = validator.createToken(mintAuthoritySigner, decimals = TOKEN_DECIMALS.toByte())
     }
 
     fun stopTestValidator() {
-        if (::testValidator.isInitialized && closeTestValidator) {
-            testValidator.close()
+        if (::validator.isInitialized && closeTestValidator) {
+            validator.close()
         }
     }
 
@@ -227,10 +227,10 @@ abstract class FlowTests {
         val msftTokenType = issuingBank.issue(msftDescriptor, ISSUING_QUANTITY * BigDecimal(2), generalNotaryName)
         val aaplTokenType = issuingBank.issue(aaplDescriptor, ISSUING_QUANTITY * BigDecimal(2), generalNotaryName)
 
-        assertNull(getAccountInfo(alice.mintToAta[msftTokenMint]), "Alice MSFT ATA should not be created yet")
-        assertNull(getAccountInfo(alice.mintToAta[aaplTokenMint]), "Alice AAPL ATA should not be created yet")
-        assertNull(getAccountInfo(bob.mintToAta[msftTokenMint]), "Bob MSFT ATA should not be created yet")
-        assertNull(getAccountInfo(bob.mintToAta[aaplTokenMint]), "Bob AAPL ATA should not be created yet")
+        assertNull(validator.getAccountInfo(alice.mintToAta[msftTokenMint]), "Alice MSFT ATA should not be created yet")
+        assertNull(validator.getAccountInfo(alice.mintToAta[aaplTokenMint]), "Alice AAPL ATA should not be created yet")
+        assertNull(validator.getAccountInfo(bob.mintToAta[msftTokenMint]), "Bob MSFT ATA should not be created yet")
+        assertNull(validator.getAccountInfo(bob.mintToAta[aaplTokenMint]), "Bob AAPL ATA should not be created yet")
 
         move(issuingBank, alice.party, ISSUING_QUANTITY, msftTokenType).get()
         move(issuingBank, alice.party, ISSUING_QUANTITY, aaplTokenType).get()
@@ -328,13 +328,13 @@ abstract class FlowTests {
             holder !in listOf(stakeholderInfo.party, bridgeAuthority.party),
             "Fungible token holder should be Locking Identity, but was $holder"
         )
-        val accountInfo = getAccountInfo(tokenAccount)
+        val accountInfo = validator.getAccountInfo(tokenAccount)
         assertAtaAccount(accountInfo, mint, stakeholderInfo.signer.account)
         // SPL Token RPC returns decimal strings with trailing zeros trimmed,
         // BigDecimal.equals is scale-sensitive (1.0 != 1.00), so we compare numeric value instead.
         val expectedSolanaBalanceAfter = stakeholderInfo.expectedSolanaBalance[mint]
         eventually(duration = 10.seconds) {
-            assertThat(getSolanaTokenBalance(tokenAccount))
+            assertThat(validator.getSolanaTokenBalance(tokenAccount))
                 .describedAs("Solana ${tokenType.tokenIdentifier} token amount equals to $expectedSolanaBalanceAfter")
                 .isEqualByComparingTo(expectedSolanaBalanceAfter)
         }
@@ -351,10 +351,10 @@ abstract class FlowTests {
             "Source token account must not be null"
         }
         val toTokenAccount = bridgeAuthority.redemptionTokenAccountForPartyAndMint(stakeholderInfo.party, mint)
-        transfer(stakeholderInfo.signer, fromTokenAccount, toTokenAccount, moveQuantity.toRawAmount())
+        validator.transfer(stakeholderInfo.signer, fromTokenAccount, toTokenAccount, moveQuantity.toRawAmount())
         val party = stakeholderInfo.node.party()
         eventually(duration = 10.seconds) {
-            val balance = getSolanaTokenBalance(toTokenAccount)
+            val balance = validator.getSolanaTokenBalance(toTokenAccount)
             assertEquals(
                 0,
                 balance.compareTo(moveQuantity),
@@ -392,64 +392,71 @@ abstract class FlowTests {
             .map { it.state.data }
     }
 
-    private fun transfer(fromOwner: Signer, fromTokenAccount: PublicKey, toTokenAccount: PublicKey, amount: Long) {
-        val error = testValidator.client
-            .sendAndConfirm(
-                { txBuilder ->
-                    Token2022Program.factory(txBuilder).transfer(
-                        fromTokenAccount,
-                        toTokenAccount,
-                        fromOwner.account,
-                        amount,
-                        emptyList()
-                    )
-                },
-                fromOwner,
-                emptyList(),
-                DefaultRpcParams()
-            ).metadata.err
-        assertNull(error, "Token transfer failed with error: $error")
-    }
-
-    private fun BigDecimal.toRawAmount(): Long {
-        return (this * BigDecimal(10L).pow(TOKEN_DECIMALS)).longValueExact()
-    }
-
     private fun StartedMockNode.party() = this.info.legalIdentities.first()
 
-    private fun getSolanaTokenBalance(publicKey: PublicKey): BigDecimal {
-        return testValidator
-            .client
-            .getTokenAccountBalance(publicKey.base58(), testValidator.rpcParams)
-            .checkResponse("getTokenAccountBalance")!!
-            .uiAmountString
-            .toBigDecimal()
-    }
+    fun BigDecimal.toRawAmount(): Long = this.toRawAmount(TOKEN_DECIMALS)
+}
 
-    private fun getAccountInfo(publicKey: PublicKey?): AccountInfo? {
-        requireNotNull(publicKey) { "PublicKey must not be null" }
-        return testValidator
-            .client
-            .getAccountInfo(publicKey.base58(), testValidator.rpcParams)
-            .checkResponse("getAccountInfo")
-    }
+fun BigDecimal.toRawAmount(decimals: Int): Long {
+    return (this * BigDecimal(10L).pow(decimals)).longValueExact()
+}
 
-    private fun assertAtaAccount(
-        accountInfo: AccountInfo?,
-        expectedMintAccount: PublicKey,
-        expectedOwnerAccount: PublicKey,
-    ) {
-        assertNotNull(accountInfo, "Account not found")
-        assertEquals(accountInfo.owner, tokenProgramId.base58(), "ATA programId should match Token 2022")
-        val encodedInfo = accountInfo.data?.accountInfoEncoded
-        assertNotNull(encodedInfo, "Account data missing")
-        assertTrue(encodedInfo.size >= 2, "Missing encoded account data")
-        val binaryData = Base64.getDecoder().decode(encodedInfo.first())
-        val mintAccount = SolanaEncoding.account(binaryData.copyOfRange(0, 32))
-        assertEquals(mintAccount, expectedMintAccount, "ATA mint account mismatch")
-        val ownerAccount = SolanaEncoding.account(binaryData.copyOfRange(32, 64))
-        assertEquals(ownerAccount, expectedOwnerAccount, "ATA owner account mismatch")
-    }
+fun SolanaTestValidator.transfer(
+    fromOwner: Signer,
+    fromTokenAccount: PublicKey,
+    toTokenAccount: PublicKey,
+    amount: Long,
+) {
+    val error = this.client
+        .sendAndConfirm(
+            { txBuilder ->
+                Token2022Program.factory(txBuilder).transfer(
+                    fromTokenAccount,
+                    toTokenAccount,
+                    fromOwner.account,
+                    amount,
+                    emptyList()
+                )
+            },
+            fromOwner,
+            emptyList(),
+            DefaultRpcParams()
+        ).metadata.err
+    assertNull(error, "Token transfer failed with error: $error")
+}
+
+fun SolanaTestValidator.getSolanaTokenBalance(publicKey: PublicKey): BigDecimal {
+    return this
+        .client
+        .getTokenAccountBalance(publicKey.base58(), this.rpcParams)
+        .checkResponse("getTokenAccountBalance")!!
+        .uiAmountString
+        .toBigDecimal()
+}
+
+fun SolanaTestValidator.getAccountInfo(publicKey: PublicKey?): AccountInfo? {
+    requireNotNull(publicKey) { "PublicKey must not be null" }
+    return this
+        .client
+        .getAccountInfo(publicKey.base58(), this.rpcParams)
+        .checkResponse("getAccountInfo")
+}
+
+fun assertAtaAccount(
+    accountInfo: AccountInfo?,
+    expectedMintAccount: PublicKey,
+    expectedOwnerAccount: PublicKey,
+) {
+    assertNotNull(accountInfo, "Account not found")
+    assertEquals(accountInfo.owner, tokenProgramId.base58(), "ATA programId should match Token 2022")
+    val encodedInfo = accountInfo.data?.accountInfoEncoded
+    assertNotNull(encodedInfo, "Account data missing")
+    assertTrue(encodedInfo.size >= 2, "Missing encoded account data")
+    val binaryData = Base64.getDecoder().decode(encodedInfo.first())
+    val mintAccount = SolanaEncoding.account(binaryData.copyOfRange(0, 32))
+    assertEquals(mintAccount, expectedMintAccount, "ATA mint account mismatch")
+    val ownerAccount = SolanaEncoding.account(binaryData.copyOfRange(32, 64))
+    assertEquals(ownerAccount, expectedOwnerAccount, "ATA owner account mismatch")
 }
 
 interface TokenTypeDescriptor {
