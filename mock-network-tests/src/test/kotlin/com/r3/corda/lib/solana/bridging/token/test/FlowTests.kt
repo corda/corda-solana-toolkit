@@ -19,7 +19,7 @@ import net.corda.solana.notary.common.Signer
 import net.corda.solana.notary.common.rpc.DefaultRpcParams
 import net.corda.solana.notary.common.rpc.checkResponse
 import net.corda.solana.notary.common.rpc.sendAndConfirm
-import net.corda.solana.sdk.internal.Token2022
+import net.corda.solana.sdk.Token2022
 import net.corda.testing.common.internal.eventually
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME

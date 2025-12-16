@@ -17,7 +17,7 @@ import net.corda.core.flows.StartableByService
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.solana.sdk.internal.Token2022
+import net.corda.solana.sdk.Token2022
 
 /**
  * Bridges a Corda-side fungible token position to an equivalent SPL token on Solana.
