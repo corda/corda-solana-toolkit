@@ -12,8 +12,10 @@ import software.sava.rpc.json.http.response.AccountInfo
 import software.sava.rpc.json.http.ws.SolanaRpcWebsocket
 import java.net.URI
 import java.net.http.HttpClient
+import java.util.concurrent.TimeUnit
 
 object SavaFactory {
+    private const val CONNECTION_TIMEOUT_SECONDS = 3L
     val logger = loggerFor<SavaFactory>()
 
     class WebSocketWrapper(val rpcUrl: String, val wsUrl: String, onWebSocketClose: (Int, String) -> Unit) {
@@ -75,7 +77,12 @@ object SavaFactory {
 
         fun reconnect(): Boolean {
             logger.info("Reconnecting Solana websocket...")
-            return socket.connect().get() != null
+            return try {
+                socket.connect().get(CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS) != null
+            } catch (_: Exception) {
+                logger.warn("Solana websocket failed to connect")
+                false
+            }
         }
     }
 

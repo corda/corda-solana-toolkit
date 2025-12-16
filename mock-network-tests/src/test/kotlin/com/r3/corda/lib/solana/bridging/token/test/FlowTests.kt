@@ -76,7 +76,7 @@ abstract class FlowTests {
         private val ISSUING_QUANTITY = BigDecimal("2000.000")
         private val MOVE_QUANTITY_1 = BigDecimal("10.250")
         private val MOVE_QUANTITY_2 = BigDecimal("10.200")
-        private val MOVE_QUANTITY_3 = BigDecimal("7.025")
+        private val MOVE_QUANTITY_3 = BigDecimal("3.025")
         private val MOVE_TOTAL_QUANTITY = MOVE_QUANTITY_1 + MOVE_QUANTITY_2
 
         private val issuingBankIdentity = TestIdentity(DUMMY_BANK_A_NAME)
@@ -149,7 +149,6 @@ abstract class FlowTests {
             if (e.message == "Another solana-test-validator instance is already running") {
                 // for these tests error is fine, tests create random new accounts
                 closeTestValidator = false // let the test which started it close it
-                println("Re-using another solana-test-validator instance that is already running")
             } else {
                 throw e
             }
@@ -266,10 +265,19 @@ abstract class FlowTests {
         ensureLockedAmount(msftTokenType, MOVE_TOTAL_QUANTITY - MOVE_QUANTITY_3)
         redeemAndCheck(bob, aaplTokenMint, aaplTokenType, MOVE_QUANTITY_3)
         ensureLockedAmount(aaplTokenType, MOVE_TOTAL_QUANTITY - MOVE_QUANTITY_3)
+
+        // Restart the validator on an alternative configuration simulating the connection drop
+        validator.start(alternativeConfig = true, resetLedger = false)
+        redeemAndCheck(bob, msftTokenMint, msftTokenType, MOVE_QUANTITY_3, false)
+
+        // Restart the validator on the default configuration simulating the connection restore
+        validator.start(alternativeConfig = false, resetLedger = false)
+        val expectedBobNodeBalance = MOVE_TOTAL_QUANTITY - MOVE_QUANTITY_3.multiply(BigDecimal(2))
+        ensureLockedAmount(msftTokenType, expectedBobNodeBalance)
     }
 
     private fun ensureLockedAmount(tokenType: TokenType, expectedLockedAmount: BigDecimal) {
-        eventually(5.seconds) {
+        eventually(10.seconds) {
             val lockedFungibleTokens = bridgeAuthority.node.getAllFungibleTokens(issuingBankParty, tokenType).filter {
                 it.holder !in listOf(alice.party, bob.party, bridgeAuthority.party) // Locking identity holds tokens
             }
@@ -284,8 +292,9 @@ abstract class FlowTests {
                     "Expected some ${tokenType.tokenIdentifier} tokens locked, but none were found"
                 )
                 val lockedAmount = lockedFungibleTokens.sumTokenStatesOrThrow().toDecimal()
-                assertTrue(
-                    lockedAmount == expectedLockedAmount,
+                assertEquals(
+                    expectedLockedAmount,
+                    lockedAmount,
                     "Expected $expectedLockedAmount ${tokenType.tokenIdentifier} tokens locked, but was $lockedAmount"
                 )
             }
@@ -344,6 +353,7 @@ abstract class FlowTests {
         mint: PublicKey,
         tokenType: TokenType,
         moveQuantity: BigDecimal,
+        ensureCorrectNodeBalance: Boolean = true,
     ) {
         stakeholderInfo.redeemExpectedBalance(mint, moveQuantity)
         val fromTokenAccount = requireNotNull(stakeholderInfo.mintToAta[mint]) {
@@ -359,12 +369,14 @@ abstract class FlowTests {
                 balance.compareTo(moveQuantity),
             ) { "Redemption token account has $balance instead $moveQuantity after transfer - party ${party.name}" }
         }
-        eventually(duration = 10.seconds) {
-            assertEquals(
-                stakeholderInfo.expectedCordaBalance[mint],
-                stakeholderInfo.node.myTokenBalance(issuingBankParty, tokenType),
-                "${party.name} received redeemed ${tokenType.tokenIdentifier} shares back",
-            )
+        if (ensureCorrectNodeBalance) {
+            eventually(duration = 10.seconds) {
+                assertEquals(
+                    stakeholderInfo.expectedCordaBalance[mint],
+                    stakeholderInfo.node.myTokenBalance(issuingBankParty, tokenType),
+                    "${party.name} received redeemed ${tokenType.tokenIdentifier} shares back",
+                )
+            }
         }
     }
 

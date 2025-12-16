@@ -81,7 +81,7 @@ class SolanaTestValidator(val rpcParams: DefaultRpcParams = DefaultRpcParams()) 
     val wsUrl: String get() = if (isDefaultConfigRunning) DEFAULT_WS_URL else ALTERNATIVE_WS_URL
 
     @Synchronized
-    fun start(alternativeConfig: Boolean = false, resetLedger: Boolean = false) {
+    fun start(alternativeConfig: Boolean = false, resetLedger: Boolean = true) {
         if (state != State.STOPPED) {
             close()
         }
@@ -100,6 +100,7 @@ class SolanaTestValidator(val rpcParams: DefaultRpcParams = DefaultRpcParams()) 
             .command(
                 "solana-test-validator",
                 "-ql=$ledgerStore",
+                "--rpc-port=$port",
                 "--bpf-program",
                 CordaNotary.PROGRAM_ID.base58(),
                 notaryProgramFile.toString()
@@ -110,7 +111,7 @@ class SolanaTestValidator(val rpcParams: DefaultRpcParams = DefaultRpcParams()) 
             Thread.sleep(100)
         }
         state = if (alternativeConfig) State.RUNNING_ALTERNATIVE else State.RUNNING_DEFAULT
-        logger.info("Started wit ${if (alternativeConfig) "alternative" else "default"} configuration")
+        logger.info("Started with ${if (alternativeConfig) "alternative" else "default"} configuration")
     }
 
     fun fundAccount(amount: Long, account: Signer) {
