@@ -31,7 +31,6 @@ import net.corda.testing.node.MockNetworkNotarySpec
 import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.StartedMockNode
 import net.corda.testing.node.TestCordapp
-import net.corda.testing.solana.SolanaTestValidator
 import net.corda.testing.solana.randomKeypairFile
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
@@ -202,7 +201,7 @@ abstract class FlowTests {
         """
         validating = false
         solana {
-            rpcUrl = "${SolanaTestValidator.RPC_URL}"
+            rpcUrl = "${validator.rpcUrl}"
             notaryKeypairFile = "$solanaNotaryKeyFile"
             custodiedKeysDir = "$custodiedKeysDir"
             programWhitelist = ["${Token2022.PROGRAM_ID}"]
@@ -407,7 +406,7 @@ fun SolanaTestValidator.transfer(
     toTokenAccount: PublicKey,
     amount: Long,
 ) {
-    val error = this.client
+    val error = rpcClient
         .sendAndConfirm(
             { txBuilder ->
                 Token2022Program.factory(txBuilder).transfer(
@@ -427,7 +426,7 @@ fun SolanaTestValidator.transfer(
 
 fun SolanaTestValidator.getSolanaTokenBalance(publicKey: PublicKey): BigDecimal {
     return this
-        .client
+        .rpcClient
         .getTokenAccountBalance(publicKey.base58(), this.rpcParams)
         .checkResponse("getTokenAccountBalance")!!
         .uiAmountString
@@ -437,7 +436,7 @@ fun SolanaTestValidator.getSolanaTokenBalance(publicKey: PublicKey): BigDecimal 
 fun SolanaTestValidator.getAccountInfo(publicKey: PublicKey?): AccountInfo? {
     requireNotNull(publicKey) { "PublicKey must not be null" }
     return this
-        .client
+        .rpcClient
         .getAccountInfo(publicKey.base58(), this.rpcParams)
         .checkResponse("getAccountInfo")
 }

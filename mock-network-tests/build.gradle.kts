@@ -16,6 +16,7 @@ dependencies {
     detektPlugins(libs.detekt.ktlint.wrapper)
 
     testImplementation(libs.ent.corda.solana.notary.common)
+    testImplementation(libs.ent.corda.solana.notary.client)
     testImplementation(libs.ent.corda.solana.sdk)
     testImplementation(libs.ent.corda.test.common)
     testImplementation(libs.ent.corda.test.utils)
