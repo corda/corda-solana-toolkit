@@ -217,11 +217,11 @@ class DriverTests {
         driver(
             DriverParameters(
                 inMemoryDB = false,
-                startNodesInProcess = false,
+                startNodesInProcess = true,
                 cordappsForAllNodes = cordappsForAllNodes,
                 notarySpecs = listOf(
-                    NotarySpec(generalNotaryName, validating = false, startInProcess = false),
-                    NotarySpec(solanaNotaryName, solanaNotaryConfig, startInProcess = false),
+                    NotarySpec(generalNotaryName, validating = false, startInProcess = true),
+                    NotarySpec(solanaNotaryName, solanaNotaryConfig, startInProcess = true),
                 ),
                 networkParameters = networkParameters,
             )
