@@ -1,6 +1,6 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
-import net.corda.solana.sdk.Token2022
+import net.corda.solana.sdk.internal.Token2022
 
 val globalCommitmentLevelLmax = com.lmax.solana4j.client.api.Commitment.CONFIRMED
 val globalCommitmentLevelSava = software.sava.rpc.json.http.request.Commitment.CONFIRMED

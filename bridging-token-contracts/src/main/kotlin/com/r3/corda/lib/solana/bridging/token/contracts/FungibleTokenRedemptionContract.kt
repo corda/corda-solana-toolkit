@@ -9,8 +9,8 @@ import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract
 import net.corda.core.identity.AbstractParty
 import net.corda.core.transactions.LedgerTransaction
-import net.corda.solana.sdk.Token2022
 import net.corda.solana.sdk.instruction.SolanaInstruction
+import net.corda.solana.sdk.internal.Token2022
 
 class FungibleTokenRedemptionContract : Contract {
     override fun verify(tx: LedgerTransaction) {

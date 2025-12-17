@@ -9,7 +9,7 @@ import com.r3.corda.lib.solana.bridging.token.flows.toPublicKey
 import net.corda.solana.notary.common.Signer
 import net.corda.solana.notary.common.rpc.SolanaClientException
 import net.corda.solana.notary.common.rpc.checkResponse
-import net.corda.solana.sdk.Token2022
+import net.corda.solana.sdk.internal.Token2022
 import net.corda.testing.solana.SolanaTestValidator
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
