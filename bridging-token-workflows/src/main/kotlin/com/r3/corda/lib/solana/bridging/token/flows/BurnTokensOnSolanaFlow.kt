@@ -7,7 +7,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.solana.sdk.internal.Token2022
+import net.corda.solana.sdk.Token2022
 
 class BurnTokensOnSolanaFlow(
     private val redemptionCoordinates: RedemptionCoordinates,
