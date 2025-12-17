@@ -29,7 +29,7 @@ import net.corda.core.node.NetworkParameters
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.solana.notary.common.Signer
-import net.corda.solana.sdk.internal.Token2022
+import net.corda.solana.sdk.Token2022
 import net.corda.testing.common.internal.eventually
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
