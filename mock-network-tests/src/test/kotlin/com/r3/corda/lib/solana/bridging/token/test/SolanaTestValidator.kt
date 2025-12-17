@@ -13,6 +13,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.solana.notary.client.CordaNotary
 import net.corda.solana.notary.common.Signer
 import net.corda.solana.notary.common.rpc.DefaultRpcParams
+import net.corda.solana.notary.common.rpc.SolanaTransactionException
 import net.corda.solana.notary.common.rpc.checkResponse
 import net.corda.solana.notary.common.rpc.sendAndConfirm
 import net.corda.testing.common.internal.exec
@@ -32,20 +33,12 @@ class SolanaTestValidator(val rpcParams: DefaultRpcParams = DefaultRpcParams()) 
 
         private val notaryProgramFile = Files.createTempFile("corda_notary", ".so").toAbsolutePath()
 
-        private const val DEFAULT_RPC_PORT = 8899
+        const val DEFAULT_RPC_PORT = 8899
 
         // Alternative configuration is for testing error cases recovery.
         // The design intention here is to stop the default configuration, perform
         // some actions on the alternative set-up (if needed) and resume the default setup
-        private const val ALTERNATIVE_RPC_PORT = 8799
-        private const val DEFAULT_WS_PORT = 8900
-
-        // Solana test validator sets the WS PORT as the RPC port + 1
-        private const val ALTERNATIVE_WS_PORT = 8800
-        private const val DEFAULT_RPC_URL = "http://127.0.0.1:$DEFAULT_RPC_PORT"
-        private const val DEFAULT_WS_URL = "ws://127.0.0.1:$DEFAULT_WS_PORT"
-        private const val ALTERNATIVE_RPC_URL = "http://127.0.0.1:$ALTERNATIVE_RPC_PORT"
-        private const val ALTERNATIVE_WS_URL = "ws://127.0.0.1:$ALTERNATIVE_WS_PORT"
+        const val ALTERNATIVE_RPC_PORT = 8799
 
         init {
             notaryProgramFile.toFile().deleteOnExit()
@@ -58,60 +51,47 @@ class SolanaTestValidator(val rpcParams: DefaultRpcParams = DefaultRpcParams()) 
     }
 
     private lateinit var process: Process
-    private var state = State.STOPPED
     private var nextCordaNetworkId: Short = 0
-    private lateinit var ledgerStore: Path
+    lateinit var ledgerDir: Path
 
     val notaryProgramAdmin: Signer = Signer.random()
-    private val defaultRpcClient: SolanaJsonRpcClient = SolanaJsonRpcClient(
-        HttpClient.newHttpClient(),
-        DEFAULT_RPC_URL,
-    )
-    private val alternativeRpcClient: SolanaJsonRpcClient = SolanaJsonRpcClient(
-        HttpClient.newHttpClient(),
-        ALTERNATIVE_RPC_URL
-    )
-
-    val isStopped: Boolean get() = state == State.STOPPED
-    val isDefaultConfigRunning: Boolean get() = state == State.RUNNING_DEFAULT
-    val isAlternativeConfigRunning: Boolean get() = state == State.RUNNING_ALTERNATIVE
-
-    val rpcClient: SolanaJsonRpcClient get() = if (isDefaultConfigRunning) defaultRpcClient else alternativeRpcClient
-    val rpcUrl: String get() = if (state == State.RUNNING_DEFAULT) DEFAULT_RPC_URL else ALTERNATIVE_RPC_URL
-    val wsUrl: String get() = if (isDefaultConfigRunning) DEFAULT_WS_URL else ALTERNATIVE_WS_URL
+    lateinit var rpcClient: SolanaJsonRpcClient
+    lateinit var rpcUrl: String
+    lateinit var wsUrl: String
 
     @Synchronized
-    fun start(alternativeConfig: Boolean = false, resetLedger: Boolean = true) {
-        if (state != State.STOPPED) {
-            close()
-        }
-        val port = ALTERNATIVE_RPC_PORT.takeIf { alternativeConfig } ?: DEFAULT_RPC_PORT
+    fun start(
+        existingLedgerDir: Path = Files.createTempDirectory("test-ledger"),
+        rpcPort: Int = DEFAULT_RPC_PORT,
+    ) {
         val portAvailable = try {
-            ServerSocket(port).use { true }
+            ServerSocket(rpcPort).use { true }
         } catch (_: IOException) {
             false
         }
-        check(portAvailable) { "Another solana-test-validator instance is already running on RPC port: $port" }
-        if (resetLedger || !::ledgerStore.isInitialized) {
-            logger.info("Resetting ledger state")
-            ledgerStore = Files.createTempDirectory("test-ledger")
-        }
+        check(portAvailable) { "Another solana-test-validator instance is already running on RPC port: $rpcPort" }
+        rpcUrl = "http://127.0.0.1:$rpcPort"
+        rpcClient = SolanaJsonRpcClient(
+            HttpClient.newHttpClient(),
+            rpcUrl,
+        )
+        wsUrl = "ws://127.0.0.1:${rpcPort + 1}"
+        ledgerDir = existingLedgerDir
         process = ProcessBuilder()
             .command(
                 "solana-test-validator",
-                "-ql=$ledgerStore",
-                "--rpc-port=$port",
+                "-ql=$ledgerDir",
+                "--rpc-port=$rpcPort",
                 "--bpf-program",
                 CordaNotary.PROGRAM_ID.base58(),
                 notaryProgramFile.toString()
             ).inheritIO()
             .start()
         Runtime.getRuntime().addShutdownHook(Thread(process::destroyForcibly))
-        while (!isListening("127.0.0.1", port)) {
+        while (!isListening("127.0.0.1", rpcPort)) {
             Thread.sleep(100)
         }
-        state = if (alternativeConfig) State.RUNNING_ALTERNATIVE else State.RUNNING_DEFAULT
-        logger.info("Started with ${if (alternativeConfig) "alternative" else "default"} configuration")
+        logger.info("Started listening on port $rpcPort")
     }
 
     fun fundAccount(amount: Long, account: Signer) {
@@ -126,7 +106,13 @@ class SolanaTestValidator(val rpcParams: DefaultRpcParams = DefaultRpcParams()) 
     }
 
     fun defaultNotaryProgramSetup(notary: PublicKey) {
-        initialiseNotaryProgram()
+        try {
+            initialiseNotaryProgram()
+        } catch (e: SolanaTransactionException) {
+            if (e.message?.contains("already in use") == false) {
+                throw e
+            }
+        }
         val networkId = createNewCordaNetwork()
         fundAccount(10, notary)
         addNotary(networkId, notary)
@@ -241,21 +227,17 @@ class SolanaTestValidator(val rpcParams: DefaultRpcParams = DefaultRpcParams()) 
         )
     }
 
-    private enum class State {
-        STOPPED,
-        RUNNING_DEFAULT,
-        RUNNING_ALTERNATIVE,
-    }
-
     private fun getProgramFactory(isToken2022: Boolean, txBuilder: TransactionBuilder) =
         if (isToken2022) Token2022Program.factory(txBuilder) else TokenProgram.factory(txBuilder)
 
-    @Synchronized
-    override fun close() {
-        if (state != State.STOPPED) {
+    fun stopIfRunning() {
+        if (::process.isInitialized) {
             logger.info("Shutting down...")
             process.destroyForcibly().waitFor()
-            state = State.STOPPED
         }
+    }
+
+    override fun close() {
+        stopIfRunning()
     }
 }

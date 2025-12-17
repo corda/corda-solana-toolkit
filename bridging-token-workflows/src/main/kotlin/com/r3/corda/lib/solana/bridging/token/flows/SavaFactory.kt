@@ -79,8 +79,8 @@ object SavaFactory {
             logger.info("Reconnecting Solana websocket...")
             return try {
                 socket.connect().get(CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS) != null
-            } catch (_: Exception) {
-                logger.warn("Solana websocket failed to connect")
+            } catch (e: Exception) {
+                logger.warn("Solana websocket failed to connect: ${e.message}")
                 false
             }
         }

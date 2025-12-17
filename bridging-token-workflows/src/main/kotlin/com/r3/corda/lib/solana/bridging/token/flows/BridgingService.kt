@@ -45,6 +45,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
     }
 
     private fun onStop() {
+        logger.info("Bridging service stopped.")
         executor.shutdown()
     }
 

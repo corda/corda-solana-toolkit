@@ -161,7 +161,7 @@ abstract class FlowTests {
     }
 
     fun stopTestValidator() {
-        if (::validator.isInitialized && closeTestValidator) {
+        if (::validator.isInitialized) {
             validator.close()
         }
     }
@@ -267,11 +267,25 @@ abstract class FlowTests {
         ensureLockedAmount(aaplTokenType, MOVE_TOTAL_QUANTITY - MOVE_QUANTITY_3)
 
         // Restart the validator on an alternative configuration simulating the connection drop
-        validator.start(alternativeConfig = true, resetLedger = false)
+        validator.stopIfRunning()
+        validator = validator.ledgerDir.let { ledgerDir ->
+            SolanaTestValidator().also {
+                it.start(ledgerDir, SolanaTestValidator.ALTERNATIVE_RPC_PORT)
+            }
+        }
+
+        // Before continuing, ensure the alternative config validator is available and responds to RPC calls
+        ensureSolanaTokenAccountBalance(bob, msftTokenType, msftTokenMint)
+
         redeemAndCheck(bob, msftTokenMint, msftTokenType, MOVE_QUANTITY_3, false)
 
         // Restart the validator on the default configuration simulating the connection restore
-        validator.start(alternativeConfig = false, resetLedger = false)
+        validator.stopIfRunning()
+        validator = validator.ledgerDir.let { ledgerDir ->
+            SolanaTestValidator().also {
+                it.start(ledgerDir, SolanaTestValidator.DEFAULT_RPC_PORT)
+            }
+        }
         val expectedBobNodeBalance = MOVE_TOTAL_QUANTITY - MOVE_QUANTITY_3.multiply(BigDecimal(2))
         ensureLockedAmount(msftTokenType, expectedBobNodeBalance)
     }
@@ -308,7 +322,6 @@ abstract class FlowTests {
         moveQuantity: BigDecimal,
     ) {
         stakeholderInfo.bridgeExpectedBalance(mint, moveQuantity)
-        val tokenAccount = requireNotNull(stakeholderInfo.mintToAta[mint]) { "Token account must not be null" }
         move(stakeholderInfo.node, bridgeAuthority.party, moveQuantity, tokenType).get()
         val party = stakeholderInfo.node.party()
         eventually(duration = 5.seconds) {
@@ -336,13 +349,26 @@ abstract class FlowTests {
             holder !in listOf(stakeholderInfo.party, bridgeAuthority.party),
             "Fungible token holder should be Locking Identity, but was $holder"
         )
+        val tokenAccount = requireNotNull(stakeholderInfo.mintToAta[mint]) { "Token account must not be null" }
         val accountInfo = validator.getAccountInfo(tokenAccount)
         assertAtaAccount(accountInfo, mint, stakeholderInfo.signer.account)
-        // SPL Token RPC returns decimal strings with trailing zeros trimmed,
-        // BigDecimal.equals is scale-sensitive (1.0 != 1.00), so we compare numeric value instead.
+        ensureSolanaTokenAccountBalance(stakeholderInfo, tokenType, mint)
+    }
+
+    private fun ensureSolanaTokenAccountBalance(
+        stakeholderInfo: CordaNodeAndSolanaAccounts,
+        tokenType: TokenType,
+        mint: PublicKey,
+    ) {
         val expectedSolanaBalanceAfter = stakeholderInfo.expectedSolanaBalance[mint]
+        val tokenAccount = requireNotNull(stakeholderInfo.mintToAta[mint]) { "Token account must not be null" }
         eventually(duration = 10.seconds) {
-            assertThat(validator.getSolanaTokenBalance(tokenAccount))
+            val balance = try {
+                validator.getSolanaTokenBalance(tokenAccount)
+            } catch (_: Exception) {
+                null
+            }
+            assertThat(balance)
                 .describedAs("Solana ${tokenType.tokenIdentifier} token amount equals to $expectedSolanaBalanceAfter")
                 .isEqualByComparingTo(expectedSolanaBalanceAfter)
         }
