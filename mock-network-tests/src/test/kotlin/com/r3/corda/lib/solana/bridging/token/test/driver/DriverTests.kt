@@ -77,22 +77,28 @@ class DriverTests {
     }
 
     private val validator = SolanaTestValidator()
+
     private val solanaNotaryName = CordaX500Name("Solana Notary Service", "London", "GB")
     private val generalNotaryName = CordaX500Name("Notary Service", "Zurich", "CH")
     private val bridgeAuthority: Participant = Participant(CordaX500Name("Bridge Authority", "New York", "US"))
     private val alice: Participant = Participant(ALICE_NAME)
     private val bob: Participant = Participant(BOB_NAME)
+
     private val msftDescriptor: TokenTypeDescriptor = SimpleDescriptor(MSFT_TICKER)
     private val appleDescriptor: TokenTypeDescriptor = SimpleDescriptor(APPL_TICKER)
-    private lateinit var mintAuthoritySigner: Signer
-    private lateinit var redemptionWalletForAlice: Signer
-    private lateinit var redemptionWalletForBob: Signer
-    private lateinit var bridgeAuthorityWalletFile: Path
-    private lateinit var bridgeAuthorityWallet: Signer
-    private lateinit var msftTokenMint: PublicKey
-    private lateinit var appleTokenMint: PublicKey
+
     private lateinit var solanaNotaryKeyFile: Path
     private lateinit var solanaNotaryKey: Signer
+    private lateinit var bridgeAuthorityWalletFile: Path
+    private lateinit var bridgeAuthorityWallet: Signer
+    private lateinit var redemptionWalletForAlice: Signer
+    private lateinit var redemptionWalletForBob: Signer
+
+    private lateinit var mintAuthoritySigner: Signer
+    private lateinit var msftTokenMint: PublicKey
+    private lateinit var appleTokenMint: PublicKey
+
+    // SUT:
     private lateinit var aliceMicrosoft: ParticipantAndStock
     private lateinit var aliceApple: ParticipantAndStock
     private lateinit var bobMicrosoft: ParticipantAndStock
@@ -238,62 +244,67 @@ class DriverTests {
                     "${participantAndStock.participant.nameAsString} ATA should not be created yet",
                 )
             }
-            bridge(aliceMicrosoft, BRIDGE_QUANTITY)
-            bridge(bobMicrosoft, BRIDGE_QUANTITY)
-            bridge(aliceApple, BRIDGE_QUANTITY)
-            redeem(aliceMicrosoft, BRIDGE_QUANTITY)
-            redeem(bobMicrosoft, BRIDGE_QUANTITY)
+            bridgeTest(aliceMicrosoft, BRIDGE_QUANTITY)
+            bridgeTest(bobMicrosoft, BRIDGE_QUANTITY)
+            bridgeTest(aliceApple, BRIDGE_QUANTITY)
+            bridgeTest(bobApple, BRIDGE_QUANTITY)
+            redeemTest(aliceMicrosoft, BRIDGE_QUANTITY)
+            redeemTest(bobMicrosoft, BRIDGE_QUANTITY)
             // Alice redeems a smaller quantity of Apple to leave a change for CI
-            redeem(aliceApple, BRIDGE_QUANTITY.minus(BigDecimal.ONE))
+            redeemTest(aliceApple, BRIDGE_QUANTITY.minus(BigDecimal.ONE))
+            redeemTest(bobApple, BRIDGE_QUANTITY)
         }
     }
 
-    private fun bridge(stockAccounts: ParticipantAndStock, quantity: BigDecimal) {
-        stockAccounts.move(bridgeAuthority.identity, quantity)
-        val issuingParty = stockAccounts.participant.identity
+    private fun bridgeTest(participantAndStock: ParticipantAndStock, quantity: BigDecimal) {
+        participantAndStock.move(bridgeAuthority.identity, quantity)
+        val issuingParty = participantAndStock.participant.identity
         eventually(duration = 60.seconds, waitBetween = 1.seconds) {
             assertEquals(
                 BigDecimal.ZERO,
-                bridgeAuthority.myTokenBalance(issuingParty, stockAccounts.cordaTokenType),
-                "Bridge Authority has no longer ${stockAccounts.cordaTokenIdentifier} shares," +
+                bridgeAuthority.myTokenBalance(issuingParty, participantAndStock.cordaTokenType),
+                "Bridge Authority has no longer ${participantAndStock.cordaTokenIdentifier} shares," +
                     " they are under Locking Identity"
             )
         }
         val fungibleToken = bridgeAuthority
-            .getAllFungibleTokens(issuingParty, stockAccounts.cordaTokenType)
+            .getAllFungibleTokens(issuingParty, participantAndStock.cordaTokenType)
             .singleOrNull()
         assertNotNull(
             fungibleToken,
-            "There should be single ${stockAccounts.cordaTokenIdentifier}" +
+            "There should be single ${participantAndStock.cordaTokenIdentifier}" +
                 "fungible token in Bridge Authority vault"
         )
         assertTrue(
-            fungibleToken.holder !in setOf(stockAccounts.participant.identity, bridgeAuthority.identity),
-            "Bridge Authority moved ${stockAccounts.cordaTokenIdentifier} under Lock Identity (CI) " +
+            fungibleToken.holder !in setOf(participantAndStock.participant.identity, bridgeAuthority.identity),
+            "Bridge Authority moved ${participantAndStock.cordaTokenIdentifier} under Lock Identity (CI) " +
                 "ownership as neither BA nor Alice holds the token",
         ) // We don't know Confidential Identity upfront, so indirect check who doesn't have the token
         assertEquals(
             quantity,
             fungibleToken.amount.toDecimal(),
-            "Lock Identity received expected number of ${stockAccounts.cordaTokenIdentifier} shares",
+            "Lock Identity received expected number of ${participantAndStock.cordaTokenIdentifier} shares",
         )
-        val token: StateAndRef<FungibleToken>? = bridgeAuthority.queryStates<FungibleToken>().firstOrNull {
-            it.state.data.amount.token.tokenType == stockAccounts.cordaTokenType
-        }
-        assertNotNull(token) { "BridgeAuthority hasn't received ${stockAccounts.cordaTokenType} token" }
-        val accountInfo = validator.getAccountInfo(stockAccounts.tokenAccount)
-        assertAtaAccount(accountInfo, stockAccounts.tokenMintAccount, stockAccounts.participant.walletAccount)
+        val token: StateAndRef<FungibleToken>? = bridgeAuthority.findStateOf(participantAndStock.cordaTokenType)
+
+        assertNotNull(token) { "BridgeAuthority hasn't received ${participantAndStock.cordaTokenType} token" }
+        val accountInfo = validator.getAccountInfo(participantAndStock.tokenAccount)
+        assertAtaAccount(
+            accountInfo,
+            participantAndStock.tokenMintAccount,
+            participantAndStock.participant.walletAccount,
+        )
 
         // SPL Token RPC returns decimal strings with trailing zeros trimmed,
         // BigDecimal.equals is scale-sensitive (1.0 != 1.00), so we compare numeric value instead.
         eventually(duration = 60.seconds, waitBetween = 1.seconds) {
-            assertThat(validator.getSolanaTokenBalance(stockAccounts.tokenAccount))
+            assertThat(validator.getSolanaTokenBalance(participantAndStock.tokenAccount))
                 .describedAs("Solana token amount numerically equals Corda bridged amount")
                 .isEqualByComparingTo(quantity)
         }
     }
 
-    private fun redeem(participantAndStock: ParticipantAndStock, quantity: BigDecimal) {
+    private fun redeemTest(participantAndStock: ParticipantAndStock, quantity: BigDecimal) {
         val participant = participantAndStock.participant
         val issuingBankParty = participant.identity
         // Simulate redemption transfer for participant's account on Solana
@@ -393,7 +404,14 @@ class Participant(val name: CordaX500Name) {
             }
     }
 
-    inline fun <reified T : ContractState> queryStates(): List<StateAndRef<T>> {
+    fun findStateOf(tokenType: TokenType): StateAndRef<FungibleToken>? {
+        return queryStates<FungibleToken>()
+            .firstOrNull {
+                it.state.data.amount.token.tokenType == tokenType
+            }
+    }
+
+    private inline fun <reified T : ContractState> queryStates(): List<StateAndRef<T>> {
         return node.rpc
             .vaultQueryBy<T>()
             .states
