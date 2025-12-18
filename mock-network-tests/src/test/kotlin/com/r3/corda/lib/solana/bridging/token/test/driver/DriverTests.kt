@@ -62,7 +62,7 @@ class DriverTests {
     companion object {
         const val TOKEN_DECIMALS = 3
         private val ISSUING_QUANTITY = BigDecimal("2000.000")
-        private val MOVE_QUANTITY = BigDecimal("10.250")
+        private val BRIDGE_QUANTITY = BigDecimal("10.250")
         private val networkParameters = NetworkParameters(
             minimumPlatformVersion = 4,
             notaries = emptyList(),
@@ -114,12 +114,12 @@ class DriverTests {
         TestCordapp.findCordapp("com.r3.corda.lib.solana.bridging.token.flows").withConfig(
             mapOf(
                 "participants" to mapOf(
-                    alice.identityAsString to alice.walletAccountAsString,
-                    bob.identityAsString to bob.walletAccountAsString
+                    alice.nameAsString to alice.walletAccountAsString,
+                    bob.nameAsString to bob.walletAccountAsString
                 ),
                 "redemptionWalletAccountToHolder" to mapOf(
-                    redemptionWalletForAlice.account.base58() to alice.identityAsString,
-                    redemptionWalletForBob.account.base58() to bob.identityAsString,
+                    redemptionWalletForAlice.account.base58() to alice.nameAsString,
+                    redemptionWalletForBob.account.base58() to bob.nameAsString,
                 ),
                 "mintsWithAuthorities" to mapOf(
                     msftDescriptor.tokenTypeIdentifier to
@@ -217,54 +217,50 @@ class DriverTests {
         driver(
             DriverParameters(
                 inMemoryDB = false,
-                startNodesInProcess = true,
+                startNodesInProcess = false,
                 cordappsForAllNodes = cordappsForAllNodes,
                 notarySpecs = listOf(
-                    NotarySpec(generalNotaryName, validating = false, startInProcess = true),
-                    NotarySpec(solanaNotaryName, solanaNotaryConfig, startInProcess = true),
+                    NotarySpec(generalNotaryName, validating = false, startInProcess = false),
+                    NotarySpec(solanaNotaryName, solanaNotaryConfig, startInProcess = false),
                 ),
                 networkParameters = networkParameters,
             )
         ) {
-            bridgeAuthority.startNode(this, bridgingFlowsCordapp, bridgingContractsCordapp)
-            alice.startNode(this)
-            bob.startNode(this)
+            startNode(bridgeAuthority, bridgingFlowsCordapp, bridgingContractsCordapp)
+            startNode(alice)
+            startNode(bob)
 
-            setOf(aliceMicrosoft, aliceApple, bobMicrosoft, bobApple).forEach { stock ->
-                val cordaTokenType = stock.participant.issue(stock.tokenDescriptor, ISSUING_QUANTITY, generalNotaryName)
-                stock.cordaTokenType = cordaTokenType
+            setOf(aliceMicrosoft, aliceApple, bobMicrosoft, bobApple).forEach { participantAndStock ->
+                // intentionally Alice or Bob self issue to avoid extra node and avoid tokens move from issuer
+                participantAndStock.issue(ISSUING_QUANTITY, generalNotaryName)
                 assertNull(
-                    validator.getAccountInfo(stock.tokenAccount),
-                    "${stock.participant.identityAsString} ATA should not be created yet",
+                    validator.getAccountInfo(participantAndStock.tokenAccount),
+                    "${participantAndStock.participant.nameAsString} ATA should not be created yet",
                 )
             }
-            bridge(aliceMicrosoft, MOVE_QUANTITY)
-            // Bob bridges and redeems exactly the same amount in one go
-            bridge(bobMicrosoft, MOVE_QUANTITY)
-            bridge(aliceApple, MOVE_QUANTITY)
-            redeem(aliceMicrosoft, MOVE_QUANTITY)
-            redeem(bobMicrosoft, MOVE_QUANTITY)
-            // Alice redeems a smaller quantity of APPLE to leave a change for CI
-            redeem(aliceApple, MOVE_QUANTITY.minus(BigDecimal.ONE))
+            bridge(aliceMicrosoft, BRIDGE_QUANTITY)
+            bridge(bobMicrosoft, BRIDGE_QUANTITY)
+            bridge(aliceApple, BRIDGE_QUANTITY)
+            redeem(aliceMicrosoft, BRIDGE_QUANTITY)
+            redeem(bobMicrosoft, BRIDGE_QUANTITY)
+            // Alice redeems a smaller quantity of Apple to leave a change for CI
+            redeem(aliceApple, BRIDGE_QUANTITY.minus(BigDecimal.ONE))
         }
     }
 
     private fun bridge(stockAccounts: ParticipantAndStock, quantity: BigDecimal) {
-        val participant = stockAccounts.participant
-        participant.move(bridgeAuthority.identity, quantity, stockAccounts.cordaTokenType)
-
-        val issuingBankParty =
-            participant.identity // intentionally Alice or Bob is self issuing to avoid more nodes is the test
+        stockAccounts.move(bridgeAuthority.identity, quantity)
+        val issuingParty = stockAccounts.participant.identity
         eventually(duration = 60.seconds, waitBetween = 1.seconds) {
             assertEquals(
                 BigDecimal.ZERO,
-                bridgeAuthority.myTokenBalance(issuingBankParty, stockAccounts.cordaTokenType),
+                bridgeAuthority.myTokenBalance(issuingParty, stockAccounts.cordaTokenType),
                 "Bridge Authority has no longer ${stockAccounts.cordaTokenIdentifier} shares," +
                     " they are under Locking Identity"
             )
         }
         val fungibleToken = bridgeAuthority
-            .getAllFungibleTokens(issuingBankParty, stockAccounts.cordaTokenType)
+            .getAllFungibleTokens(issuingParty, stockAccounts.cordaTokenType)
             .singleOrNull()
         assertNotNull(
             fungibleToken,
@@ -272,7 +268,7 @@ class DriverTests {
                 "fungible token in Bridge Authority vault"
         )
         assertTrue(
-            fungibleToken.holder !in setOf(participant.identity, bridgeAuthority.identity),
+            fungibleToken.holder !in setOf(stockAccounts.participant.identity, bridgeAuthority.identity),
             "Bridge Authority moved ${stockAccounts.cordaTokenIdentifier} under Lock Identity (CI) " +
                 "ownership as neither BA nor Alice holds the token",
         ) // We don't know Confidential Identity upfront, so indirect check who doesn't have the token
@@ -281,12 +277,12 @@ class DriverTests {
             fungibleToken.amount.toDecimal(),
             "Lock Identity received expected number of ${stockAccounts.cordaTokenIdentifier} shares",
         )
-        val token: StateAndRef<FungibleToken>? = bridgeAuthority.node.queryStates<FungibleToken>().firstOrNull {
+        val token: StateAndRef<FungibleToken>? = bridgeAuthority.queryStates<FungibleToken>().firstOrNull {
             it.state.data.amount.token.tokenType == stockAccounts.cordaTokenType
         }
         assertNotNull(token)
         val accountInfo = validator.getAccountInfo(stockAccounts.tokenAccount)
-        assertAtaAccount(accountInfo, stockAccounts.tokenMintAccount, participant.walletAccount)
+        assertAtaAccount(accountInfo, stockAccounts.tokenMintAccount, stockAccounts.participant.walletAccount)
 
         // SPL Token RPC returns decimal strings with trailing zeros trimmed,
         // BigDecimal.equals is scale-sensitive (1.0 != 1.00), so we compare numeric value instead.
@@ -307,13 +303,13 @@ class DriverTests {
             stockAccounts.redemptionTokenAccount,
             quantity.toRawAmount(TOKEN_DECIMALS)
         )
-        val expectedLockedAmount = MOVE_QUANTITY - quantity
+        val expectedLockedAmount = BRIDGE_QUANTITY - quantity
         // We need to wait for the websocket listener to process the newly received event
         eventually(duration = 60.seconds, waitBetween = 1.seconds) {
             assertEquals(
                 ISSUING_QUANTITY - expectedLockedAmount,
-                participant.myTokenBalance(issuingBankParty, stockAccounts.cordaTokenType),
-                "${participant.identityAsString} received redeemed ${stockAccounts.cordaTokenIdentifier} shares back",
+                stockAccounts.tokenBalance(),
+                "${participant.nameAsString} received redeemed ${stockAccounts.cordaTokenIdentifier} shares back",
             )
         }
         val fungibleTokens =
@@ -338,25 +334,48 @@ class DriverTests {
         }
     }
 
-    fun Participant.issue(
-        tokenDescriptor: TokenTypeDescriptor,
-        amount: BigDecimal,
-        notaryName: CordaX500Name,
-    ): TokenType {
-        val tokenType = TokenType(tokenDescriptor.ticker, tokenDescriptor.fractionDigits)
-        node.rpc
-            .startFlow(
-                ::IssueSimpleTokenFlow,
-                tokenType,
-                amount,
-                notaryName,
-            ).returnValue
-            .getOrThrow()
-        assertEquals(amount, myTokenBalance(identity, tokenType))
-        return tokenType
+    fun DriverDSL.startNode(participant: Participant, vararg additionalCordapps: TestCordapp) {
+        val user = User("user1", "test", permissions = setOf("ALL"))
+        val node = startNode(
+            NodeParameters(providedName = participant.name, rpcUsers = listOf(user))
+                .withAdditionalCordapps(additionalCordapps.toSet())
+        ).getOrThrow()
+        participant.node = node
+    }
+}
+
+/**
+ * Holds Corda and Solana data for a participant used for creation of Cordapp config and while interacting with node.
+ * Encapsulates interactions with Corda node.
+ * Field [node] need to be initialized later after a Corda node is started. Field [identity] is derived from [node].
+ */
+class Participant(val name: CordaX500Name) {
+    // values known before node starts, may be used to create cordapp configuration file for BA:
+    val nameAsString: String
+        get() = name.toString()
+    val wallet: Signer = Signer.random()
+    val walletAccount: PublicKey
+        get() = wallet.account
+    val walletAccountAsString: String
+        get() = walletAccount.base58()
+
+    // values know after node starts:
+    lateinit var node: NodeHandle
+    val identity: Party
+        get() = node.nodeInfo.legalIdentities.first()
+
+    fun myTokenBalance(issuer: Party, tokenType: TokenType): BigDecimal {
+        val fungibleTokens = getAllFungibleTokens(issuer, tokenType).filter { it.holder == identity }
+        return if (fungibleTokens.isEmpty()) {
+            BigDecimal.ZERO
+        } else {
+            fungibleTokens
+                .sumTokenStatesOrThrow()
+                .toDecimal()
+        }
     }
 
-    private fun Participant.getAllFungibleTokens(issuer: Party, stock: TokenType): List<FungibleToken> {
+    fun getAllFungibleTokens(issuer: Party, stock: TokenType): List<FungibleToken> {
         val fungibleTokenType = node.rpc
             .startFlow(::QuerySimpleTokensFlow, issuer, stock)
             .returnValue
@@ -372,68 +391,26 @@ class DriverTests {
             }
     }
 
-    fun Participant.myTokenBalance(issuer: Party, tokenType: TokenType): BigDecimal {
-        val fungibleTokens = getAllFungibleTokens(issuer, tokenType).filter { it.holder == identity }
-        return if (fungibleTokens.isEmpty()) {
-            BigDecimal.ZERO
-        } else {
-            fungibleTokens
-                .sumTokenStatesOrThrow()
-                .toDecimal()
-        }
-    }
-
-    private fun Participant.move(toParty: Party, quantity: BigDecimal, tokenType: TokenType) =
-        assertNotNull(
-            node.rpc
-                .startFlow(
-                    ::MoveFungibleTokens,
-                    Amount.fromDecimal(quantity, tokenType),
-                    toParty,
-                ).returnValue
-                .getOrThrow()
-        )
-
-    private inline fun <reified T : ContractState> NodeHandle.queryStates(): List<StateAndRef<T>> {
-        return rpc
+    inline fun <reified T : ContractState> queryStates(): List<StateAndRef<T>> {
+        return node.rpc
             .vaultQueryBy<T>()
             .states
     }
 }
 
-class Participant(private val name: CordaX500Name) {
-    val wallet: Signer = Signer.random()
-    val walletAccount: PublicKey
-        get() = wallet.account
-    val walletAccountAsString: String
-        get() = walletAccount.base58()
-    lateinit var node: NodeHandle
-
-    fun startNode(ext: DriverDSL, vararg additionalCordapps: TestCordapp) {
-        node = ext
-            .startNode(
-                NodeParameters(providedName = name, rpcUsers = listOf(user))
-                    .withAdditionalCordapps(additionalCordapps.toSet())
-            ).getOrThrow()
-    }
-
-    val identity: Party
-        get() = node.nodeInfo.legalIdentities.first()
-    val identityAsString: String
-        get() = name.toString()
-
-    val user = User("user1", "test", permissions = setOf("ALL"))
-}
-
+/**
+ * Holds Corda and Solana data for a single Corda Token and respective Solana Token accounts,
+ * and reference to [Participant] owner.
+ * Fields are used for creation of Cordapp config file and while interacting with node or Solana.
+ * Field [cordaTokenType] need to be initialized later after a Corda token is created.
+ * Field [cordaTokenIdentifier] is derived from [cordaTokenType].
+ */
 class ParticipantAndStock(
     val participant: Participant,
     val tokenDescriptor: TokenTypeDescriptor,
     val tokenMintAccount: PublicKey,
     val redemptionTokenAccount: PublicKey,
 ) {
-    lateinit var cordaTokenType: TokenType
-    val cordaTokenIdentifier: String
-        get() = cordaTokenType.tokenIdentifier
     val tokenAccount: PublicKey
         get() = AssociatedTokenProgram
             .deriveAddress(
@@ -441,4 +418,45 @@ class ParticipantAndStock(
                 Token2022.PROGRAM_ID.toPublicKey(),
                 tokenMintAccount
             ).address()
+
+    // values known after node starts and Cordapp has issue a Corda Token:
+    lateinit var cordaTokenType: TokenType
+    val cordaTokenIdentifier: String
+        get() = cordaTokenType.tokenIdentifier
+
+    fun issue(
+        amount: BigDecimal,
+        notaryName: CordaX500Name,
+    ): TokenType {
+        val tokenType = TokenType(tokenDescriptor.ticker, tokenDescriptor.fractionDigits)
+        participant.node.rpc
+            .startFlow(
+                ::IssueSimpleTokenFlow,
+                tokenType,
+                amount,
+                notaryName,
+            ).returnValue
+            .getOrThrow()
+        cordaTokenType = tokenType
+        assertEquals(amount, tokenBalance()) {
+            "Issued token amount doesn't match vault balance for identity=" +
+                "${participant.nameAsString} and token=$tokenType"
+        }
+        return tokenType
+    }
+
+    fun move(toParty: Party, quantity: BigDecimal) =
+        assertNotNull(
+            participant.node.rpc
+                .startFlow(
+                    ::MoveFungibleTokens,
+                    Amount.fromDecimal(quantity, cordaTokenType),
+                    toParty,
+                ).returnValue
+                .getOrThrow()
+        ) {
+            "Token move flow failed for identity=${participant.nameAsString} and token=$cordaTokenType"
+        }
+
+    fun tokenBalance(): BigDecimal = participant.myTokenBalance(participant.identity, cordaTokenType)
 }

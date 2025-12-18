@@ -1,8 +1,8 @@
 [versions]
 kotlin = "1.9.25"  # Use the same minor version of Kotlin as Corda
-corda-os = "4.14-20251216.000800-54"
-corda-os-shell = "4.14-20251216.004300-91" # for a sample CorDapp deployment
-corda-ent = "4.14-20251217.004000-42"
+corda-os = "4.14-20251218.000801-56"
+corda-os-shell = "4.14-20251218.004300-93" # for a sample CorDapp deployment
+corda-ent = "4.14-20251218.094428-44"
 tokens-sdk = "1.3.2"
 artifactory = "6.0.2"
 detekt = "2.0.0-alpha.0"
