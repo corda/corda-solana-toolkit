@@ -280,7 +280,7 @@ class DriverTests {
         val token: StateAndRef<FungibleToken>? = bridgeAuthority.queryStates<FungibleToken>().firstOrNull {
             it.state.data.amount.token.tokenType == stockAccounts.cordaTokenType
         }
-        assertNotNull(token)
+        assertNotNull(token) { "BridgeAuthority hasn't received ${stockAccounts.cordaTokenType} token" }
         val accountInfo = validator.getAccountInfo(stockAccounts.tokenAccount)
         assertAtaAccount(accountInfo, stockAccounts.tokenMintAccount, stockAccounts.participant.walletAccount)
 
@@ -293,14 +293,14 @@ class DriverTests {
         }
     }
 
-    private fun redeem(stockAccounts: ParticipantAndStock, quantity: BigDecimal) {
-        val participant = stockAccounts.participant
+    private fun redeem(participantAndStock: ParticipantAndStock, quantity: BigDecimal) {
+        val participant = participantAndStock.participant
         val issuingBankParty = participant.identity
         // Simulate redemption transfer for participant's account on Solana
         validator.transfer(
             participant.wallet,
-            stockAccounts.tokenAccount,
-            stockAccounts.redemptionTokenAccount,
+            participantAndStock.tokenAccount,
+            participantAndStock.redemptionTokenAccount,
             quantity.toRawAmount(TOKEN_DECIMALS)
         )
         val expectedLockedAmount = BRIDGE_QUANTITY - quantity
@@ -308,28 +308,30 @@ class DriverTests {
         eventually(duration = 60.seconds, waitBetween = 1.seconds) {
             assertEquals(
                 ISSUING_QUANTITY - expectedLockedAmount,
-                stockAccounts.tokenBalance(),
-                "${participant.nameAsString} received redeemed ${stockAccounts.cordaTokenIdentifier} shares back",
+                participantAndStock.tokenBalance(),
+                "${participant.nameAsString} received redeemed ${participantAndStock.cordaTokenIdentifier} shares back",
             )
         }
         val fungibleTokens =
-            bridgeAuthority.getAllFungibleTokens(issuingBankParty, stockAccounts.cordaTokenType).filter {
+            bridgeAuthority.getAllFungibleTokens(issuingBankParty, participantAndStock.cordaTokenType).filter {
                 it.holder !in listOf(alice.identity, bob.identity, bridgeAuthority.identity) // CI holds tokens
             }
         if (expectedLockedAmount.toRawAmount(TOKEN_DECIMALS) == BigDecimal.ZERO.toRawAmount(TOKEN_DECIMALS)) {
             assertTrue(
                 fungibleTokens.isEmpty(),
-                "No ${stockAccounts.cordaTokenIdentifier} shares left in Bridge Authority vault"
+                "No ${participantAndStock.cordaTokenIdentifier} shares left in Bridge Authority vault"
             )
         } else {
             assertTrue(
                 fungibleTokens.isNotEmpty(),
-                "Expected some ${stockAccounts.cordaTokenIdentifier} tokens locked, but none were found"
+                "Expected some ${participantAndStock.cordaTokenIdentifier} tokens locked, but none were found"
             )
             val lockedAmount = fungibleTokens.sumTokenStatesOrThrow().toDecimal()
-            assertTrue(
-                lockedAmount == expectedLockedAmount,
-                "Expected $expectedLockedAmount ${stockAccounts.cordaTokenType} tokens locked, but was $lockedAmount"
+            val cordaTokenType = participantAndStock.cordaTokenType
+            assertEquals(
+                expectedLockedAmount,
+                lockedAmount,
+                "Expected $expectedLockedAmount $cordaTokenType tokens locked, but was $lockedAmount"
             )
         }
     }
