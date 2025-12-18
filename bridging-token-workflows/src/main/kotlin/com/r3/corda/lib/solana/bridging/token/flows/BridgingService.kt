@@ -16,6 +16,7 @@ import net.corda.core.utilities.debug
 import net.corda.solana.sdk.instruction.Pubkey
 import org.slf4j.LoggerFactory
 import java.net.http.HttpClient
+import java.util.concurrent.CompletionException
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
@@ -61,7 +62,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
                 logger.info("Reconnected Solana websocket")
             }
             remainingAttempts > 0 -> {
-                logger.error("Failed to reconnect to ${socket.wsUrl}. Trying again...")
+                logger.warn("Failed to reconnect to ${socket.wsUrl}. Trying again...")
                 val attemptNumber = MAXIMUM_CONNECTION_ATTEMPTS - remainingAttempts + 1
                 val backOffSeconds = attemptNumber
                 logger.info("Retrying to reconnect in $backOffSeconds seconds (attempt $attemptNumber)")
@@ -164,7 +165,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         }
     }
 
-    fun processRedemptionEvent(
+    private fun processRedemptionEvent(
         redemptionWalletAccount: Pubkey,
         redemptionTokenAccount: Pubkey,
         mint: Pubkey,
@@ -237,8 +238,13 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
     private fun FlowHandle<*>.logErrorIfException() {
         val future = returnValue.toCompletableFuture()
         future.whenComplete { _, ex ->
-            if (ex != null) {
-                logger.error("Flow $id failed", ex)
+            when {
+                ex is CompletionException -> {
+                    logger.error("Flow $id failed", ex.cause)
+                }
+                ex != null -> {
+                    logger.error("Flow $id failed", ex)
+                }
             }
         }
     }
