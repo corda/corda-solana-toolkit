@@ -356,7 +356,7 @@ abstract class DriverTests {
             assertEquals(
                 expectCumulativeQuantity,
                 sum,
-                "${participantAndStock.participant.nameAsString} received redeemed" +
+                "${participantAndStock.participant.nameAsString} received redeemed " +
                     "${participantAndStock.stockName} shares back",
             )
         }
@@ -436,7 +436,7 @@ class SolanaParticipant(name: CordaX500Name) : CordaParticipant(name) {
 
 /**
  * Holds and accumulates Corda and Solana data for a single Corda Token and respective Solana Token accounts,
- * and reference to [SolanaParticipant] owner.
+ * and reference to a participant.
  * Fields are used for creation of Cordapp config file and for interaction with Corda node or Solana.
  * Field [cordaTokenType] need to be initialized later after a Corda token is created.
  * Field [cordaTokenIdentifier] is derived from [cordaTokenType].
