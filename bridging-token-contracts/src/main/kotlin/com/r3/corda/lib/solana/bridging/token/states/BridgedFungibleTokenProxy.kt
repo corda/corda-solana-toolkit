@@ -36,7 +36,10 @@ data class BridgedFungibleTokenProxy(
     val mintAccount: Pubkey,
     val mintAuthority: Pubkey,
     val bridgeAuthority: Party,
+    override val participants: List<AbstractParty> = listOf(bridgeAuthority),
 ) : ContractState {
-    override val participants: List<AbstractParty>
-        get() = listOf(bridgeAuthority)
+    init {
+        // future-proof extra check in case an object is deserialized by AMQP on a node that doesn't have this class
+        require(bridgeAuthority in participants) { "Bridge Authority is not present in participants list." }
+    }
 }
