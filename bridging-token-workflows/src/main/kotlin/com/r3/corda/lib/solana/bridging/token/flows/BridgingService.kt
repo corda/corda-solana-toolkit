@@ -115,10 +115,18 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
 
     private fun checkAndListenForRedemption() {
         checkAllBalancesForRedemption()
-        attemptToSubscribeToWebsocket()
+        attemptToSubscribeToWebsocket(false)
     }
 
-    private fun attemptToSubscribeToWebsocket(remainingAttempts: Int = MAXIMUM_CONNECTION_ATTEMPTS) {
+    private fun attemptToSubscribeToWebsocket(
+        unsubscribeBefore: Boolean,
+        remainingAttempts: Int = MAXIMUM_CONNECTION_ATTEMPTS,
+    ) {
+        if (unsubscribeBefore) {
+            SavaFactory.logger.info("Unsubscribing from socket first before attempting a new subscription...")
+            val unsubscribed = socket.unsubscribe()
+            check(unsubscribed) { "Unsubscribing from socket was unsuccessful." }
+        }
         val subscribed = socket.onToken2022ByOwner(
             configHandler.redemptionWalletAccountToHolder.keys,
             ::processRedemptionEvent,
@@ -141,7 +149,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
                 logger.info("Retrying to connect in $backOffSeconds seconds (attempt $attemptNumber)")
                 executor.schedule(
                     {
-                        attemptToSubscribeToWebsocket(remainingAttempts - 1)
+                        attemptToSubscribeToWebsocket(true, remainingAttempts - 1)
                     },
                     backOffSeconds.toLong(),
                     TimeUnit.SECONDS

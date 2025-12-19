@@ -23,6 +23,10 @@ object SavaFactory {
             onWebSocketClose(errorCode, reason)
         }
 
+        fun unsubscribe(): Boolean {
+            return socket.programUnsubscribe(SolanaAccounts.MAIN_NET.token2022Program())
+        }
+
         fun onToken2022ByOwner(
             owners: Set<Pubkey>,
             onAccountChanged: (owner: Pubkey, account: Pubkey, tokenMint: Pubkey, amount: Long) -> Unit,
