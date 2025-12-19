@@ -12,7 +12,11 @@ KubernetesAgent k8s = new KubernetesAgent(
     BuildEnvironment.AMD64_LINUX_JAVA17_CORDA4,
     KubernetesCluster.JenkinsAgents,
     1
-)
+).withDocker(
+     1,
+     false,
+     true
+ )
 
 String COMMON_GRADLE_PARAMS = [
         '--no-daemon',
@@ -38,7 +42,13 @@ pipeline {
         }
     }
 
-    options { timestamps() }
+    options {
+        ansiColor('xterm')
+        buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
+        parallelsAlwaysFailFast()
+        timeout(time: 6, unit: 'HOURS')
+        timestamps()
+    }
 
     environment {
         ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
@@ -79,40 +89,16 @@ pipeline {
                     }
                 }
             }
-            stage('Publish to Artifactory') {
-                when {
-                   allOf {
-                      not { changeRequest() }
-                   }
-                }
-                steps {
-                    rtServer (
-                        id: 'R3-Artifactory',
-                        url: 'https://software.r3.com/artifactory',
-                        credentialsId: 'artifactory-credentials'
-                    )
-                    rtGradleDeployer (
-                        id: 'deployer',
-                        serverId: 'R3-Artifactory',
-                    )
-                    withCredentials([
-                        usernamePassword(credentialsId: 'artifactory-credentials',
-                                        usernameVariable: 'CORDA_ARTIFACTORY_USERNAME',
-                                        passwordVariable: 'CORDA_ARTIFACTORY_PASSWORD')]) {
-                               rtGradleRun (
-                                    usesPlugin: true,
-                                    useWrapper: true,
-                                    switches: publishOptions,
-                                    tasks: 'artifactoryPublish',
-                                    deployerId: 'deployer',
-                                    buildName: env.ARTIFACTORY_BUILD_NAME
-                               )
-                    }
-                    rtPublishBuildInfo (
-                        serverId: 'R3-Artifactory',
-                        buildName: env.ARTIFACTORY_BUILD_NAME
-                    )
-                }
+            stage('Test and Publish') {
+//                   when {
+//                     allOf {
+//                         not { changeRequest() }
+//                     }
+//                   }
+                  steps {
+                    authenticateGradleWrapper()
+                    sh './gradlew --no-daemon clean check artifactoryPublish'
+                  }
             }
     }
 
