@@ -3,24 +3,19 @@ package com.r3.corda.lib.solana.bridging.token.test.driver
 import com.lmax.solana4j.api.PublicKey
 import com.lmax.solana4j.programs.AssociatedTokenProgram
 import com.r3.corda.lib.solana.bridging.token.flows.toPublicKey
-import com.r3.corda.lib.solana.bridging.token.test.FlowTests.Companion.APPL_TICKER
-import com.r3.corda.lib.solana.bridging.token.test.FlowTests.Companion.MSFT_TICKER
-import com.r3.corda.lib.solana.bridging.token.test.SimpleDescriptor
 import com.r3.corda.lib.solana.bridging.token.test.TokenTypeDescriptor
 import com.r3.corda.lib.solana.bridging.token.test.assertAtaAccount
 import com.r3.corda.lib.solana.bridging.token.test.getAccountInfo
 import com.r3.corda.lib.solana.bridging.token.test.getSolanaTokenBalance
 import com.r3.corda.lib.solana.bridging.token.test.toRawAmount
 import com.r3.corda.lib.solana.bridging.token.test.transfer
-import com.r3.corda.lib.solana.bridging.token.testing.IssueSimpleTokenFlow
 import com.r3.corda.lib.solana.bridging.token.testing.QuerySimpleTokensFlow
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.contracts.types.TokenType
 import com.r3.corda.lib.tokens.contracts.utilities.sumTokenStatesOrThrow
 import com.r3.corda.lib.tokens.workflows.flows.rpc.MoveFungibleTokens
+import com.r3.corda.lib.tokens.workflows.utilities.tokenAmountCriteria
 import net.corda.core.contracts.Amount
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.StateAndRef
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.messaging.startFlow
@@ -33,6 +28,7 @@ import net.corda.solana.sdk.Token2022
 import net.corda.testing.common.internal.eventually
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
@@ -57,8 +53,9 @@ import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
+import kotlin.collections.contains
 
-class DriverTests {
+abstract class DriverTests {
     companion object {
         const val TOKEN_DECIMALS = 3
         private val ISSUING_QUANTITY = BigDecimal("2000.000")
@@ -80,12 +77,16 @@ class DriverTests {
 
     private val solanaNotaryName = CordaX500Name("Solana Notary Service", "London", "GB")
     private val generalNotaryName = CordaX500Name("Notary Service", "Zurich", "CH")
-    private val bridgeAuthority: Participant = Participant(CordaX500Name("Bridge Authority", "New York", "US"))
-    private val alice: Participant = Participant(ALICE_NAME)
-    private val bob: Participant = Participant(BOB_NAME)
+    private val bridgeAuthority = CordaParticipant(CordaX500Name("Bridge Authority", "New York", "US"))
+    private val alice = SolanaParticipant(ALICE_NAME)
+    private val bob = SolanaParticipant(BOB_NAME)
+    private val issuer = CordaParticipant(DUMMY_BANK_A_NAME)
 
-    private val msftDescriptor: TokenTypeDescriptor = SimpleDescriptor(MSFT_TICKER)
-    private val appleDescriptor: TokenTypeDescriptor = SimpleDescriptor(APPL_TICKER)
+    @TempDir
+    lateinit var custodiedKeysDir: Path
+
+    @TempDir
+    lateinit var generalDir: Path
 
     private lateinit var solanaNotaryKeyFile: Path
     private lateinit var solanaNotaryKey: Signer
@@ -98,17 +99,13 @@ class DriverTests {
     private lateinit var msftTokenMint: PublicKey
     private lateinit var appleTokenMint: PublicKey
 
-    // SUT:
+    // SUTs:
+    abstract val msftDescriptor: TokenTypeDescriptor
+    abstract val appleDescriptor: TokenTypeDescriptor
     private lateinit var aliceMicrosoft: ParticipantAndStock
     private lateinit var aliceApple: ParticipantAndStock
     private lateinit var bobMicrosoft: ParticipantAndStock
-    private lateinit var bobApple: ParticipantAndStock
-
-    @TempDir
-    lateinit var custodiedKeysDir: Path
-
-    @TempDir
-    lateinit var generalDir: Path
+    // no bobApple
 
     val cordappsForAllNodes = listOf(
         TestCordapp.findCordapp("com.r3.corda.lib.tokens.contracts"),
@@ -197,20 +194,24 @@ class DriverTests {
 
         msftTokenMint = validator.createToken(mintAuthoritySigner, decimals = TOKEN_DECIMALS.toByte())
         appleTokenMint = validator.createToken(mintAuthoritySigner, decimals = TOKEN_DECIMALS.toByte())
-        val create = fun(
-            participant: Participant,
-            stockDescription: TokenTypeDescriptor,
-            tokenMint: PublicKey,
+        val assembeParticipantWithStock = fun(
+            participant: SolanaParticipant,
+            tokenDescriptor: TokenTypeDescriptor,
+            tokenMintAccount: PublicKey,
             redemptionWallet: Signer,
         ): ParticipantAndStock {
-            val redemptionTokenAccount = validator.createTokenAccount(redemptionWallet, tokenMint)
+            val redemptionTokenAccount = validator.createTokenAccount(redemptionWallet, tokenMintAccount)
             validator.fundAccount(10, redemptionTokenAccount)
-            return ParticipantAndStock(participant, stockDescription, tokenMint, redemptionTokenAccount)
+            return ParticipantAndStock(
+                tokenDescriptor.ticker,
+                participant,
+                tokenMintAccount,
+                redemptionTokenAccount,
+            )
         }
-        aliceMicrosoft = create(alice, msftDescriptor, msftTokenMint, redemptionWalletForAlice)
-        aliceApple = create(alice, appleDescriptor, appleTokenMint, redemptionWalletForAlice)
-        bobMicrosoft = create(bob, msftDescriptor, msftTokenMint, redemptionWalletForBob)
-        bobApple = create(bob, appleDescriptor, appleTokenMint, redemptionWalletForBob)
+        aliceMicrosoft = assembeParticipantWithStock(alice, msftDescriptor, msftTokenMint, redemptionWalletForAlice)
+        aliceApple = assembeParticipantWithStock(alice, appleDescriptor, appleTokenMint, redemptionWalletForAlice)
+        bobMicrosoft = assembeParticipantWithStock(bob, msftDescriptor, msftTokenMint, redemptionWalletForBob)
     }
 
     @AfterEach
@@ -232,81 +233,106 @@ class DriverTests {
                 networkParameters = networkParameters,
             )
         ) {
+            // setup continuation:
+            setOf(issuer, alice, bob).forEach { startNode(it) }
             startNode(bridgeAuthority, bridgingFlowsCordapp, bridgingContractsCordapp)
-            startNode(alice)
-            startNode(bob)
 
-            setOf(aliceMicrosoft, aliceApple, bobMicrosoft, bobApple).forEach { participantAndStock ->
-                // intentionally Alice or Bob self issue to avoid extra node and avoid tokens move from issuer
-                participantAndStock.issue(ISSUING_QUANTITY, generalNotaryName)
+            // setup continuation; issue tokens and then move them to Alice and Bob:
+            issuer.issue(msftDescriptor, ISSUING_QUANTITY * BigDecimal(2), generalNotaryName).also { tokenType ->
+                aliceMicrosoft.receive(issuer, tokenType, ISSUING_QUANTITY)
+                bobMicrosoft.receive(issuer, tokenType, ISSUING_QUANTITY)
+            }
+            issuer.issue(appleDescriptor, ISSUING_QUANTITY, generalNotaryName).also { tokenType ->
+                aliceApple.receive(issuer, tokenType, ISSUING_QUANTITY)
+            }
+
+            setOf(aliceMicrosoft, aliceApple, bobMicrosoft).forEach { participantAndStock ->
+                eventually(duration = 10.seconds, waitBetween = 1.seconds) {
+                    assertEquals(
+                        ISSUING_QUANTITY,
+                        participantAndStock.tokenBalance(issuer.identity),
+                        "${participantAndStock.participant.identity} received redeemed " +
+                            "${participantAndStock.stockName} shares back",
+                    )
+                }
                 assertNull(
                     validator.getAccountInfo(participantAndStock.tokenAccount),
                     "${participantAndStock.participant.nameAsString} ATA should not be created yet",
                 )
             }
+
+            // actual test:
+            // Alice bridges Microsoft stock once, and then she redeems once the same amount
             bridgeTest(aliceMicrosoft, BRIDGE_QUANTITY)
-            bridgeTest(bobMicrosoft, BRIDGE_QUANTITY)
+
+            // Bob bridges Microsoft stock twice and then he will redeem all in one go
+            val firstBridgeQuantity = BigDecimal.ONE
+            val secondBridgeQuantity = BRIDGE_QUANTITY.minus(BigDecimal.ONE)
+            bridgeTest(bobMicrosoft, firstBridgeQuantity)
+            bridgeTest(bobMicrosoft, secondBridgeQuantity, BRIDGE_QUANTITY)
+
             bridgeTest(aliceApple, BRIDGE_QUANTITY)
-            bridgeTest(bobApple, BRIDGE_QUANTITY)
+
             redeemTest(aliceMicrosoft, BRIDGE_QUANTITY)
+
             redeemTest(bobMicrosoft, BRIDGE_QUANTITY)
-            // Alice redeems a smaller quantity of Apple to leave a change for CI
-            redeemTest(aliceApple, BRIDGE_QUANTITY.minus(BigDecimal.ONE))
-            redeemTest(bobApple, BRIDGE_QUANTITY)
+
+            // Alice redeems a smaller quantity of Apple stock to leave a change in Bridge Authority (CI)
+            val redeemQuantity = BigDecimal.ONE
+            val leftQuantity = BRIDGE_QUANTITY.minus(BigDecimal.ONE)
+            val expectedCordaQuantity = ISSUING_QUANTITY - leftQuantity
+            redeemTest(aliceApple, redeemQuantity, expectedCordaQuantity)
         }
     }
 
-    private fun bridgeTest(participantAndStock: ParticipantAndStock, quantity: BigDecimal) {
+    private fun bridgeTest(
+        participantAndStock: ParticipantAndStock,
+        quantity: BigDecimal,
+        expectedCumulativeBridgedQuantity: BigDecimal = quantity,
+    ) {
         participantAndStock.move(bridgeAuthority.identity, quantity)
-        val issuingParty = participantAndStock.participant.identity
-        eventually(duration = 60.seconds, waitBetween = 1.seconds) {
+        eventually(duration = 10.seconds, waitBetween = 1.seconds) {
             assertEquals(
                 BigDecimal.ZERO,
-                bridgeAuthority.myTokenBalance(issuingParty, participantAndStock.cordaTokenType),
-                "Bridge Authority has no longer ${participantAndStock.cordaTokenIdentifier} shares," +
+                bridgeAuthority.myTokenBalance(issuer.identity, participantAndStock.cordaTokenType),
+                "Bridge Authority has no longer ${participantAndStock.stockName} shares," +
                     " they are under Locking Identity"
             )
         }
-        val fungibleToken = bridgeAuthority
-            .getAllFungibleTokens(issuingParty, participantAndStock.cordaTokenType)
-            .singleOrNull()
-        assertNotNull(
-            fungibleToken,
-            "There should be single ${participantAndStock.cordaTokenIdentifier}" +
-                "fungible token in Bridge Authority vault"
-        )
+        val fungibleTokens = bridgeAuthority
+            .getAllFungibleTokens(issuer.identity, participantAndStock.cordaTokenType)
         assertTrue(
-            fungibleToken.holder !in setOf(participantAndStock.participant.identity, bridgeAuthority.identity),
-            "Bridge Authority moved ${participantAndStock.cordaTokenIdentifier} under Lock Identity (CI) " +
-                "ownership as neither BA nor Alice holds the token",
-        ) // We don't know Confidential Identity upfront, so indirect check who doesn't have the token
-        assertEquals(
-            quantity,
-            fungibleToken.amount.toDecimal(),
-            "Lock Identity received expected number of ${participantAndStock.cordaTokenIdentifier} shares",
+            fungibleTokens.isNotEmpty(),
+            "There should be at least one ${participantAndStock.stockName}" +
+                " fungible token in Bridge Authority vault"
         )
-        val token: StateAndRef<FungibleToken>? = bridgeAuthority.findStateOf(participantAndStock.cordaTokenType)
-
-        assertNotNull(token) { "BridgeAuthority hasn't received ${participantAndStock.cordaTokenType} token" }
+        val holder = fungibleTokens.map { it.holder }.toSet().singleOrNull()
+        requireNotNull(holder) { "Selected fungible tokens should have the same holder" }
+        assertTrue(
+            holder !in listOf(participantAndStock.participant.identity, bridgeAuthority.identity),
+            "Fungible token holder should be Locking Identity, but was $holder"
+        )
         val accountInfo = validator.getAccountInfo(participantAndStock.tokenAccount)
         assertAtaAccount(
             accountInfo,
             participantAndStock.tokenMintAccount,
             participantAndStock.participant.walletAccount,
         )
-
         // SPL Token RPC returns decimal strings with trailing zeros trimmed,
         // BigDecimal.equals is scale-sensitive (1.0 != 1.00), so we compare numeric value instead.
-        eventually(duration = 60.seconds, waitBetween = 1.seconds) {
+        eventually(duration = 10.seconds, waitBetween = 1.seconds) {
             assertThat(validator.getSolanaTokenBalance(participantAndStock.tokenAccount))
                 .describedAs("Solana token amount numerically equals Corda bridged amount")
-                .isEqualByComparingTo(quantity)
+                .isEqualByComparingTo(expectedCumulativeBridgedQuantity)
         }
     }
 
-    private fun redeemTest(participantAndStock: ParticipantAndStock, quantity: BigDecimal) {
+    private fun redeemTest(
+        participantAndStock: ParticipantAndStock,
+        quantity: BigDecimal,
+        expectCumulativeQuantity: BigDecimal = ISSUING_QUANTITY,
+    ) {
         val participant = participantAndStock.participant
-        val issuingBankParty = participant.identity
         // Simulate redemption transfer for participant's account on Solana
         validator.transfer(
             participant.wallet,
@@ -314,40 +340,38 @@ class DriverTests {
             participantAndStock.redemptionTokenAccount,
             quantity.toRawAmount(TOKEN_DECIMALS)
         )
-        val expectedLockedAmount = BRIDGE_QUANTITY - quantity
         // We need to wait for the websocket listener to process the newly received event
-        eventually(duration = 60.seconds, waitBetween = 1.seconds) {
+        eventually(duration = 10.seconds) {
+            val balance = validator.getSolanaTokenBalance(participantAndStock.redemptionTokenAccount)
             assertEquals(
-                ISSUING_QUANTITY - expectedLockedAmount,
-                participantAndStock.tokenBalance(),
-                "${participant.nameAsString} received redeemed ${participantAndStock.cordaTokenIdentifier} shares back",
-            )
-        }
-        val fungibleTokens =
-            bridgeAuthority.getAllFungibleTokens(issuingBankParty, participantAndStock.cordaTokenType).filter {
-                it.holder !in listOf(alice.identity, bob.identity, bridgeAuthority.identity) // CI holds tokens
+                0,
+                balance.compareTo(quantity),
+            ) {
+                "Redemption token account has $balance instead $quantity after transfer - party" +
+                    " ${participantAndStock.participant.nameAsString}"
             }
-        if (expectedLockedAmount.toRawAmount(TOKEN_DECIMALS) == BigDecimal.ZERO.toRawAmount(TOKEN_DECIMALS)) {
-            assertTrue(
-                fungibleTokens.isEmpty(),
-                "No ${participantAndStock.cordaTokenIdentifier} shares left in Bridge Authority vault"
-            )
-        } else {
-            assertTrue(
-                fungibleTokens.isNotEmpty(),
-                "Expected some ${participantAndStock.cordaTokenIdentifier} tokens locked, but none were found"
-            )
-            val lockedAmount = fungibleTokens.sumTokenStatesOrThrow().toDecimal()
-            val cordaTokenType = participantAndStock.cordaTokenType
+        }
+        eventually(duration = 10.seconds) {
+            val sum = participantAndStock.tokenBalance(issuer.identity)
             assertEquals(
-                expectedLockedAmount,
-                lockedAmount,
-                "Expected $expectedLockedAmount $cordaTokenType tokens locked, but was $lockedAmount"
+                expectCumulativeQuantity,
+                sum,
+                "${participantAndStock.participant.nameAsString} received redeemed" +
+                    "${participantAndStock.stockName} shares back",
             )
         }
     }
 
-    fun DriverDSL.startNode(participant: Participant, vararg additionalCordapps: TestCordapp) {
+    // issuance method could be defined inside [ParticipantAndStock] class however it needs to be abstract method,
+    // because it creates either Corda Simple Token or Corda Evolvable Token,
+    // and is issued by another participant "issuer" that is no use in the actual test
+    abstract fun CordaParticipant.issue(
+        tokenTypeDescriptor: TokenTypeDescriptor,
+        amount: BigDecimal,
+        notaryName: CordaX500Name,
+    ): TokenType
+
+    fun DriverDSL.startNode(participant: CordaParticipant, vararg additionalCordapps: TestCordapp) {
         val user = User("user1", "test", permissions = setOf("ALL"))
         val node = startNode(
             NodeParameters(providedName = participant.name, rpcUsers = listOf(user))
@@ -358,19 +382,14 @@ class DriverTests {
 }
 
 /**
- * Holds Corda and Solana data for a participant used for creation of Cordapp config and while interacting with node.
- * Encapsulates interactions with Corda node.
+ * Holds and accumulates Corda data for a participant used for creation of Cordapp config,
+ * and for interaction with Corda node. Encapsulates RPC operation with Corda node.
  * Field [node] need to be initialized later after a Corda node is started. Field [identity] is derived from [node].
  */
-class Participant(val name: CordaX500Name) {
-    // values known before node starts, may be used to create cordapp configuration file for BA:
+open class CordaParticipant(val name: CordaX500Name) {
+    // values known before node starts, values may be used to create cordapp configuration file for BA:
     val nameAsString: String
         get() = name.toString()
-    val wallet: Signer = Signer.random()
-    val walletAccount: PublicKey
-        get() = wallet.account
-    val walletAccountAsString: String
-        get() = walletAccount.base58()
 
     // values know after node starts:
     lateinit var node: NodeHandle
@@ -395,39 +414,36 @@ class Participant(val name: CordaX500Name) {
             .getOrThrow()
             .firstOrNull() ?: return emptyList()
         return node.rpc
-            .vaultQueryBy<FungibleToken>()
+            .vaultQueryBy<FungibleToken>(tokenAmountCriteria(fungibleTokenType.state.data.tokenType))
             .states
             .map { it.state.data }
-            .filter {
-                it.amount.token == fungibleTokenType.state.data.issuedTokenType ||
-                    it.amount.token == fungibleTokenType.state.data.tokenType
-            }
-    }
-
-    fun findStateOf(tokenType: TokenType): StateAndRef<FungibleToken>? {
-        return queryStates<FungibleToken>()
-            .firstOrNull {
-                it.state.data.amount.token.tokenType == tokenType
-            }
-    }
-
-    private inline fun <reified T : ContractState> queryStates(): List<StateAndRef<T>> {
-        return node.rpc
-            .vaultQueryBy<T>()
-            .states
     }
 }
 
 /**
- * Holds Corda and Solana data for a single Corda Token and respective Solana Token accounts,
- * and reference to [Participant] owner.
- * Fields are used for creation of Cordapp config file and while interacting with node or Solana.
+ * Holds and accumulates Corda and Solana data for a participant used for creation of Cordapp config,
+ * and for interaction with Corda node. Encapsulates RPC operation with Corda node.
+ * Field [node] need to be initialized later after a Corda node is started. Field [identity] is derived from [node].
+ */
+class SolanaParticipant(name: CordaX500Name) : CordaParticipant(name) {
+    // values known before node starts, values may be used to create cordapp configuration file for BA:
+    val wallet: Signer = Signer.random()
+    val walletAccount: PublicKey
+        get() = wallet.account
+    val walletAccountAsString: String
+        get() = walletAccount.base58()
+}
+
+/**
+ * Holds and accumulates Corda and Solana data for a single Corda Token and respective Solana Token accounts,
+ * and reference to [SolanaParticipant] owner.
+ * Fields are used for creation of Cordapp config file and for interaction with Corda node or Solana.
  * Field [cordaTokenType] need to be initialized later after a Corda token is created.
  * Field [cordaTokenIdentifier] is derived from [cordaTokenType].
  */
 class ParticipantAndStock(
-    val participant: Participant,
-    val tokenDescriptor: TokenTypeDescriptor,
+    val stockName: String,
+    val participant: SolanaParticipant,
     val tokenMintAccount: PublicKey,
     val redemptionTokenAccount: PublicKey,
 ) {
@@ -444,39 +460,27 @@ class ParticipantAndStock(
     val cordaTokenIdentifier: String
         get() = cordaTokenType.tokenIdentifier
 
-    fun issue(
-        amount: BigDecimal,
-        notaryName: CordaX500Name,
-    ): TokenType {
-        val tokenType = TokenType(tokenDescriptor.ticker, tokenDescriptor.fractionDigits)
-        participant.node.rpc
-            .startFlow(
-                ::IssueSimpleTokenFlow,
-                tokenType,
-                amount,
-                notaryName,
-            ).returnValue
-            .getOrThrow()
+    fun receive(source: CordaParticipant, tokenType: TokenType, quantity: BigDecimal) {
         cordaTokenType = tokenType
-        assertEquals(amount, tokenBalance()) {
-            "Issued token amount doesn't match vault balance for identity=" +
-                "${participant.nameAsString} and token=$tokenType"
-        }
-        return tokenType
+        source.node.rpc.startFlow(
+            ::MoveFungibleTokens,
+            Amount.fromDecimal(quantity, cordaTokenType),
+            participant.identity
+        )
     }
 
-    fun move(toParty: Party, quantity: BigDecimal) =
-        assertNotNull(
+    fun move(destination: Party, quantity: BigDecimal) =
+        assertNotNull( // assertion here is a setup check
             participant.node.rpc
                 .startFlow(
                     ::MoveFungibleTokens,
                     Amount.fromDecimal(quantity, cordaTokenType),
-                    toParty,
+                    destination,
                 ).returnValue
                 .getOrThrow()
         ) {
             "Token move flow failed for identity=${participant.nameAsString} and token=$cordaTokenType"
         }
 
-    fun tokenBalance(): BigDecimal = participant.myTokenBalance(participant.identity, cordaTokenType)
+    fun tokenBalance(issuer: Party): BigDecimal = participant.myTokenBalance(issuer, cordaTokenType)
 }
