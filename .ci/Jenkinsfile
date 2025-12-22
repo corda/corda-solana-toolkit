@@ -5,6 +5,7 @@ import com.r3.build.agents.KubernetesAgent
 import com.r3.build.enums.KubernetesCluster
 import com.r3.build.enums.BuildEnvironment
 import com.r3.build.enums.BuildOperatingSystem
+import com.r3.build.utils.GitUtils
 
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
@@ -17,6 +18,8 @@ KubernetesAgent k8s = new KubernetesAgent(
      false,
      true
  )
+
+GitUtils gitUtils = new GitUtils(this)
 
 String COMMON_GRADLE_PARAMS = [
         '--no-daemon',
@@ -87,11 +90,12 @@ pipeline {
             }
         }
         stage('Test and Publish') {
-//                   when {
-//                     allOf {
-//                         not { changeRequest() }
-//                     }
-//                   }
+            when {
+                allOf {
+                    not { changeRequest() }
+                    expression { return gitUtils.isMainBranch() }
+                }
+            }
             steps {
                 authenticateGradleWrapper()
                 sh './gradlew --no-daemon clean check artifactoryPublish'
