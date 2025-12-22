@@ -1,11 +1,11 @@
 plugins {
-    id(libs.plugins.axion.release) version "1.21.0"
-    id(libs.plugins.ben.memes.versions) version "0.53.0"
+    alias(libs.plugins.axion.release)
+    alias(libs.plugins.ben.manes.versions)
 }
 
 scmVersion {
     tag {
-        prefix = "v"
+        prefix.set("v")
     }
 }
 
