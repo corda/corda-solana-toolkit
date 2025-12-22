@@ -12,7 +12,11 @@ KubernetesAgent k8s = new KubernetesAgent(
     BuildEnvironment.AMD64_LINUX_JAVA17_CORDA4,
     KubernetesCluster.JenkinsAgents,
     1
-)
+).withDocker(
+     1,
+     false,
+     true
+ )
 
 String COMMON_GRADLE_PARAMS = [
         '--no-daemon',
@@ -35,7 +39,17 @@ pipeline {
         }
     }
 
-    options { timestamps() }
+    parameters {
+        string(name: 'CHOSEN_BRANCH', defaultValue: 'main', description: 'Branch or commit hash to run the pipeline against.')
+    }
+
+    options {
+        ansiColor('xterm')
+        buildDiscarder(logRotator(daysToKeepStr: '14', artifactDaysToKeepStr: '14'))
+        parallelsAlwaysFailFast()
+        timeout(time: 6, unit: 'HOURS')
+        timestamps()
+    }
 
     environment {
         ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
@@ -48,6 +62,7 @@ pipeline {
         GRADLE_USER_HOME = "/host_tmp/gradle"
         SNYK_ORG_ID = credentials('r3-solana-snyk-org-id')
         SNYK_API_TOKEN = credentials('r3-solana-snyk-api-token-secret')
+        ARTIFACTORY_BUILD_NAME = "Corda Solana Toolkit / Publish".replaceAll("/", " :: ")
     }
 
     stages {
@@ -71,6 +86,22 @@ pipeline {
                             env.SNYK_ORG_ID,
                             "--policy-path=./.snyk --sub-project=${module} --configuration-matching='^runtimeClasspath\$' --prune-repeated-subdependencies --target-reference='${env.BRANCH_NAME}' --project-tags=Branch='${env.BRANCH_NAME.replaceAll("[^0-9|a-z|A-Z]+", "_")}'"
                         )
+                    }
+                }
+            }
+        }
+        stage('Publish') {
+            when {
+                allOf {
+                    not { changeRequest() }
+                }
+            }
+            steps {
+                script {
+                    dir('chosen-branch') {
+                        gitUtils.clone(params.CHOSEN_BRANCH, 'https://github.com/corda/corda-solana-toolkit')
+                        authenticateGradleWrapper()
+                        sh './gradlew --no-daemon artifactoryPublish'
                     }
                 }
             }

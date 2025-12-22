@@ -10,6 +10,8 @@ corda-plugin = "5.1.3"
 lmax-solana = "1.2.2"
 caffeine-cache = "3.2.3"
 sava = "24.23.3-j17-1"
+ben-manes = "0.53.0"
+axion-release = "1.21.0"
 
 [libraries]
 corda-core = { module = "net.corda:corda-core", version.ref = "corda-os" }
@@ -39,4 +41,6 @@ corda-shell = { module = "net.corda:corda-shell", version.ref = "corda-os-shell"
 [plugins]
 cordapp = { id = "net.corda.plugins.cordapp", version = "5.1.3" }
 quasar-utils = { id = "net.corda.plugins.quasar-utils", version.ref = "corda-plugin" }
+axion-release = { id = "pl.allegro.tech.build.axion-release", version.ref = "axion-release"}
+ben-manes-versions = { id = "com.github.ben-manes.versions", version.ref = "ben-manes"}
 cordformation = { id = "net.corda.plugins.cordformation", version = "5.1.1" }
