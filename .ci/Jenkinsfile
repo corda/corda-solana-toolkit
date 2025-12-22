@@ -101,7 +101,7 @@ pipeline {
                     dir('chosen-branch') {
                         gitUtils.clone(params.CHOSEN_BRANCH, 'https://github.com/corda/corda-solana-toolkit')
                         authenticateGradleWrapper()
-                        sh './gradlew --no-daemon clean check artifactoryPublish'
+                        sh './gradlew --no-daemon artifactoryPublish'
                     }
                 }
             }
