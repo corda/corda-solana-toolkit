@@ -5,6 +5,7 @@ import com.r3.build.agents.KubernetesAgent
 import com.r3.build.enums.KubernetesCluster
 import com.r3.build.enums.BuildEnvironment
 import com.r3.build.enums.BuildOperatingSystem
+import com.r3.build.utils.GitUtils
 
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
@@ -23,6 +24,8 @@ String COMMON_GRADLE_PARAMS = [
         '--stacktrace',
         '--info'
 ].join(' ')
+
+GitUtils gitUtils = new GitUtils(this)
 
 pipeline {
     agent {
