@@ -86,17 +86,17 @@ pipeline {
                     }
                 }
             }
-            stage('Test and Publish') {
+        stage('Test and Publish') {
 //                   when {
 //                     allOf {
 //                         not { changeRequest() }
 //                     }
 //                   }
-                  steps {
-                    authenticateGradleWrapper()
-                    sh './gradlew --no-daemon clean check artifactoryPublish'
-                  }
+            steps {
+                authenticateGradleWrapper()
+                sh './gradlew --no-daemon clean check artifactoryPublish'
             }
+        }
     }
 
     post {
