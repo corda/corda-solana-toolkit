@@ -90,7 +90,7 @@ pipeline {
                 }
             }
         }
-        stage('Test and Publish') {
+        stage('Publish') {
             when {
                 allOf {
                     not { changeRequest() }
