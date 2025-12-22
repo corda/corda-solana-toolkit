@@ -5,7 +5,6 @@ import com.r3.build.agents.KubernetesAgent
 import com.r3.build.enums.KubernetesCluster
 import com.r3.build.enums.BuildEnvironment
 import com.r3.build.enums.BuildOperatingSystem
-import com.r3.build.utils.GitUtils
 
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
@@ -18,8 +17,6 @@ KubernetesAgent k8s = new KubernetesAgent(
      false,
      true
  )
-
-GitUtils gitUtils = new GitUtils(this)
 
 String COMMON_GRADLE_PARAMS = [
         '--no-daemon',
@@ -40,6 +37,10 @@ pipeline {
             showRawYaml true
             defaultContainer k8s.defaultContainer.name
         }
+    }
+
+    parameters {
+        string(name: 'CHOSEN_BRANCH', defaultValue: main, description: 'Branch or commit hash to run the pipeline against.')
     }
 
     options {
@@ -93,12 +94,15 @@ pipeline {
             when {
                 allOf {
                     not { changeRequest() }
-                    expression { return gitUtils.isMainBranch() }
                 }
             }
             steps {
-                authenticateGradleWrapper()
-                sh './gradlew --no-daemon clean check artifactoryPublish'
+            script {
+                dir('chosen-branch') {
+                    gitUtils.clone(params.CHOSEN_BRANCH, 'https://github.com/corda/corda-solana-toolkit')
+                    authenticateGradleWrapper()
+                    sh './gradlew --no-daemon clean check artifactoryPublish'
+                }
             }
         }
     }
