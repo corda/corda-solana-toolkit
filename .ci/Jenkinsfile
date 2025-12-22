@@ -58,8 +58,7 @@ pipeline {
         GRADLE_USER_HOME = "/host_tmp/gradle"
         SNYK_ORG_ID = credentials('r3-solana-snyk-org-id')
         SNYK_API_TOKEN = credentials('r3-solana-snyk-api-token-secret')
-        ARTIFACTORY_BUILD_NAME = "Corda Solana Toolkit / Publish"
-                        .replaceAll("/", " :: ")
+        ARTIFACTORY_BUILD_NAME = "Corda Solana Toolkit / Publish".replaceAll("/", " :: ")
     }
 
     stages {
@@ -86,6 +85,7 @@ pipeline {
                     }
                 }
             }
+        }
         stage('Test and Publish') {
 //                   when {
 //                     allOf {
