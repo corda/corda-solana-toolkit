@@ -24,9 +24,6 @@ String COMMON_GRADLE_PARAMS = [
         '--info'
 ].join(' ')
 
-def isRelease = false // TODO differentiate based on branch or tag
-String publishOptions = "--no-daemon -s -PversionFromGit -PtargetRepo=${isRelease ? 'corda-dependencies' : 'corda-lib-dev'}"
-
 pipeline {
     agent {
         kubernetes {
