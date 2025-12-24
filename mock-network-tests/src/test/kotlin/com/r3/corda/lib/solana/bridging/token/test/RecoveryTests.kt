@@ -33,10 +33,8 @@ class RecoveryTests : ValidatorTests() {
 
         // Restart the validator on an alternative configuration simulating the connection drop
         validator.stopIfRunning()
-        validator = validator.ledgerDir.let { ledgerDir ->
-            SolanaTestValidator().also {
-                it.start(ledgerDir, SolanaTestValidator.ALTERNATIVE_RPC_PORT)
-            }
+        validator = SolanaTestValidator().also {
+            it.start(validator.ledgerDir, SolanaTestValidator.ALTERNATIVE_RPC_PORT)
         }
 
         // Before continuing, ensure the alternative config validator is available and responds to RPC calls
@@ -46,10 +44,8 @@ class RecoveryTests : ValidatorTests() {
 
         // Restart the validator on the default configuration simulating the connection restore
         validator.stopIfRunning()
-        validator = validator.ledgerDir.let { ledgerDir ->
-            SolanaTestValidator().also {
-                it.start(ledgerDir, SolanaTestValidator.DEFAULT_RPC_PORT)
-            }
+        validator = SolanaTestValidator().also {
+            it.start(validator.ledgerDir, SolanaTestValidator.DEFAULT_RPC_PORT)
         }
         val expectedBobNodeBalance = MOVE_TOTAL_QUANTITY - MOVE_QUANTITY_3
         ensureLockedAmount(msftTokenType, expectedBobNodeBalance)
