@@ -8,7 +8,6 @@ import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.StartedMockNode
 import net.corda.testing.node.TestCordapp
-import net.corda.testing.solana.SolanaTestValidator
 import net.corda.testing.solana.randomKeypairFile
 import java.nio.file.Path
 import java.util.*
@@ -57,8 +56,8 @@ data class BridgeAuthorityInfo(
                 "lockingIdentityLabel" to UUID.randomUUID().toString(),
                 "solanaNotaryName" to solanaNotaryName.toString(),
                 "generalNotaryName" to generalNotaryName.toString(),
-                "solanaWsUrl" to SolanaTestValidator.WS_URL,
-                "solanaRpcUrl" to SolanaTestValidator.RPC_URL,
+                "solanaWsUrl" to testValidator.wsUrl,
+                "solanaRpcUrl" to testValidator.rpcUrl,
                 "bridgeAuthorityWalletFile" to mintWalletFile.toString(),
                 // Set to very height value interval to effectively disable redemption in tests in order
                 // to validate "core" real time processing and Sava listeners

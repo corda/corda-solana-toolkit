@@ -7,13 +7,16 @@ import com.r3.corda.lib.tokens.workflows.utilities.toParty
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.messaging.FlowHandle
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.ServiceLifecycleEvent
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.utilities.debug
 import net.corda.solana.sdk.instruction.Pubkey
 import org.slf4j.LoggerFactory
 import java.net.http.HttpClient
+import java.util.concurrent.CompletionException
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
@@ -21,6 +24,7 @@ import java.util.concurrent.TimeUnit
 class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSerializeAsToken() {
     companion object {
         private val logger = LoggerFactory.getLogger(BridgingService::class.java)
+        private const val MAX_BACKOFF_DELAY_SECS = 10
     }
 
     private val socket: SavaFactory.WebSocketWrapper
@@ -30,7 +34,11 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
     private val accountService: TokenAccountService
 
     init {
-        socket = SavaFactory.WebSocketWrapper(configHandler.solanaRpcUrl, configHandler.solanaWsUrl)
+        socket = SavaFactory.WebSocketWrapper(
+            configHandler.solanaRpcUrl,
+            configHandler.solanaWsUrl,
+            ::onSocketClosed
+        )
         appServiceHub.registerUnloadHandler { onStop() }
         appServiceHub.register { onStartup(it) }
         rpcClient = SolanaJsonRpcClient(HttpClient.newHttpClient(), configHandler.solanaRpcUrl)
@@ -38,7 +46,49 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
     }
 
     private fun onStop() {
+        logger.info("Bridging service stopped.")
         executor.shutdown()
+    }
+
+    private fun onSocketClosed(errorCode: Int, reason: String) {
+        logger.info("WebSocket closed: $errorCode, $reason. Reconnecting...")
+        executor.submit { attemptSocketReconnect() }
+    }
+
+    private fun attemptSocketReconnect(remainingAttempts: Int = MAX_BACKOFF_DELAY_SECS) {
+        val connected = socket.reconnect()
+        when {
+            connected -> {
+                logger.info("Reconnected Solana websocket")
+            }
+            remainingAttempts > 0 -> {
+                logger.warn("Failed to reconnect to ${socket.wsUrl}. Trying again...")
+                val attemptNumber = MAX_BACKOFF_DELAY_SECS - remainingAttempts + 1
+                val backOffSeconds = attemptNumber
+                logger.info("Retrying to reconnect in $backOffSeconds seconds (attempt $attemptNumber)")
+                executor.schedule(
+                    {
+                        attemptSocketReconnect(remainingAttempts - 1)
+                    },
+                    backOffSeconds.toLong(),
+                    TimeUnit.SECONDS
+                )
+            }
+            else -> {
+                logger.info(
+                    """Failed to reconnect to ${socket.wsUrl}.
+                        |Trying again in $MAX_BACKOFF_DELAY_SECS seconds
+                    """.trimMargin()
+                )
+                executor.schedule(
+                    {
+                        attemptSocketReconnect(0)
+                    },
+                    MAX_BACKOFF_DELAY_SECS.toLong(),
+                    TimeUnit.SECONDS
+                )
+            }
+        }
     }
 
     fun getBridgingCoordinates(token: StateAndRef<FungibleToken>, originalHolder: Party) =
@@ -64,67 +114,105 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
     }
 
     private fun checkAndListenForRedemption() {
-        // First check existing balances in the redemption addresses
         checkAllBalancesForRedemption()
-        // Now add listener for new redemption events
+        attemptToSubscribeToWebsocket(false)
+    }
+
+    private fun attemptToSubscribeToWebsocket(
+        unsubscribeBefore: Boolean,
+        remainingAttempts: Int = MAX_BACKOFF_DELAY_SECS,
+    ) {
+        if (unsubscribeBefore) {
+            SavaFactory.logger.info("Unsubscribing from socket first before attempting a new subscription...")
+            val unsubscribed = socket.unsubscribe()
+            check(unsubscribed) { "Unsubscribing from socket was unsuccessful." }
+        }
         val subscribed = socket.onToken2022ByOwner(
             configHandler.redemptionWalletAccountToHolder.keys,
             ::processRedemptionEvent,
         )
-        if (!subscribed) {
-            logger.error(
-                "Failed to subscribe to ${socket.wsUrl}"
-            )
+        when {
+            subscribed -> {
+                logger.info(
+                    """Successfully subscribed to ${socket.wsUrl}. Scheduling redemption balance checks every
+                        |${configHandler.redemptionCheckIntervalSeconds} seconds"
+                    """.trimMargin()
+                )
+                executor.scheduleAtFixedRate({
+                    checkAllBalancesForRedemption()
+                }, 0, configHandler.redemptionCheckIntervalSeconds, TimeUnit.SECONDS)
+            }
+            remainingAttempts > 0 -> {
+                logger.error("Failed to subscribe to ${socket.wsUrl}. Trying again...")
+                val attemptNumber = MAX_BACKOFF_DELAY_SECS - remainingAttempts + 1
+                val backOffSeconds = attemptNumber
+                logger.info("Retrying to connect in $backOffSeconds seconds (attempt $attemptNumber)")
+                executor.schedule(
+                    {
+                        attemptToSubscribeToWebsocket(true, remainingAttempts - 1)
+                    },
+                    backOffSeconds.toLong(),
+                    TimeUnit.SECONDS
+                )
+            }
+            else -> logger.error("No remaining attempts to connect to ${socket.wsUrl}")
         }
     }
 
     private fun checkAllBalancesForRedemption() {
-        executor.scheduleAtFixedRate({
-            logger.info("Checking all balances for redemption")
-            configHandler.redemptionWalletAccountToHolder.keys.forEach { redemptionWallet ->
-                socket.getNonZeroTokenAccounts(redemptionWallet).forEach { tokenAccountInfo ->
-                    processRedemptionEvent(
-                        redemptionWallet,
-                        tokenAccountInfo.pubKey.toPubkey(),
-                        tokenAccountInfo.data.mint.toPubkey(),
-                        tokenAccountInfo.data.amount()
-                    )
-                }
+        logger.info("Checking all balances for redemption")
+        configHandler.redemptionWalletAccountToHolder.keys.forEach { redemptionWallet ->
+            socket.getNonZeroTokenAccounts(redemptionWallet).forEach { tokenAccountInfo ->
+                processRedemptionEvent(
+                    redemptionWallet,
+                    tokenAccountInfo.pubKey.toPubkey(),
+                    tokenAccountInfo.data.mint.toPubkey(),
+                    tokenAccountInfo.data.amount()
+                )
             }
-        }, 0, configHandler.redemptionCheckIntervalSeconds, TimeUnit.SECONDS)
+        }
     }
 
-    fun processRedemptionEvent(
+    private fun processRedemptionEvent(
         redemptionWalletAccount: Pubkey,
         redemptionTokenAccount: Pubkey,
         mint: Pubkey,
         amount: Long,
     ) {
-        if (amount == 0L) {
-            return
+        try {
+            if (amount == 0L) {
+                return
+            }
+            val tokenId = checkNotNull(configHandler.getTokenIdentifierByMint(mint)) {
+                "No token configured for mint $mint"
+            }
+            val cordaOwnerName = checkNotNull(
+                configHandler.redemptionWalletAccountToHolder[redemptionWalletAccount]
+            ) {
+                "No Corda owner configured for Solana redemption account $redemptionWalletAccount"
+            }
+            val cordaOwner = checkNotNull(appServiceHub.networkMapCache.getPeerByLegalName(cordaOwnerName)) {
+                "No Corda owner found for Solana redemption account $redemptionTokenAccount"
+            }
+            val redemptionCoordinates = configHandler.getRedemptionCoordinates(
+                tokenId,
+                redemptionWalletAccount,
+                redemptionTokenAccount,
+            )
+            callRedemptionFlow(
+                cordaOwner,
+                amount,
+                redemptionCoordinates,
+            )
+        } catch (e: Exception) {
+            logger.error(
+                """Error processing token received event for mint $mint,
+                    |redemption wallet account $redemptionWalletAccount,
+                    |redemption token account $redemptionTokenAccount, amount $amount
+                """.trimMargin(),
+                e
+            )
         }
-        // TODO perhaps move those to the flow so it can be tracked by the flow hospital
-        val tokenId = checkNotNull(configHandler.getTokenIdentifierByMint(mint)) {
-            "No token configured for mint $mint"
-        }
-        val cordaOwnerName = checkNotNull(
-            configHandler.redemptionWalletAccountToHolder[redemptionWalletAccount]
-        ) {
-            "No Corda owner configured for Solana redemption account $redemptionWalletAccount"
-        }
-        val cordaOwner = checkNotNull(appServiceHub.networkMapCache.getPeerByLegalName(cordaOwnerName)) {
-            "No Corda owner found for Solana redemption account $redemptionTokenAccount"
-        }
-        val redemptionCoordinates = configHandler.getRedemptionCoordinates(
-            tokenId,
-            redemptionWalletAccount,
-            redemptionTokenAccount,
-        )
-        callRedemptionFlow(
-            cordaOwner,
-            amount,
-            redemptionCoordinates,
-        )
     }
 
     fun createAta(mint: Pubkey, owner: Pubkey) {
@@ -136,23 +224,37 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         amount: Long,
         redemptionCoordinates: RedemptionCoordinates,
     ) {
-        logger.debug("Web socket event for redemption coordinates: $redemptionCoordinates, amount $amount")
+        logger.debug { "Web socket event for redemption coordinates: $redemptionCoordinates, amount $amount" }
         if (amount == 0L) {
             return
         }
-        val flowHandle = with(configHandler) {
-            appServiceHub.startFlow(
-                RedeemFungibleTokenFlow(
-                    redemptionCoordinates,
-                    cordaOwner,
-                    amount,
-                    solanaNotary,
-                    generalNotaryName,
-                    lockingIdentity
-                )
-            )
+        with(configHandler) {
+            appServiceHub
+                .startFlow(
+                    RedeemFungibleTokenFlow(
+                        redemptionCoordinates,
+                        cordaOwner,
+                        amount,
+                        solanaNotary,
+                        generalNotaryName,
+                        lockingIdentity
+                    )
+                ).logErrorIfException()
         }
-        flowHandle.returnValue.get()
+    }
+
+    private fun FlowHandle<*>.logErrorIfException() {
+        val future = returnValue.toCompletableFuture()
+        future.whenComplete { _, ex ->
+            when {
+                ex is CompletionException -> {
+                    logger.error("Flow $id failed", ex.cause)
+                }
+                ex != null -> {
+                    logger.error("Flow $id failed", ex)
+                }
+            }
+        }
     }
 
     private fun callBridgeFlow(appServiceHub: AppServiceHub, token: StateAndRef<FungibleToken>) {
@@ -169,15 +271,16 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
             logger.info("Starting flow to bridge ${token.state.data} to Solana for $previousHolder")
             executor.submit {
                 try {
-                    appServiceHub.startFlow(
-                        BridgeFungibleTokenFlow(
-                            lockingIdentity,
-                            previousHolder.toParty(appServiceHub),
-                            token,
-                            solanaNotary,
-                            emptyList(), // TODO ENT-14346 an observer is not a generic concept in tokens
-                        )
-                    )
+                    appServiceHub
+                        .startFlow(
+                            BridgeFungibleTokenFlow(
+                                lockingIdentity,
+                                previousHolder.toParty(appServiceHub),
+                                token,
+                                solanaNotary,
+                                emptyList(), // TODO ENT-14346 an observer is not a generic concept in tokens
+                            )
+                        ).logErrorIfException()
                 } catch (e: Exception) {
                     logger.error("Unable to start BridgeFungibleTokenFlow for $token", e)
                 }

@@ -20,6 +20,7 @@ ent-corda-node = { module = "com.r3.corda:corda-node", version.ref = "corda-ent"
 ent-corda-node-api = { module = "com.r3.corda:corda-node-api", version.ref = "corda-ent" }
 ent-corda-core-test-utils = { module = "com.r3.corda:corda-core-test-utils", version.ref = "corda-ent" }
 ent-corda-solana-notary-common = { module = "net.corda.solana.notary:common", version = "0.1.2" }
+ent-corda-solana-notary-client = { module = "net.corda.solana.notary:kotlin-client", version = "0.1.2" }
 ent-corda-solana-sdk = { module = "com.r3.corda:corda-solana-sdk", version.ref = "corda-ent" }
 ent-corda-test-common = { module = "com.r3.corda:corda-test-common", version.ref = "corda-ent" }
 ent-corda-test-utils = { module = "com.r3.corda:corda-test-utils", version.ref = "corda-ent" }
