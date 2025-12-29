@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit
 class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSerializeAsToken() {
     companion object {
         private val logger = LoggerFactory.getLogger(BridgingService::class.java)
-        private const val MAXIMUM_CONNECTION_ATTEMPTS = 10
+        private const val MAX_BACKOFF_DELAY_SECS = 10
     }
 
     private val socket: SavaFactory.WebSocketWrapper
@@ -55,7 +55,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         executor.submit { attemptSocketReconnect() }
     }
 
-    private fun attemptSocketReconnect(remainingAttempts: Int = MAXIMUM_CONNECTION_ATTEMPTS) {
+    private fun attemptSocketReconnect(remainingAttempts: Int = MAX_BACKOFF_DELAY_SECS) {
         val connected = socket.reconnect()
         when {
             connected -> {
@@ -63,7 +63,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
             }
             remainingAttempts > 0 -> {
                 logger.warn("Failed to reconnect to ${socket.wsUrl}. Trying again...")
-                val attemptNumber = MAXIMUM_CONNECTION_ATTEMPTS - remainingAttempts + 1
+                val attemptNumber = MAX_BACKOFF_DELAY_SECS - remainingAttempts + 1
                 val backOffSeconds = attemptNumber
                 logger.info("Retrying to reconnect in $backOffSeconds seconds (attempt $attemptNumber)")
                 executor.schedule(
@@ -77,14 +77,14 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
             else -> {
                 logger.info(
                     """Failed to reconnect to ${socket.wsUrl}.
-                        |Trying again in $MAXIMUM_CONNECTION_ATTEMPTS seconds
+                        |Trying again in $MAX_BACKOFF_DELAY_SECS seconds
                     """.trimMargin()
                 )
                 executor.schedule(
                     {
                         attemptSocketReconnect(0)
                     },
-                    MAXIMUM_CONNECTION_ATTEMPTS.toLong(),
+                    MAX_BACKOFF_DELAY_SECS.toLong(),
                     TimeUnit.SECONDS
                 )
             }
@@ -120,7 +120,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
 
     private fun attemptToSubscribeToWebsocket(
         unsubscribeBefore: Boolean,
-        remainingAttempts: Int = MAXIMUM_CONNECTION_ATTEMPTS,
+        remainingAttempts: Int = MAX_BACKOFF_DELAY_SECS,
     ) {
         if (unsubscribeBefore) {
             SavaFactory.logger.info("Unsubscribing from socket first before attempting a new subscription...")
@@ -144,7 +144,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
             }
             remainingAttempts > 0 -> {
                 logger.error("Failed to subscribe to ${socket.wsUrl}. Trying again...")
-                val attemptNumber = MAXIMUM_CONNECTION_ATTEMPTS - remainingAttempts + 1
+                val attemptNumber = MAX_BACKOFF_DELAY_SECS - remainingAttempts + 1
                 val backOffSeconds = attemptNumber
                 logger.info("Retrying to connect in $backOffSeconds seconds (attempt $attemptNumber)")
                 executor.schedule(
