@@ -3,6 +3,7 @@ package com.r3.corda.lib.solana.bridging.token.test.driver
 import com.lmax.solana4j.api.PublicKey
 import com.lmax.solana4j.programs.AssociatedTokenProgram
 import com.r3.corda.lib.solana.bridging.token.flows.toPublicKey
+import com.r3.corda.lib.solana.bridging.token.test.SolanaTestValidator
 import com.r3.corda.lib.solana.bridging.token.test.TokenTypeDescriptor
 import com.r3.corda.lib.solana.bridging.token.test.assertAtaAccount
 import com.r3.corda.lib.solana.bridging.token.test.getAccountInfo
@@ -37,7 +38,6 @@ import net.corda.testing.driver.driver
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.User
-import net.corda.testing.solana.SolanaTestValidator
 import net.corda.testing.solana.randomKeypairFile
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
@@ -53,7 +53,7 @@ import java.math.BigDecimal
 import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
-import java.util.UUID
+import java.util.*
 
 abstract class DriverTests {
     companion object {
@@ -72,6 +72,8 @@ abstract class DriverTests {
             packageOwnership = emptyMap(),
         )
 
+        // To reuse extension functions such as "transfer", the test uses the "extended" SolanaTestValidator
+        // from com.r3.corda.lib.solana.bridging.token.test instead of the one from Corda.
         private lateinit var validator: SolanaTestValidator
 
         private val solanaNotaryName = CordaX500Name("Solana Notary Service", "London", "GB")
@@ -179,8 +181,8 @@ abstract class DriverTests {
                 "lockingIdentityLabel" to UUID.randomUUID().toString(),
                 "solanaNotaryName" to solanaNotaryName.toString(),
                 "generalNotaryName" to generalNotaryName.toString(),
-                "solanaWsUrl" to SolanaTestValidator.WS_URL,
-                "solanaRpcUrl" to SolanaTestValidator.RPC_URL,
+                "solanaWsUrl" to validator.wsUrl,
+                "solanaRpcUrl" to validator.rpcUrl,
                 "bridgeAuthorityWalletFile" to bridgeAuthorityWalletFile.toString(),
             )
         )
@@ -192,7 +194,7 @@ abstract class DriverTests {
                 "validating" to false,
                 // "serviceLegalName" doesn't work with Driver, because it needs a distributed key that is not created
                 "solana" to mapOf(
-                    "rpcUrl" to SolanaTestValidator.RPC_URL,
+                    "rpcUrl" to validator.rpcUrl,
                     "notaryKeypairFile" to "$solanaNotaryKeyFile",
                     "custodiedKeysDir" to "$custodiedKeysDir",
                     "programWhitelist" to listOf(Token2022.PROGRAM_ID.toPublicKey().base58()),
