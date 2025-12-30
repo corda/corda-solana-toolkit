@@ -1,6 +1,6 @@
 package com.r3.corda.lib.solana.bridging.token.test
 
-import com.r3.corda.lib.solana.bridging.token.test.FlowTests.Companion.TOKEN_DECIMALS
+import com.r3.corda.lib.solana.bridging.token.test.ValidatorTests.Companion.TOKEN_DECIMALS
 import com.r3.corda.lib.solana.bridging.token.testing.IssueEvolvableTokenTypeFlow
 import com.r3.corda.lib.tokens.contracts.types.TokenType
 import net.corda.core.identity.CordaX500Name

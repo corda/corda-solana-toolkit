@@ -55,7 +55,6 @@ class TokenAccountServiceTest {
                 if (e.message == "Another solana-test-validator instance is already running") {
                     // for these tests error is fine, tests create random new accounts
                     closeTestValidator = false // let the test which started it close it
-                    println("Re-using another solana-test-validator instance that is already running")
                 } else {
                     throw e
                 }

@@ -9,7 +9,6 @@ import net.corda.solana.notary.common.Signer
 import net.corda.solana.sdk.Token2022
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.StartedMockNode
-import net.corda.testing.solana.SolanaTestValidator
 import java.math.BigDecimal
 
 data class CordaNodeAndSolanaAccounts(

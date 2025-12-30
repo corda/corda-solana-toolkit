@@ -24,6 +24,7 @@ dependencies {
     testImplementation(libs.ent.corda.test.common)
     testImplementation(libs.ent.corda.test.utils)
     testImplementation(libs.ent.corda.core.test.utils)
+    testImplementation(libs.ent.corda.node.driver)
 }
 
 cordapp {
