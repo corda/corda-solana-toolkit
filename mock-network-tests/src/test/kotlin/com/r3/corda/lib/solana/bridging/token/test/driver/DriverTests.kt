@@ -54,7 +54,6 @@ import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
-import kotlin.collections.contains
 
 abstract class DriverTests {
     companion object {
@@ -203,7 +202,7 @@ abstract class DriverTests {
     }
 
     @BeforeEach
-    fun startTestValidator() {
+    fun issueCordaTokens() {
         msftTokenMint = validator.createToken(mintAuthoritySigner, decimals = TOKEN_DECIMALS.toByte())
         appleTokenMint = validator.createToken(mintAuthoritySigner, decimals = TOKEN_DECIMALS.toByte())
         val assembleParticipantWithStock = fun(
@@ -274,7 +273,7 @@ abstract class DriverTests {
 
             // Bob bridges Microsoft stock twice and then he will redeem all in one go
             val firstBridgeQuantity = BigDecimal.ONE
-            val secondBridgeQuantity = BRIDGE_QUANTITY.minus(BigDecimal.ONE)
+            val secondBridgeQuantity = BRIDGE_QUANTITY - BigDecimal.ONE
             bridgeTest(bobMicrosoft, firstBridgeQuantity)
             bridgeTest(bobMicrosoft, secondBridgeQuantity, BRIDGE_QUANTITY)
 
@@ -351,8 +350,8 @@ abstract class DriverTests {
         eventually(duration = 10.seconds) {
             val balance = validator.getSolanaTokenBalance(participantAndStock.redemptionTokenAccount)
             assertEquals(
-                0,
-                balance.compareTo(quantity),
+                quantity.stripTrailingZeros(),
+                balance.stripTrailingZeros(),
             ) {
                 "Redemption token account has $balance instead $quantity after transfer - party" +
                     " ${participantAndStock.participant.nameAsString}"
