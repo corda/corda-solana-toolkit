@@ -194,7 +194,7 @@ abstract class DriverTests {
 
         msftTokenMint = validator.createToken(mintAuthoritySigner, decimals = TOKEN_DECIMALS.toByte())
         appleTokenMint = validator.createToken(mintAuthoritySigner, decimals = TOKEN_DECIMALS.toByte())
-        val assembeParticipantWithStock = fun(
+        val assembleParticipantWithStock = fun(
             participant: SolanaParticipant,
             tokenDescriptor: TokenTypeDescriptor,
             tokenMintAccount: PublicKey,
@@ -209,9 +209,9 @@ abstract class DriverTests {
                 redemptionTokenAccount,
             )
         }
-        aliceMicrosoft = assembeParticipantWithStock(alice, msftDescriptor, msftTokenMint, redemptionWalletForAlice)
-        aliceApple = assembeParticipantWithStock(alice, appleDescriptor, appleTokenMint, redemptionWalletForAlice)
-        bobMicrosoft = assembeParticipantWithStock(bob, msftDescriptor, msftTokenMint, redemptionWalletForBob)
+        aliceMicrosoft = assembleParticipantWithStock(alice, msftDescriptor, msftTokenMint, redemptionWalletForAlice)
+        aliceApple = assembleParticipantWithStock(alice, appleDescriptor, appleTokenMint, redemptionWalletForAlice)
+        bobMicrosoft = assembleParticipantWithStock(bob, msftDescriptor, msftTokenMint, redemptionWalletForBob)
     }
 
     @AfterEach
@@ -220,7 +220,7 @@ abstract class DriverTests {
     }
 
     @Test
-    fun driverBridgeAndRedemptionTest() {
+    fun `driver bridge and redemption test`() {
         driver(
             DriverParameters(
                 inMemoryDB = false,
@@ -279,7 +279,7 @@ abstract class DriverTests {
 
             // Alice redeems a smaller quantity of Apple stock to leave a change in Bridge Authority (CI)
             val redeemQuantity = BigDecimal.ONE
-            val leftQuantity = BRIDGE_QUANTITY.minus(BigDecimal.ONE)
+            val leftQuantity = BRIDGE_QUANTITY - BigDecimal.ONE
             val expectedCordaQuantity = ISSUING_QUANTITY - leftQuantity
             redeemTest(aliceApple, redeemQuantity, expectedCordaQuantity)
         }
@@ -391,7 +391,7 @@ open class CordaParticipant(val name: CordaX500Name) {
     val nameAsString: String
         get() = name.toString()
 
-    // values know after node starts:
+    // values only known after node start:
     lateinit var node: NodeHandle
     val identity: Party
         get() = node.nodeInfo.legalIdentities.first()
