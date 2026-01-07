@@ -4,7 +4,6 @@ include(
     "bridging-token-contracts",
     "bridging-token-workflows",
     "mock-network-tests",
-    "samples:stockpaydividend-solana-bridge",
 )
 
 pluginManagement {
