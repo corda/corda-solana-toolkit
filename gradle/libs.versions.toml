@@ -34,9 +34,6 @@ lmax-solana4j = { module = "com.lmax:solana4j", version.ref = "lmax-solana" } # 
 lmax-solana4j-json-rpc = { module = "com.lmax:solana4j-json-rpc", version.ref = "lmax-solana" } # for tests
 caffeine-cache = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "caffeine-cache" }
 
-# Libraries for a sample Corddap deployment
-corda-node-api = { module = "net.corda:corda-node-api", version.ref = "corda-os" }
-
 [plugins]
 cordapp = { id = "net.corda.plugins.cordapp", version = "5.1.3" }
 quasar-utils = { id = "net.corda.plugins.quasar-utils", version.ref = "corda-plugin" }
