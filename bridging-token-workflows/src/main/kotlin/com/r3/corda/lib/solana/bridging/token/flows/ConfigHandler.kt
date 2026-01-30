@@ -1,5 +1,6 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
+import com.r3.corda.lib.solana.core.FileSigner
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.contracts.types.TokenPointer
 import net.corda.core.contracts.StateAndRef
@@ -9,7 +10,6 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.AppServiceHub
-import net.corda.solana.notary.common.Signer
 import net.corda.solana.sdk.instruction.Pubkey
 import java.util.UUID
 import kotlin.io.path.Path
@@ -29,7 +29,7 @@ class ConfigHandler(private val appServiceHub: AppServiceHub) {
     val solanaWsUrl: String
     val solanaRpcUrl: String
     val redemptionWalletAccountToHolder: Map<Pubkey, CordaX500Name>
-    val bridgeAuthoritySigner: Signer
+    val bridgeAuthoritySigner: FileSigner
     val redemptionCheckIntervalSeconds: Long
 
     init {
@@ -52,7 +52,7 @@ class ConfigHandler(private val appServiceHub: AppServiceHub) {
         generalNotaryName = getNotary("generalNotaryName", config, appServiceHub)
         solanaWsUrl = config.getString("solanaWsUrl")
         solanaRpcUrl = config.getString("solanaRpcUrl")
-        bridgeAuthoritySigner = Signer.fromFile(Path(config.getString("bridgeAuthorityWalletFile")))
+        bridgeAuthoritySigner = FileSigner.read(Path(config.getString("bridgeAuthorityWalletFile")))
         redemptionCheckIntervalSeconds = if (config.exists("redemptionCheckIntervalSeconds")) {
             config.getLong("redemptionCheckIntervalSeconds")
         } else {

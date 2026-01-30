@@ -15,17 +15,18 @@ dependencies {
 
     detektPlugins(libs.detekt.ktlint.wrapper)
 
-    testImplementation(libs.ent.corda.solana.notary.common)
-    testImplementation(libs.ent.corda.solana.notary.client)
+    testImplementation(project(":core"))
+    testImplementation(project(":testing"))
+    testImplementation(libs.solana.notary.client)
+    testImplementation(libs.solana.notary.common)
+    testImplementation(libs.solana.notary.test)
     testImplementation(libs.ent.corda.solana.sdk)
     testImplementation(libs.ent.corda.test.common)
-    testImplementation(libs.ent.corda.test.utils)
+//    testImplementation(libs.ent.corda.test.utils)
     testImplementation(libs.ent.corda.core.test.utils)
     testImplementation(libs.ent.corda.node)
     testImplementation(libs.ent.corda.node.driver)
     testImplementation(libs.quasar.core)
-    testImplementation(libs.lmax.solana4j)
-    testImplementation(libs.lmax.solana4j.json.rpc)
 
     // When using SNAPSHOT node-driver, make sure we are using the same build of the Enterprise Corda node
     testRuntimeOnly(libs.ent.corda.node.api)
@@ -42,13 +43,6 @@ cordapp {
         versionId.set(properties["cordaVersionId"].toString().toInt())
         vendor.set("R3")
     }
-}
-
-java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(17))
-    }
-    withSourcesJar()
 }
 
 quasar {

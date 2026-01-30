@@ -1,22 +1,22 @@
 package com.r3.corda.lib.solana.bridging.token.test
 
-import com.lmax.solana4j.api.PublicKey
+import com.r3.corda.lib.solana.core.FileSigner
+import com.r3.corda.lib.solana.testing.SolanaTestValidator
 import net.corda.core.identity.Party
-import net.corda.solana.notary.common.Signer
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.StartedMockNode
 import net.corda.testing.node.TestCordapp
-import net.corda.testing.solana.randomKeypairFile
+import software.sava.core.accounts.PublicKey
+import software.sava.core.accounts.Signer
 import java.nio.file.Path
-import java.util.*
+import java.util.UUID
 
 data class BridgeAuthorityInfo(
     val node: StartedMockNode,
     val party: Party,
-    val mintWalletFile: Path,
-    val mintWallet: Signer,
+    val mintWallet: FileSigner,
     val redemptionWallets: Map<Party, Signer>,
     private val redemptionTokenAccounts: Map<Party, List<AssociatedTokenAccountInfo>>,
 ) {
@@ -30,35 +30,36 @@ data class BridgeAuthorityInfo(
             mintAuthority: PublicKey,
             testValidator: SolanaTestValidator,
         ): BridgeAuthorityInfo {
-            val bridgingContractsCordapp =
-                TestCordapp.findCordapp("com.r3.corda.lib.solana.bridging.token.contracts")
+            val bridgingContractsCordapp = TestCordapp.findCordapp("com.r3.corda.lib.solana.bridging.token.contracts")
             val bridgingFlowsCordapp = TestCordapp.findCordapp("com.r3.corda.lib.solana.bridging.token.flows")
-            val redemptionWallets = parties.associate { it.party to Signer.fromFile(randomKeypairFile(keyDir)) }
-            redemptionWallets.values.forEach {
-                testValidator.fundAccount(10, it)
-            }
-            val mintWalletFile = randomKeypairFile(keyDir)
-            val mintWallet = Signer.fromFile(mintWalletFile)
-            testValidator.fundAccount(10, mintWallet)
+            val redemptionWallets = parties.associateBy(
+                { it.party },
+                {
+                    val signer = FileSigner.random(keyDir)
+                    testValidator.accounts().airdropSol(signer.publicKey(), 10)
+                    signer
+                }
+            )
+            val mintWallet = FileSigner.random(keyDir)
+            testValidator.accounts().airdropSol(mintWallet.publicKey(), 10)
             val baConfig = mapOf(
-                "participants" to parties.associate { it.party.name.toString() to it.signer.account.base58() },
+                "participants" to parties.associate { it.party.name.toString() to it.signer.publicKey().toBase58() },
                 "redemptionWalletAccountToHolder" to redemptionWallets
-                    .map {
-                        it.value.account.base58() to it.key.name.toString()
-                    }.toMap(),
+                    .map { it.value.publicKey().toBase58() to it.key.name.toString() }
+                    .toMap(),
                 "mintsWithAuthorities" to tokenDescriptorToMint
                     .map {
                         it.key.tokenTypeIdentifier to mapOf(
-                            "tokenMint" to it.value.base58(),
-                            "mintAuthority" to mintAuthority.base58(),
+                            "tokenMint" to it.value.toBase58(),
+                            "mintAuthority" to mintAuthority.toBase58(),
                         )
                     }.toMap(),
                 "lockingIdentityLabel" to UUID.randomUUID().toString(),
                 "solanaNotaryName" to solanaNotaryName.toString(),
                 "generalNotaryName" to generalNotaryName.toString(),
-                "solanaWsUrl" to testValidator.wsUrl,
-                "solanaRpcUrl" to testValidator.rpcUrl,
-                "bridgeAuthorityWalletFile" to mintWalletFile.toString(),
+                "solanaWsUrl" to testValidator.websocketUrl(),
+                "solanaRpcUrl" to testValidator.rpcUrl(),
+                "bridgeAuthorityWalletFile" to mintWallet.file.toString(),
                 // Set to very height value interval to effectively disable redemption in tests in order
                 // to validate "core" real time processing and Sava listeners
                 "redemptionCheckIntervalSeconds" to 300, // 5 minutes
@@ -75,14 +76,13 @@ data class BridgeAuthorityInfo(
             return BridgeAuthorityInfo(
                 node = node,
                 party = node.info.legalIdentities.first(),
-                mintWalletFile = mintWalletFile,
                 mintWallet = mintWallet,
                 redemptionWallets = redemptionWallets,
                 redemptionTokenAccounts = parties.associate { info ->
                     info.party to tokenDescriptorToMint.map { (_, mint) ->
                         AssociatedTokenAccountInfo(
                             mint = mint,
-                            tokenAccount = testValidator.createTokenAccount(
+                            tokenAccount = testValidator.tokens().createTokenAccount(
                                 redemptionWallets[info.party]!!,
                                 mint
                             )

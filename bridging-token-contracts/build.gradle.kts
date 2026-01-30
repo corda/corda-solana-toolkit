@@ -6,7 +6,6 @@ plugins {
 
 dependencies {
     cordaProvided(libs.corda.core)
-    cordaProvided(libs.ent.corda.solana.notary.common)
     cordaProvided(libs.ent.corda.solana.sdk)
 
     cordapp(libs.tokens.contracts)
@@ -17,9 +16,9 @@ dependencies {
     testImplementation(libs.ent.corda.node.driver)
     testImplementation(libs.ent.corda.core.test.utils)
     testImplementation(libs.ent.corda.test.utils)
-    testImplementation(libs.ent.corda.solana.notary.common)
     testImplementation(libs.mockito.core)
-    testImplementation(libs.lmax.solana4j)
+
+    detektPlugins(libs.detekt.ktlint.wrapper)
 }
 
 cordapp {
@@ -35,9 +34,6 @@ cordapp {
 }
 
 java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(17))
-    }
     withSourcesJar()
 }
 

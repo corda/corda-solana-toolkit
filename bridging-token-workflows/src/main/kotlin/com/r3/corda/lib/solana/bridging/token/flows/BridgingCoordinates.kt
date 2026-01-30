@@ -1,7 +1,8 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
-import com.lmax.solana4j.programs.AssociatedTokenProgram
 import com.r3.corda.lib.solana.bridging.token.states.BridgedFungibleTokenProxy
+import com.r3.corda.lib.solana.core.TokenManagement
+import com.r3.corda.lib.solana.core.TokenProgram
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import net.corda.core.identity.Party
 import net.corda.solana.sdk.instruction.Pubkey
@@ -25,12 +26,12 @@ data class BridgingCoordinates(
      * @param token the source of amount to bridge
      */
     fun toBridgedFungibleTokenProxy(token: FungibleToken, bridgeAuthority: Party): BridgedFungibleTokenProxy {
-        val tokenAccount = AssociatedTokenProgram
-            .deriveAddress(
-                this.mintWalletAccount.toPublicKey(),
-                tokenProgramId,
-                this.mintAccount.toPublicKey(),
-            ).address()
+        val tokenAccount = TokenManagement
+            .getAssociatedTokenAccountAddress(
+                mintAccount.toPublicKey(),
+                mintWalletAccount.toPublicKey(),
+                TokenProgram.valueOf(tokenProgramId)
+            )
             .toPubkey()
         return BridgedFungibleTokenProxy(
             amount = token.amount.quantity,

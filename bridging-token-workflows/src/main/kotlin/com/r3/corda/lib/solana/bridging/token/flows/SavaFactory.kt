@@ -69,7 +69,7 @@ object SavaFactory {
 
         fun getNonZeroTokenAccounts(owner: Pubkey): List<AccountInfo<TokenAccount>> {
             val httpClient = HttpClient.newHttpClient()
-            val solanaClient = SolanaRpcClient.createClient(URI.create(rpcUrl), httpClient, globalCommitmentLevelSava)
+            val solanaClient = SolanaRpcClient.createClient(URI.create(rpcUrl), httpClient, globalCommitmentLevel)
             logger.debug { "Checking for non-zero token accounts owned by $owner" }
             return solanaClient
                 .getTokenAccountsForProgramByOwner(owner.toPublicKey(), SolanaAccounts.MAIN_NET.token2022Program())
@@ -97,7 +97,7 @@ object SavaFactory {
             .webSocketBuilder(httpClient.newWebSocketBuilder())
             .uri(rpcUrl)
             .solanaAccounts(SolanaAccounts.MAIN_NET)
-            .commitment(globalCommitmentLevelSava)
+            .commitment(globalCommitmentLevel)
             .onClose(onClose)
             .create()
 

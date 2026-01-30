@@ -6,26 +6,18 @@ plugins {
 }
 
 dependencies {
+    implementation(project(":core"))
     implementation(libs.sava.rpc)
-    implementation(libs.lmax.solana4j)
-    implementation(libs.lmax.solana4j.json.rpc)
     implementation(libs.caffeine.cache)
 
     cordaProvided(libs.corda.core)
     cordaProvided(libs.ent.corda.solana.sdk)
-    cordaProvided(libs.ent.corda.solana.notary.common)
 
     cordapp(project(":bridging-token-contracts"))
     cordapp(libs.tokens.contracts)
     cordapp(libs.tokens.workflows)
 
     detektPlugins(libs.detekt.ktlint.wrapper)
-
-    testImplementation(libs.ent.corda.test.common)
-    testImplementation(libs.ent.corda.test.utils)
-    testImplementation(libs.ent.corda.core.test.utils)
-    testImplementation(libs.ent.corda.node)
-    testImplementation(libs.ent.corda.node.driver)
 }
 
 cordapp {
@@ -41,9 +33,6 @@ cordapp {
 }
 
 java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(17))
-    }
     withSourcesJar()
 }
 
