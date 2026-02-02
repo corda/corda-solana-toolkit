@@ -3,7 +3,7 @@ rootProject.name = "corda-solana-toolkit"
 include(
     "bridging-token-contracts",
     "bridging-token-workflows",
-    "mock-network-tests",
+    "bridging-token-integration-tests",
 )
 
 pluginManagement {
