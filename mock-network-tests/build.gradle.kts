@@ -21,6 +21,7 @@ dependencies {
     testImplementation(libs.ent.corda.test.common)
     testImplementation(libs.ent.corda.test.utils)
     testImplementation(libs.ent.corda.core.test.utils)
+    testImplementation(libs.ent.corda.node)
     testImplementation(libs.ent.corda.node.driver)
     testImplementation(libs.quasar.core)
     testImplementation(libs.lmax.solana4j)

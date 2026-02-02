@@ -206,6 +206,7 @@ abstract class ValidatorTests {
         validating = false
         solana {
             rpcUrl = "${validator.rpcUrl}"
+            websocketUrl = "${validator.wsUrl}"
             notaryKeypairFile = "$solanaNotaryKeyFile"
             custodiedKeysDir = "$custodiedKeysDir"
             programWhitelist = ["${Token2022.PROGRAM_ID}"]
