@@ -195,6 +195,7 @@ abstract class DriverTests {
                 // "serviceLegalName" doesn't work with Driver, because it needs a distributed key that is not created
                 "solana" to mapOf(
                     "rpcUrl" to validator.rpcUrl,
+                    "websocketUrl" to validator.wsUrl,
                     "notaryKeypairFile" to "$solanaNotaryKeyFile",
                     "custodiedKeysDir" to "$custodiedKeysDir",
                     "programWhitelist" to listOf(Token2022.PROGRAM_ID.toPublicKey().base58()),

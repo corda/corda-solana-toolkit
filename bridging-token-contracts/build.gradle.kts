@@ -13,6 +13,7 @@ dependencies {
 
     detektPlugins(libs.detekt.ktlint.wrapper)
 
+    testImplementation(libs.ent.corda.node)
     testImplementation(libs.ent.corda.node.driver)
     testImplementation(libs.ent.corda.core.test.utils)
     testImplementation(libs.ent.corda.test.utils)
