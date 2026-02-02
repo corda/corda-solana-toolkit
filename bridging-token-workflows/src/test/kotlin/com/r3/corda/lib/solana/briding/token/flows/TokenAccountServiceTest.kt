@@ -6,21 +6,22 @@ import com.r3.corda.lib.solana.bridging.token.flows.BoundedExistingAtaCache
 import com.r3.corda.lib.solana.bridging.token.flows.ExistingAtaCache
 import com.r3.corda.lib.solana.bridging.token.flows.TokenAccountService
 import com.r3.corda.lib.solana.bridging.token.flows.toPublicKey
+import net.corda.node.utilities.solana.TokenProgram.TOKEN_2022
 import net.corda.solana.notary.common.Signer
-import net.corda.solana.notary.common.rpc.SolanaClientException
-import net.corda.solana.notary.common.rpc.checkResponse
 import net.corda.solana.sdk.Token2022
 import net.corda.testing.solana.SolanaTestValidator
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Named
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
-import java.lang.IllegalStateException
+import software.sava.core.accounts.PublicKey.createPubKey
+import software.sava.rpc.json.http.client.SolanaRpcClient
+import software.sava.rpc.json.http.response.JsonRpcException
 import java.math.BigDecimal
 import java.util.stream.Stream
 
@@ -50,7 +51,7 @@ class TokenAccountServiceTest {
         fun setup() {
             testValidator = SolanaTestValidator()
             try {
-                testValidator.start()
+                testValidator.startAndWait()
             } catch (e: IllegalStateException) {
                 if (e.message == "Another solana-test-validator instance is already running") {
                     // for these tests error is fine, tests create random new accounts
@@ -73,8 +74,12 @@ class TokenAccountServiceTest {
     @BeforeEach
     fun setupAccounts() {
         mintAuthoritySigner = Signer.random()
-        testValidator.fundAccount(10, mintAuthoritySigner)
-        tokenMint = testValidator.createToken(mintAuthoritySigner, decimals = 3.toByte())
+        testValidator.accounts.airdropSol(mintAuthoritySigner.account, 10)
+        tokenMint = testValidator.tokens.createToken(
+            mintAuthoritySigner,
+            decimals = 3.toByte(),
+            tokenProgram = TOKEN_2022
+        )
         wallet = Signer.random()
     }
 
@@ -94,17 +99,16 @@ class TokenAccountServiceTest {
                 tokenMint
             ).address()
 
-        assertThrows(
-            SolanaClientException::class.java,
-            { getSolanaTokenBalance(tokenAccount) },
-            "ATA account should not exist yet"
-        )
+        assertThatThrownBy { getSolanaTokenBalance(tokenAccount) }
+            .isInstanceOf(JsonRpcException::class.java)
+            .hasMessageContaining("could not find account")
         sut.createAta(tokenMint, wallet.account)
         assertEquals(
             BigDecimal.ZERO,
             getSolanaTokenBalance(tokenAccount),
             "ATA should exist with 0 balance"
         )
+        testValidator.client.getBlockhashInfo(forceFetch = true) // Make sure a different blockhash is used
         assertDoesNotThrow(
             { sut.createAta(tokenMint, wallet.account) },
             "The call to create ATA should be idempotent"
@@ -114,9 +118,7 @@ class TokenAccountServiceTest {
     private fun getSolanaTokenBalance(publicKey: PublicKey): BigDecimal {
         return testValidator
             .client
-            .getTokenAccountBalance(publicKey.base58(), testValidator.rpcParams)
-            .checkResponse("getTokenAccountBalance")!!
-            .uiAmountString
-            .toBigDecimal()
+            .call(SolanaRpcClient::getTokenAccountBalance, createPubKey(publicKey.bytes()))
+            .toDecimal()
     }
 }
