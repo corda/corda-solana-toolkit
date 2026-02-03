@@ -1,10 +1,12 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
-import com.lmax.solana4j.programs.AssociatedTokenProgram
 import com.r3.corda.lib.solana.bridging.token.states.BridgedFungibleTokenProxy
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import net.corda.core.identity.Party
+import net.corda.node.utilities.solana.toPubkey
 import net.corda.solana.sdk.instruction.Pubkey
+import software.sava.core.accounts.SolanaAccounts
+import software.sava.solana.programs.token.AssociatedTokenProgram
 
 /**
  * Holds the necessary metadata to bridge a Corda token to Solana Token.
@@ -26,11 +28,12 @@ data class BridgingCoordinates(
      */
     fun toBridgedFungibleTokenProxy(token: FungibleToken, bridgeAuthority: Party): BridgedFungibleTokenProxy {
         val tokenAccount = AssociatedTokenProgram
-            .deriveAddress(
+            .findATA(
+                SolanaAccounts.MAIN_NET,
                 this.mintWalletAccount.toPublicKey(),
                 tokenProgramId,
                 this.mintAccount.toPublicKey(),
-            ).address()
+            ).publicKey()
             .toPubkey()
         return BridgedFungibleTokenProxy(
             amount = token.amount.quantity,

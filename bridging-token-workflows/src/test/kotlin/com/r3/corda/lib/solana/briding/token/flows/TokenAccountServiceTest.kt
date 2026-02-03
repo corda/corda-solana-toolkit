@@ -1,13 +1,11 @@
 package com.r3.corda.lib.solana.briding.token.flows
 
-import com.lmax.solana4j.api.PublicKey
-import com.lmax.solana4j.programs.AssociatedTokenProgram
 import com.r3.corda.lib.solana.bridging.token.flows.BoundedExistingAtaCache
 import com.r3.corda.lib.solana.bridging.token.flows.ExistingAtaCache
 import com.r3.corda.lib.solana.bridging.token.flows.TokenAccountService
 import com.r3.corda.lib.solana.bridging.token.flows.toPublicKey
+import net.corda.node.utilities.solana.SolanaUtils
 import net.corda.node.utilities.solana.TokenProgram.TOKEN_2022
-import net.corda.solana.notary.common.Signer
 import net.corda.solana.sdk.Token2022
 import net.corda.testing.solana.SolanaTestValidator
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -19,9 +17,12 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Named
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
-import software.sava.core.accounts.PublicKey.createPubKey
+import software.sava.core.accounts.PublicKey
+import software.sava.core.accounts.Signer
+import software.sava.core.accounts.SolanaAccounts
 import software.sava.rpc.json.http.client.SolanaRpcClient
 import software.sava.rpc.json.http.response.JsonRpcException
+import software.sava.solana.programs.token.AssociatedTokenProgram
 import java.math.BigDecimal
 import java.util.stream.Stream
 
@@ -73,14 +74,14 @@ class TokenAccountServiceTest {
 
     @BeforeEach
     fun setupAccounts() {
-        mintAuthoritySigner = Signer.random()
-        testValidator.accounts.airdropSol(mintAuthoritySigner.account, 10)
+        mintAuthoritySigner = SolanaUtils.randomSigner()
+        testValidator.accounts.airdropSol(mintAuthoritySigner.publicKey(), 10)
         tokenMint = testValidator.tokens.createToken(
             mintAuthoritySigner,
-            decimals = 3.toByte(),
-            tokenProgram = TOKEN_2022
+            TOKEN_2022,
+            decimals = 3,
         )
-        wallet = Signer.random()
+        wallet = SolanaUtils.randomSigner()
     }
 
     lateinit var mintAuthoritySigner: Signer
@@ -93,16 +94,17 @@ class TokenAccountServiceTest {
         val sut = TokenAccountService(testValidator.client, mintAuthoritySigner, cache)
 
         val tokenAccount = AssociatedTokenProgram
-            .deriveAddress(
-                wallet.account,
+            .findATA(
+                SolanaAccounts.MAIN_NET,
+                wallet.publicKey(),
                 Token2022.PROGRAM_ID.toPublicKey(),
                 tokenMint
-            ).address()
+            ).publicKey()
 
         assertThatThrownBy { getSolanaTokenBalance(tokenAccount) }
             .isInstanceOf(JsonRpcException::class.java)
             .hasMessageContaining("could not find account")
-        sut.createAta(tokenMint, wallet.account)
+        sut.createAta(tokenMint, wallet.publicKey())
         assertEquals(
             BigDecimal.ZERO,
             getSolanaTokenBalance(tokenAccount),
@@ -110,7 +112,7 @@ class TokenAccountServiceTest {
         )
         testValidator.client.getBlockhashInfo(forceFetch = true) // Make sure a different blockhash is used
         assertDoesNotThrow(
-            { sut.createAta(tokenMint, wallet.account) },
+            { sut.createAta(tokenMint, wallet.publicKey()) },
             "The call to create ATA should be idempotent"
         )
     }
@@ -118,7 +120,7 @@ class TokenAccountServiceTest {
     private fun getSolanaTokenBalance(publicKey: PublicKey): BigDecimal {
         return testValidator
             .client
-            .call(SolanaRpcClient::getTokenAccountBalance, createPubKey(publicKey.bytes()))
+            .call(SolanaRpcClient::getTokenAccountBalance, publicKey)
             .toDecimal()
     }
 }

@@ -6,14 +6,26 @@ import java.math.BigDecimal
 
 abstract class FlowTests : ValidatorTests() {
     @Test
-    fun e2eBridgeAndRedemption() {
+    fun `e2e bridge and redemption`() {
         val msftTokenType = issuingBank.issue(msftDescriptor, ISSUING_QUANTITY * BigDecimal(2), generalNotaryName)
         val aaplTokenType = issuingBank.issue(aaplDescriptor, ISSUING_QUANTITY * BigDecimal(2), generalNotaryName)
 
-        assertNull(validator.getAccountInfo(alice.mintToAta[msftTokenMint]), "Alice MSFT ATA should not be created yet")
-        assertNull(validator.getAccountInfo(alice.mintToAta[aaplTokenMint]), "Alice AAPL ATA should not be created yet")
-        assertNull(validator.getAccountInfo(bob.mintToAta[msftTokenMint]), "Bob MSFT ATA should not be created yet")
-        assertNull(validator.getAccountInfo(bob.mintToAta[aaplTokenMint]), "Bob AAPL ATA should not be created yet")
+        assertNull(
+            validator.client.getAccountInfo(alice.mintToAta[msftTokenMint]!!),
+            "Alice MSFT ATA should not be created yet"
+        )
+        assertNull(
+            validator.client.getAccountInfo(alice.mintToAta[aaplTokenMint]!!),
+            "Alice AAPL ATA should not be created yet"
+        )
+        assertNull(
+            validator.client.getAccountInfo(bob.mintToAta[msftTokenMint]!!),
+            "Bob MSFT ATA should not be created yet"
+        )
+        assertNull(
+            validator.client.getAccountInfo(bob.mintToAta[aaplTokenMint]!!),
+            "Bob AAPL ATA should not be created yet"
+        )
 
         move(issuingBank, alice.party, ISSUING_QUANTITY, msftTokenType).get()
         move(issuingBank, alice.party, ISSUING_QUANTITY, aaplTokenType).get()
