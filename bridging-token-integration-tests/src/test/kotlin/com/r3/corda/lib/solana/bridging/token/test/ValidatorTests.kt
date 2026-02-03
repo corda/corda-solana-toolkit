@@ -5,6 +5,7 @@ import com.lmax.solana4j.client.api.AccountInfo
 import com.lmax.solana4j.encoding.SolanaEncoding
 import com.lmax.solana4j.programs.Token2022Program
 import com.r3.corda.lib.solana.bridging.token.flows.tokenProgramId
+import com.r3.corda.lib.solana.bridging.token.test.BridgeAuthorityInfo.Companion.randomKeypairFile
 import com.r3.corda.lib.tokens.contracts.types.TokenType
 import com.r3.corda.lib.tokens.contracts.utilities.sumTokenStatesOrThrow
 import com.r3.corda.lib.tokens.workflows.flows.rpc.MoveFungibleTokens
@@ -28,7 +29,6 @@ import net.corda.testing.node.MockNetworkNotarySpec
 import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.StartedMockNode
 import net.corda.testing.node.TestCordapp
-import net.corda.testing.solana.randomKeypairFile
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals

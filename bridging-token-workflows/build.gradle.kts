@@ -12,6 +12,7 @@ dependencies {
     implementation(libs.caffeine.cache)
 
     cordaProvided(libs.corda.core)
+    cordaProvided(libs.ent.corda.node)  // TODO Remove once SolanaClient is moved to this repo
     cordaProvided(libs.ent.corda.solana.sdk)
     cordaProvided(libs.ent.corda.solana.notary.common)
 

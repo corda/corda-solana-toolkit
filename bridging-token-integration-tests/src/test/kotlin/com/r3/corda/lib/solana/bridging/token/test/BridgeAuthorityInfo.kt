@@ -3,14 +3,15 @@ package com.r3.corda.lib.solana.bridging.token.test
 import com.lmax.solana4j.api.PublicKey
 import net.corda.core.identity.Party
 import net.corda.solana.notary.common.Signer
+import net.corda.testing.common.internal.exec
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.StartedMockNode
 import net.corda.testing.node.TestCordapp
-import net.corda.testing.solana.randomKeypairFile
+import java.nio.file.Files
 import java.nio.file.Path
-import java.util.*
+import java.util.UUID
 
 data class BridgeAuthorityInfo(
     val node: StartedMockNode,
@@ -21,6 +22,16 @@ data class BridgeAuthorityInfo(
     private val redemptionTokenAccounts: Map<Party, List<AssociatedTokenAccountInfo>>,
 ) {
     companion object {
+        fun randomKeypairFile(dir: Path? = null): Path {
+            val file = if (dir != null) {
+                Files.createTempFile(dir, null, ".json")
+            } else {
+                Files.createTempFile(null, ".json")
+            }.toAbsolutePath()
+            exec("solana-keygen new -o $file --no-bip39-passphrase -f")
+            return file
+        }
+
         fun createAndInitialise(
             network: MockNetwork,
             identity: TestIdentity,

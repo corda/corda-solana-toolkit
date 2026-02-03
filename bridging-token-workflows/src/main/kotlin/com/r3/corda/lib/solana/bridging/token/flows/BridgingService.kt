@@ -1,6 +1,5 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
-import com.lmax.solana4j.client.jsonrpc.SolanaJsonRpcClient
 import com.r3.corda.lib.solana.bridging.token.flows.SavaFactory.toPubkey
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.workflows.utilities.toParty
@@ -13,9 +12,10 @@ import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.ServiceLifecycleEvent
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.debug
+import net.corda.node.utilities.solana.SolanaClient
 import net.corda.solana.sdk.instruction.Pubkey
 import org.slf4j.LoggerFactory
-import java.net.http.HttpClient
+import java.net.URI
 import java.util.concurrent.CompletionException
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -30,7 +30,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
     private val socket: SavaFactory.WebSocketWrapper
     private val executor = Executors.newSingleThreadScheduledExecutor()
     private val configHandler = ConfigHandler(appServiceHub)
-    private val rpcClient: SolanaJsonRpcClient
+    private val solanaClient: SolanaClient
     private val accountService: TokenAccountService
 
     init {
@@ -41,8 +41,12 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         )
         appServiceHub.registerUnloadHandler { onStop() }
         appServiceHub.register { onStartup(it) }
-        rpcClient = SolanaJsonRpcClient(HttpClient.newHttpClient(), configHandler.solanaRpcUrl)
-        accountService = TokenAccountService(rpcClient, configHandler.bridgeAuthoritySigner)
+        solanaClient = SolanaClient(
+            URI(configHandler.solanaRpcUrl),
+            URI(configHandler.solanaWsUrl),
+            globalCommitmentLevel
+        )
+        accountService = TokenAccountService(solanaClient, configHandler.bridgeAuthoritySigner)
     }
 
     private fun onStop() {
@@ -64,13 +68,12 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
             remainingAttempts > 0 -> {
                 logger.warn("Failed to reconnect to ${socket.wsUrl}. Trying again...")
                 val attemptNumber = MAX_BACKOFF_DELAY_SECS - remainingAttempts + 1
-                val backOffSeconds = attemptNumber
-                logger.info("Retrying to reconnect in $backOffSeconds seconds (attempt $attemptNumber)")
+                logger.info("Retrying to reconnect in $attemptNumber seconds (attempt $attemptNumber)")
                 executor.schedule(
                     {
                         attemptSocketReconnect(remainingAttempts - 1)
                     },
-                    backOffSeconds.toLong(),
+                    attemptNumber.toLong(),
                     TimeUnit.SECONDS
                 )
             }
@@ -96,6 +99,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
 
     private fun onStartup(event: ServiceLifecycleEvent) {
         if (event != ServiceLifecycleEvent.STATE_MACHINE_STARTED) return
+        solanaClient.start()
         checkAndListenForBridging()
         checkAndListenForRedemption()
     }
@@ -145,13 +149,12 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
             remainingAttempts > 0 -> {
                 logger.error("Failed to subscribe to ${socket.wsUrl}. Trying again...")
                 val attemptNumber = MAX_BACKOFF_DELAY_SECS - remainingAttempts + 1
-                val backOffSeconds = attemptNumber
-                logger.info("Retrying to connect in $backOffSeconds seconds (attempt $attemptNumber)")
+                logger.info("Retrying to connect in $attemptNumber seconds (attempt $attemptNumber)")
                 executor.schedule(
                     {
                         attemptToSubscribeToWebsocket(true, remainingAttempts - 1)
                     },
-                    backOffSeconds.toLong(),
+                    attemptNumber.toLong(),
                     TimeUnit.SECONDS
                 )
             }
@@ -259,7 +262,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
 
     private fun callBridgeFlow(appServiceHub: AppServiceHub, token: StateAndRef<FungibleToken>) {
         val previousHolder = try {
-            findPreviousHolderOfToken(token) ?: return
+            findPreviousHolderOfToken(token)
         } catch (e: Exception) {
             logger.warn("Could not start flow to bridge ${token.state.data}", e)
             return
@@ -288,7 +291,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         }
     }
 
-    private fun findPreviousHolderOfToken(output: StateAndRef<FungibleToken>): AbstractParty? {
+    private fun findPreviousHolderOfToken(output: StateAndRef<FungibleToken>): AbstractParty {
         val txHash = output.ref.txhash
         val stx = appServiceHub.validatedTransactions.getTransaction(txHash) ?: error("Transaction $txHash not found")
 

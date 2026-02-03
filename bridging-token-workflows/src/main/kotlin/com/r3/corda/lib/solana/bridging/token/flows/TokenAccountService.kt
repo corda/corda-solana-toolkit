@@ -3,13 +3,13 @@ package com.r3.corda.lib.solana.bridging.token.flows
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.lmax.solana4j.api.PublicKey
-import com.lmax.solana4j.client.jsonrpc.SolanaJsonRpcClient
 import com.lmax.solana4j.programs.AssociatedTokenProgram
+import net.corda.node.utilities.solana.SolanaClient
 import net.corda.solana.notary.common.Signer
-import net.corda.solana.notary.common.rpc.DefaultRpcParams
 import net.corda.solana.notary.common.rpc.SolanaTransactionException
-import net.corda.solana.notary.common.rpc.sendAndConfirm
 import org.slf4j.LoggerFactory
+import software.sava.rpc.json.http.response.IxError
+import software.sava.rpc.json.http.response.TransactionError
 
 /**
  * Manages creation of Solana ATA account on the fly,
@@ -19,15 +19,12 @@ import org.slf4j.LoggerFactory
  * @param existingAtaCache The internal results cache, exposed for testing.
  */
 class TokenAccountService(
-    private val client: SolanaJsonRpcClient,
+    private val client: SolanaClient,
     private val feePayer: Signer,
     private val existingAtaCache: ExistingAtaCache = BoundedExistingAtaCache(), // configurable for testing
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(TokenAccountService::class.java)
-
-        // preflight required to avoid running transaction which will fail on chain
-        private val rpcParams = DefaultRpcParams(globalCommitmentLevelLmax, false)
     }
 
     /**
@@ -58,17 +55,8 @@ class TokenAccountService(
             false,
         )
         try {
-            val result = client.sendAndConfirm(
-                { txBuilder ->
-                    txBuilder.append(instruction)
-                },
-                feePayer,
-                emptyList(),
-                rpcParams
-            )
-            logger.info(
-                "ATA created successfully, slot=${result.slot}, owner=$ownerAccount, mint=$mintAccount, pda=$pda."
-            )
+            client.sendAndConfirm({ txBuilder -> txBuilder.append(instruction) }, feePayer)
+            logger.info("ATA created successfully, owner=$ownerAccount, mint=$mintAccount, pda=$pda")
         } catch (e: SolanaTransactionException) {
             if (!doesAtaAlreadyExist(e)) {
                 logger.error("Exception while creating ATA owner=$ownerAccount, mint=$mintAccount, pda=$pda", e)
@@ -80,14 +68,7 @@ class TokenAccountService(
 
     // Checks for an expected error when ATA already exists
     private fun doesAtaAlreadyExist(e: SolanaTransactionException): Boolean {
-        val errors = e.error
-        if (errors is Map<*, *>) {
-            val errorEntries = errors["InstructionError"]
-            if (errorEntries != null && errorEntries is List<*> && errorEntries.contains("IllegalOwner")) {
-                return true
-            }
-        }
-        return false
+        return (e.error as? TransactionError.InstructionError)?.ixError() is IxError.IllegalOwner
     }
 }
 

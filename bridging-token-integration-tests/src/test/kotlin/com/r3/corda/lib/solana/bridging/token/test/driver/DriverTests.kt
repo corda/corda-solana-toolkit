@@ -3,6 +3,7 @@ package com.r3.corda.lib.solana.bridging.token.test.driver
 import com.lmax.solana4j.api.PublicKey
 import com.lmax.solana4j.programs.AssociatedTokenProgram
 import com.r3.corda.lib.solana.bridging.token.flows.toPublicKey
+import com.r3.corda.lib.solana.bridging.token.test.BridgeAuthorityInfo.Companion.randomKeypairFile
 import com.r3.corda.lib.solana.bridging.token.test.SolanaTestValidator
 import com.r3.corda.lib.solana.bridging.token.test.TokenTypeDescriptor
 import com.r3.corda.lib.solana.bridging.token.test.assertAtaAccount
@@ -38,7 +39,6 @@ import net.corda.testing.driver.driver
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.User
-import net.corda.testing.solana.randomKeypairFile
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -53,7 +53,7 @@ import java.math.BigDecimal
 import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
-import java.util.*
+import java.util.UUID
 
 abstract class DriverTests {
     companion object {
