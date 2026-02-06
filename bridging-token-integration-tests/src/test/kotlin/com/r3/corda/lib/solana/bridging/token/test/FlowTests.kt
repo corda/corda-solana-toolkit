@@ -6,7 +6,7 @@ import java.math.BigDecimal
 
 abstract class FlowTests : ValidatorTests() {
     @Test
-    fun e2eBridgeAndRedemption() {
+    fun `e2e bridge and redemption`() {
         val msftTokenType = issuingBank.issue(msftDescriptor, ISSUING_QUANTITY * BigDecimal(2), generalNotaryName)
         val aaplTokenType = issuingBank.issue(aaplDescriptor, ISSUING_QUANTITY * BigDecimal(2), generalNotaryName)
 
