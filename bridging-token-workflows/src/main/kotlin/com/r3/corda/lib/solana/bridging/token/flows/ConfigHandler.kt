@@ -14,7 +14,7 @@ import net.corda.solana.sdk.instruction.Pubkey
 import java.util.UUID
 import kotlin.io.path.Path
 
-class ConfigHandler(private val appServiceHub: AppServiceHub) {
+class ConfigHandler(appServiceHub: AppServiceHub) {
     companion object {
         private const val DEFAULT_REDEMPTION_CHECK_INTERVAL_SECONDS = 10L
     }

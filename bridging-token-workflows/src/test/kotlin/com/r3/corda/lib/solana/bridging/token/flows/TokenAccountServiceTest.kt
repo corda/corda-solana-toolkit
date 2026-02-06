@@ -1,11 +1,7 @@
-package com.r3.corda.lib.solana.briding.token.flows
+package com.r3.corda.lib.solana.bridging.token.flows
 
 import com.lmax.solana4j.api.PublicKey
 import com.lmax.solana4j.programs.AssociatedTokenProgram
-import com.r3.corda.lib.solana.bridging.token.flows.BoundedExistingAtaCache
-import com.r3.corda.lib.solana.bridging.token.flows.ExistingAtaCache
-import com.r3.corda.lib.solana.bridging.token.flows.TokenAccountService
-import com.r3.corda.lib.solana.bridging.token.flows.toPublicKey
 import net.corda.node.utilities.solana.TokenProgram.TOKEN_2022
 import net.corda.solana.notary.common.Signer
 import net.corda.solana.sdk.Token2022
