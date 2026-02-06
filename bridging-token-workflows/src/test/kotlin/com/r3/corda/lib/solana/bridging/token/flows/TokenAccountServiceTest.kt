@@ -1,4 +1,4 @@
-package com.r3.corda.lib.solana.briding.token.flows
+package com.r3.corda.lib.solana.bridging.token.flows
 
 import com.r3.corda.lib.solana.bridging.token.flows.BoundedExistingAtaCache
 import com.r3.corda.lib.solana.bridging.token.flows.ExistingAtaCache
