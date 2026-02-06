@@ -20,7 +20,10 @@ class RecoveryTests : ValidatorTests() {
     fun `e2e redemption recovery`() {
         val msftTokenType = issuingBank.issue(msftDescriptor, ISSUING_QUANTITY, generalNotaryName)
 
-        assertNull(validator.getAccountInfo(bob.mintToAta[msftTokenMint]), "Bob MSFT ATA should not be created yet")
+        assertNull(
+            validator.client.getAccountInfo(bob.mintToAta[msftTokenMint]!!),
+            "Bob MSFT ATA should not be created yet"
+        )
 
         move(issuingBank, bob.party, ISSUING_QUANTITY, msftTokenType).get()
 

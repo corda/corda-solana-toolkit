@@ -6,9 +6,9 @@ plugins {
 }
 
 dependencies {
+    implementation(libs.sava.core)
     implementation(libs.sava.rpc)
-    implementation(libs.lmax.solana4j)
-    implementation(libs.lmax.solana4j.json.rpc)
+    implementation(libs.sava.programs)
     implementation(libs.caffeine.cache)
 
     cordaProvided(libs.corda.core)
@@ -25,8 +25,11 @@ dependencies {
     testImplementation(libs.ent.corda.test.common)
     testImplementation(libs.ent.corda.test.utils)
     testImplementation(libs.ent.corda.core.test.utils)
-    testImplementation(libs.ent.corda.node)
     testImplementation(libs.ent.corda.node.driver)
+
+    // When using SNAPSHOT node-driver, make sure we are using the same build of the Enterprise Corda node
+    testRuntimeOnly(libs.ent.corda.node.api)
+    testRuntimeOnly(libs.ent.corda.node)
 }
 
 cordapp {

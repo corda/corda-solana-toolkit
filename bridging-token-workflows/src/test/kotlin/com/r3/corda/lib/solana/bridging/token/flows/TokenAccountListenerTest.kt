@@ -1,14 +1,14 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
-import com.lmax.solana4j.api.PublicKey
-import net.corda.node.utilities.solana.toSava
-import net.corda.solana.notary.common.Signer
+import net.corda.node.utilities.solana.SolanaUtils
 import net.corda.testing.solana.SolanaTestValidator
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import software.sava.core.accounts.PublicKey
+import software.sava.core.accounts.Signer
 import software.sava.core.accounts.token.TokenAccount
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.SECONDS
@@ -26,13 +26,13 @@ class TokenAccountListenerTest {
         @BeforeAll
         @JvmStatic
         fun start() {
-            mintAuthority = Signer.random()
-            owner1 = Signer.random()
-            owner2 = Signer.random()
+            mintAuthority = SolanaUtils.randomSigner()
+            owner1 = SolanaUtils.randomSigner()
+            owner2 = SolanaUtils.randomSigner()
             testValidator.startAndWait()
-            testValidator.accounts.airdropSol(mintAuthority.account, 10)
-            testValidator.accounts.airdropSol(owner1.account, 10)
-            testValidator.accounts.airdropSol(owner2.account, 10)
+            testValidator.accounts.airdropSol(mintAuthority.publicKey(), 10)
+            testValidator.accounts.airdropSol(owner1.publicKey(), 10)
+            testValidator.accounts.airdropSol(owner2.publicKey(), 10)
             tokenMint1 = testValidator.tokens.createToken(mintAuthority)
             tokenMint2 = testValidator.tokens.createToken(mintAuthority)
         }
@@ -48,7 +48,7 @@ class TokenAccountListenerTest {
 
     @Test
     fun `mint to new token account`() {
-        val updates = listenTo(owner1.account)
+        val updates = listenTo(owner1.publicKey())
         val tokenAccountAddress = testValidator.tokens.createTokenAccount(owner1, tokenMint1)
         updates.assertLatestUpdate(tokenAccountAddress, tokenMint1, 0)
         testValidator.tokens.mintTo(tokenAccountAddress, tokenMint1, mintAuthority, 10_000)
@@ -61,8 +61,8 @@ class TokenAccountListenerTest {
         val owner2Token = testValidator.tokens.createTokenAccount(owner2, tokenMint1)
         testValidator.tokens.mintTo(owner1Token, tokenMint1, mintAuthority, 1_000)
 
-        val owner1Updates = listenTo(owner1.account)
-        val owner2Updates = listenTo(owner2.account)
+        val owner1Updates = listenTo(owner1.publicKey())
+        val owner2Updates = listenTo(owner2.publicKey())
         testValidator.tokens.transfer(owner1, owner1Token, owner2Token, 400)
         owner1Updates.assertLatestUpdate(owner1Token, tokenMint1, 600) // Owner 1 balance is now 600
         owner2Updates.assertLatestUpdate(owner2Token, tokenMint1, 400)
@@ -71,7 +71,7 @@ class TokenAccountListenerTest {
     @Test
     fun `does not receive prior updates`() {
         val tokenAccountAddress = testValidator.tokens.createTokenAccount(owner1, tokenMint1)
-        val updates = listenTo(owner1.account)
+        val updates = listenTo(owner1.publicKey())
         updates.assertNoUpdates()
         testValidator.tokens.mintTo(tokenAccountAddress, tokenMint1, mintAuthority, 10_000)
         updates.assertLatestUpdate(tokenAccountAddress, tokenMint1, 10_000)
@@ -79,8 +79,8 @@ class TokenAccountListenerTest {
 
     @Test
     fun `does not receive update for another owner`() {
-        val owner1Updates = listenTo(owner1.account)
-        val owner2Updates = listenTo(owner2.account)
+        val owner1Updates = listenTo(owner1.publicKey())
+        val owner2Updates = listenTo(owner2.publicKey())
 
         val owner1Token = testValidator.tokens.createTokenAccount(owner1, tokenMint1)
         owner2Updates.assertNoUpdates()
@@ -93,17 +93,17 @@ class TokenAccountListenerTest {
 
     @Test
     fun unsubscribe() {
-        val updates = listenTo(owner1.account)
+        val updates = listenTo(owner1.publicKey())
         val tokenAccountAddress = testValidator.tokens.createTokenAccount(owner1, tokenMint1)
         updates.assertLatestUpdate(tokenAccountAddress, tokenMint1, 0)
-        tokenAccountListener.unsubscribe(owner1.account.toSava())
+        tokenAccountListener.unsubscribe(owner1.publicKey())
         testValidator.tokens.mintTo(tokenAccountAddress, tokenMint1, mintAuthority, 10_000)
         updates.assertNoUpdates()
     }
 
     private fun listenTo(owner: PublicKey): TokenUpdates {
         val tokenUpdates = TokenUpdates(owner)
-        tokenAccountListener.listenToOwner(owner.toSava(), tokenUpdates.queue::add)
+        tokenAccountListener.listenToOwner(owner, tokenUpdates.queue::add)
         return tokenUpdates
     }
 
@@ -118,9 +118,9 @@ class TokenAccountListenerTest {
         fun assertLatestUpdate(address: PublicKey, tokenMint: PublicKey, amount: Long) {
             val tokenAccount = queue.poll(3, SECONDS)
             checkNotNull(tokenAccount) { "Did not receive new TokenAccount update" }
-            assertThat(tokenAccount.address).isEqualTo(address.toSava())
-            assertThat(tokenAccount.owner).isEqualTo(owner.toSava())
-            assertThat(tokenAccount.mint).isEqualTo(tokenMint.toSava())
+            assertThat(tokenAccount.address).isEqualTo(address)
+            assertThat(tokenAccount.owner).isEqualTo(owner)
+            assertThat(tokenAccount.mint).isEqualTo(tokenMint)
             assertThat(tokenAccount.amount).isEqualTo(amount)
         }
 

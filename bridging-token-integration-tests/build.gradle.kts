@@ -24,8 +24,10 @@ dependencies {
     testImplementation(libs.ent.corda.node)
     testImplementation(libs.ent.corda.node.driver)
     testImplementation(libs.quasar.core)
+    testImplementation(libs.sava.core)
+    testImplementation(libs.sava.rpc)
+    testImplementation(libs.sava.programs)
     testImplementation(libs.lmax.solana4j)
-    testImplementation(libs.lmax.solana4j.json.rpc)
 
     // When using SNAPSHOT node-driver, make sure we are using the same build of the Enterprise Corda node
     testRuntimeOnly(libs.ent.corda.node.api)

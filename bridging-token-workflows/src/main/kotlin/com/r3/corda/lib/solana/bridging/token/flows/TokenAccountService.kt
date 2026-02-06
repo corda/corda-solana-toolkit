@@ -2,14 +2,15 @@ package com.r3.corda.lib.solana.bridging.token.flows
 
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
-import com.lmax.solana4j.api.PublicKey
-import com.lmax.solana4j.programs.AssociatedTokenProgram
 import net.corda.node.utilities.solana.SolanaClient
-import net.corda.solana.notary.common.Signer
 import net.corda.solana.notary.common.rpc.SolanaTransactionException
 import org.slf4j.LoggerFactory
+import software.sava.core.accounts.PublicKey
+import software.sava.core.accounts.Signer
+import software.sava.core.accounts.SolanaAccounts
 import software.sava.rpc.json.http.response.IxError
 import software.sava.rpc.json.http.response.TransactionError
+import software.sava.solana.programs.token.AssociatedTokenProgram
 
 /**
  * Manages creation of Solana ATA account on the fly,
@@ -39,27 +40,38 @@ class TokenAccountService(
      *
      * @throws net.corda.solana.notary.common.rpc.SolanaException if the transaction cannot be constructed
      *         or is too large.
-     * @throws com.lmax.solana4j.client.jsonrpc.SolanaJsonRpcClientException if the underlying RPC calls fail.
      */
     fun createAta(mintAccount: PublicKey, ownerAccount: PublicKey) {
         if (existingAtaCache.contains(mintAccount, ownerAccount)) {
             return // ATA already exists
         }
-        val pda = AssociatedTokenProgram.deriveAddress(ownerAccount, tokenProgramId, mintAccount)
-        val instruction = AssociatedTokenProgram.createAssociatedTokenAccount(
-            pda,
-            mintAccount,
-            ownerAccount,
-            feePayer.account,
-            tokenProgramId,
-            false,
-        )
+        val tokenAccount = AssociatedTokenProgram
+            .findATA(SolanaAccounts.MAIN_NET, ownerAccount, tokenProgramId, mintAccount)
+            .publicKey()
         try {
-            client.sendAndConfirm({ txBuilder -> txBuilder.append(instruction) }, feePayer)
-            logger.info("ATA created successfully, owner=$ownerAccount, mint=$mintAccount, pda=$pda")
+            client.sendAndConfirm(
+                {
+                    it.createTransaction(
+                        AssociatedTokenProgram.createATAForProgram(
+                            false,
+                            SolanaAccounts.MAIN_NET,
+                            feePayer.publicKey(),
+                            tokenAccount,
+                            ownerAccount,
+                            mintAccount,
+                            tokenProgramId
+                        )
+                    )
+                },
+                feePayer
+            )
+            logger.info("ATA created successfully, owner=$ownerAccount, mint=$mintAccount, tokenAccount=$tokenAccount")
         } catch (e: SolanaTransactionException) {
             if (!doesAtaAlreadyExist(e)) {
-                logger.error("Exception while creating ATA owner=$ownerAccount, mint=$mintAccount, pda=$pda", e)
+                logger.error(
+                    "Exception while creating ATA owner=$ownerAccount, mint=$mintAccount, tokenAccount=$tokenAccount",
+                    e
+                )
                 throw e
             }
         }

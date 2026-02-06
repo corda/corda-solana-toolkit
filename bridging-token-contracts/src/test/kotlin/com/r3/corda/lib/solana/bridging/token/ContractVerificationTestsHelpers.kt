@@ -5,11 +5,11 @@ import com.r3.corda.lib.tokens.contracts.types.TokenType
 import com.r3.corda.lib.tokens.contracts.utilities.issuedBy
 import com.r3.corda.lib.tokens.contracts.utilities.of
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.secureRandomBytes
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.solana.notary.common.Signer
 import net.corda.solana.sdk.Token2022
 import net.corda.solana.sdk.instruction.AccountMeta
 import net.corda.solana.sdk.instruction.Pubkey
@@ -40,11 +40,10 @@ val services = MockServices(
 val TOKEN_PROGRAM_ID: String = FungibleTokenContract.contractId
 val cordaTokenAmount = (10000 of TokenType("TEST", 0)).issuedBy(tokenIssuer)
 
-val mintAccount = Pubkey(Signer.random().account.bytes())
-val mintAuthority = Pubkey(Signer.random().account.bytes())
-val tokenAccount = Pubkey(Signer.random().account.bytes())
-
-val bridgeAuthorityWallet = Pubkey(Signer.random().account.bytes())
+val mintAccount = Pubkey(secureRandomBytes(32))
+val mintAuthority = Pubkey(secureRandomBytes(32))
+val tokenAccount = Pubkey(secureRandomBytes(32))
+val bridgeAuthorityWallet = Pubkey(secureRandomBytes(32))
 
 fun instructionWithWrongOperation(programId: Pubkey): SolanaInstruction {
     val operation = 6

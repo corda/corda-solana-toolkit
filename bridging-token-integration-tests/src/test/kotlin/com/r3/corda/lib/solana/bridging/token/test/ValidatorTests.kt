@@ -1,11 +1,6 @@
 package com.r3.corda.lib.solana.bridging.token.test
 
-import com.lmax.solana4j.api.PublicKey
-import com.lmax.solana4j.client.api.AccountInfo
-import com.lmax.solana4j.encoding.SolanaEncoding
-import com.lmax.solana4j.programs.Token2022Program
 import com.r3.corda.lib.solana.bridging.token.flows.tokenProgramId
-import com.r3.corda.lib.solana.bridging.token.test.BridgeAuthorityInfo.Companion.randomKeypairFile
 import com.r3.corda.lib.tokens.contracts.types.TokenType
 import com.r3.corda.lib.tokens.contracts.utilities.sumTokenStatesOrThrow
 import com.r3.corda.lib.tokens.workflows.flows.rpc.MoveFungibleTokens
@@ -13,11 +8,9 @@ import net.corda.core.contracts.Amount
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.utilities.seconds
-import net.corda.solana.notary.common.Signer
-import net.corda.solana.notary.common.rpc.DefaultRpcParams
-import net.corda.solana.notary.common.rpc.checkResponse
-import net.corda.solana.notary.common.rpc.sendAndConfirm
-import net.corda.solana.sdk.Token2022
+import net.corda.node.utilities.solana.FileSigner
+import net.corda.node.utilities.solana.SolanaClient
+import net.corda.node.utilities.solana.TokenProgram.TOKEN_2022
 import net.corda.testing.common.internal.eventually
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
@@ -35,11 +28,13 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.assertNotNull
-import org.junit.jupiter.api.assertNull
 import org.junit.jupiter.api.io.TempDir
+import software.sava.core.accounts.PublicKey
+import software.sava.core.accounts.token.TokenAccount
+import software.sava.rpc.json.http.client.SolanaRpcClient
+import software.sava.rpc.json.http.response.AccountInfo
 import java.math.BigDecimal
 import java.nio.file.Path
-import java.util.Base64
 
 val solanaNotaryName = CordaX500Name("Solana Notary Service", "London", "GB")
 val generalNotaryName = CordaX500Name("Notary Service", "Zurich", "CH")
@@ -97,9 +92,8 @@ abstract class ValidatorTests {
     protected lateinit var validator: SolanaTestValidator
     private var closeTestValidator = true
 
-    private lateinit var solanaNotaryKeyFile: Path
-    private lateinit var solanaNotaryKey: Signer
-    private lateinit var mintAuthoritySigner: Signer
+    private lateinit var solanaNotaryKey: FileSigner
+    private lateinit var mintAuthoritySigner: FileSigner
     protected lateinit var msftTokenMint: PublicKey
     protected lateinit var aaplTokenMint: PublicKey
 
@@ -132,7 +126,7 @@ abstract class ValidatorTests {
                 msftDescriptor to msftTokenMint,
                 aaplDescriptor to aaplTokenMint,
             ),
-            mintAuthoritySigner.account,
+            mintAuthoritySigner.publicKey(),
             validator,
         )
     }
@@ -145,9 +139,8 @@ abstract class ValidatorTests {
 
     private fun startTestValidator() {
         validator = SolanaTestValidator()
-        solanaNotaryKeyFile = randomKeypairFile(generalDir)
-        solanaNotaryKey = Signer.fromFile(solanaNotaryKeyFile)
-        mintAuthoritySigner = Signer.fromFile(randomKeypairFile(custodiedKeysDir))
+        solanaNotaryKey = FileSigner.random(generalDir)
+        mintAuthoritySigner = FileSigner.random(custodiedKeysDir)
         try {
             validator.start()
         } catch (e: IllegalStateException) {
@@ -158,11 +151,11 @@ abstract class ValidatorTests {
                 throw e
             }
         }
-        validator.defaultNotaryProgramSetup(solanaNotaryKey.account)
-        validator.fundAccount(10, mintAuthoritySigner)
+        validator.defaultNotaryProgramSetup(solanaNotaryKey.publicKey())
+        validator.accounts.airdropSol(mintAuthoritySigner.publicKey(), 10)
 
-        msftTokenMint = validator.createToken(mintAuthoritySigner, decimals = TOKEN_DECIMALS.toByte())
-        aaplTokenMint = validator.createToken(mintAuthoritySigner, decimals = TOKEN_DECIMALS.toByte())
+        msftTokenMint = validator.tokens.createToken(mintAuthoritySigner, TOKEN_2022, decimals = TOKEN_DECIMALS)
+        aaplTokenMint = validator.tokens.createToken(mintAuthoritySigner, TOKEN_2022, decimals = TOKEN_DECIMALS)
     }
 
     fun stopTestValidator() {
@@ -207,9 +200,8 @@ abstract class ValidatorTests {
         solana {
             rpcUrl = "${validator.rpcUrl}"
             websocketUrl = "${validator.wsUrl}"
-            notaryKeypairFile = "$solanaNotaryKeyFile"
+            notaryKeypairFile = "${solanaNotaryKey.file}"
             custodiedKeysDir = "$custodiedKeysDir"
-            programWhitelist = ["${Token2022.PROGRAM_ID}"]
         }
         """.trimIndent()
 
@@ -286,8 +278,8 @@ abstract class ValidatorTests {
             "Fungible token holder should be Locking Identity, but was $holder"
         )
         val tokenAccount = requireNotNull(stakeholderInfo.mintToAta[mint]) { "Token account must not be null" }
-        val accountInfo = validator.getAccountInfo(tokenAccount)
-        assertAtaAccount(accountInfo, mint, stakeholderInfo.signer.account)
+        val accountInfo = validator.client.getAccountInfo(tokenAccount)
+        assertAtaAccount(accountInfo, mint, stakeholderInfo.signer.publicKey())
         ensureSolanaTokenAccountBalance(stakeholderInfo, tokenType, mint)
     }
 
@@ -300,7 +292,7 @@ abstract class ValidatorTests {
         val tokenAccount = requireNotNull(stakeholderInfo.mintToAta[mint]) { "Token account must not be null" }
         eventually(duration = 10.seconds) {
             val balance = try {
-                validator.getSolanaTokenBalance(tokenAccount)
+                validator.client.getTokenBalance(tokenAccount)
             } catch (_: Exception) {
                 null
             }
@@ -322,10 +314,10 @@ abstract class ValidatorTests {
             "Source token account must not be null"
         }
         val toTokenAccount = bridgeAuthority.redemptionTokenAccountForPartyAndMint(stakeholderInfo.party, mint)
-        validator.transfer(stakeholderInfo.signer, fromTokenAccount, toTokenAccount, moveQuantity.toRawAmount())
+        validator.tokens.transfer(stakeholderInfo.signer, fromTokenAccount, toTokenAccount, moveQuantity.toRawAmount())
         val party = stakeholderInfo.node.party()
         eventually(duration = 10.seconds) {
-            val balance = validator.getSolanaTokenBalance(toTokenAccount)
+            val balance = validator.client.getTokenBalance(toTokenAccount)
             assertEquals(
                 0,
                 balance.compareTo(moveQuantity),
@@ -351,62 +343,24 @@ fun BigDecimal.toRawAmount(decimals: Int): Long {
     return (this * BigDecimal(10L).pow(decimals)).longValueExact()
 }
 
-fun SolanaTestValidator.transfer(
-    fromOwner: Signer,
-    fromTokenAccount: PublicKey,
-    toTokenAccount: PublicKey,
-    amount: Long,
-) {
-    val error = rpcClient
-        .sendAndConfirm(
-            { txBuilder ->
-                Token2022Program.factory(txBuilder).transfer(
-                    fromTokenAccount,
-                    toTokenAccount,
-                    fromOwner.account,
-                    amount,
-                    emptyList()
-                )
-            },
-            fromOwner,
-            emptyList(),
-            DefaultRpcParams()
-        ).metadata.err
-    assertNull(error, "Token transfer failed with error: $error")
+fun SolanaClient.getTokenBalance(publicKey: PublicKey): BigDecimal {
+    return call(SolanaRpcClient::getTokenAccountBalance, publicKey).toDecimal()
 }
 
-fun SolanaTestValidator.getSolanaTokenBalance(publicKey: PublicKey): BigDecimal {
-    return this
-        .rpcClient
-        .getTokenAccountBalance(publicKey.base58(), this.rpcParams)
-        .checkResponse("getTokenAccountBalance")!!
-        .uiAmountString
-        .toBigDecimal()
-}
-
-fun SolanaTestValidator.getAccountInfo(publicKey: PublicKey?): AccountInfo? {
-    requireNotNull(publicKey) { "PublicKey must not be null" }
-    return this
-        .rpcClient
-        .getAccountInfo(publicKey.base58(), this.rpcParams)
-        .checkResponse("getAccountInfo")
+fun SolanaClient.getAccountInfo(publicKey: PublicKey): AccountInfo<ByteArray>? {
+    return call(SolanaRpcClient::getAccountInfo, publicKey).takeIf { it.data != null }
 }
 
 fun assertAtaAccount(
-    accountInfo: AccountInfo?,
+    accountInfo: AccountInfo<ByteArray>?,
     expectedMintAccount: PublicKey,
     expectedOwnerAccount: PublicKey,
 ) {
     assertNotNull(accountInfo, "Account not found")
-    assertEquals(accountInfo.owner, tokenProgramId.base58(), "ATA programId should match Token 2022")
-    val encodedInfo = accountInfo.data?.accountInfoEncoded
-    assertNotNull(encodedInfo, "Account data missing")
-    assertTrue(encodedInfo.size >= 2, "Missing encoded account data")
-    val binaryData = Base64.getDecoder().decode(encodedInfo.first())
-    val mintAccount = SolanaEncoding.account(binaryData.copyOfRange(0, 32))
-    assertEquals(mintAccount, expectedMintAccount, "ATA mint account mismatch")
-    val ownerAccount = SolanaEncoding.account(binaryData.copyOfRange(32, 64))
-    assertEquals(ownerAccount, expectedOwnerAccount, "ATA owner account mismatch")
+    assertEquals(accountInfo.owner, tokenProgramId, "ATA programId should match Token 2022")
+    val tokenAccount = TokenAccount.read(accountInfo.pubKey, accountInfo.data)
+    assertThat(tokenAccount.mint).isEqualTo(expectedMintAccount)
+    assertThat(tokenAccount.owner).isEqualTo(expectedOwnerAccount)
 }
 
 interface TokenTypeDescriptor {
