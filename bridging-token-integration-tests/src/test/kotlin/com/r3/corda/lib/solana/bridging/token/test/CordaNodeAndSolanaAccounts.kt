@@ -3,7 +3,7 @@ package com.r3.corda.lib.solana.bridging.token.test
 import com.r3.corda.lib.solana.bridging.token.flows.tokenProgramId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.node.utilities.solana.SolanaUtils
+import net.corda.solana.notary.common.SolanaUtils
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.StartedMockNode
 import software.sava.core.accounts.PublicKey

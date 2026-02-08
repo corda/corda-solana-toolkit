@@ -8,9 +8,9 @@ import net.corda.core.contracts.Amount
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.utilities.seconds
-import net.corda.node.utilities.solana.FileSigner
-import net.corda.node.utilities.solana.SolanaClient
 import net.corda.node.utilities.solana.TokenProgram.TOKEN_2022
+import net.corda.solana.notary.common.FileSigner
+import net.corda.solana.notary.common.SolanaClient
 import net.corda.testing.common.internal.eventually
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME

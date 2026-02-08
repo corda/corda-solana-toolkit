@@ -20,9 +20,9 @@ import net.corda.core.messaging.vaultQueryBy
 import net.corda.core.node.NetworkParameters
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.node.utilities.solana.FileSigner
-import net.corda.node.utilities.solana.SolanaUtils
 import net.corda.node.utilities.solana.TokenProgram.TOKEN_2022
+import net.corda.solana.notary.common.FileSigner
+import net.corda.solana.notary.common.SolanaUtils
 import net.corda.testing.common.internal.eventually
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME

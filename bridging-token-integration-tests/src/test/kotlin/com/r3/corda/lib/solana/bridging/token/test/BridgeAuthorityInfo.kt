@@ -1,7 +1,7 @@
 package com.r3.corda.lib.solana.bridging.token.test
 
 import net.corda.core.identity.Party
-import net.corda.node.utilities.solana.FileSigner
+import net.corda.solana.notary.common.FileSigner
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters

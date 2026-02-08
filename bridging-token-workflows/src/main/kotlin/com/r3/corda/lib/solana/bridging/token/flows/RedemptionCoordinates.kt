@@ -2,7 +2,7 @@ package com.r3.corda.lib.solana.bridging.token.flows
 
 import com.r3.corda.lib.solana.bridging.token.states.FungibleTokenBurnReceipt
 import net.corda.core.identity.Party
-import net.corda.solana.sdk.instruction.Pubkey
+import net.corda.core.solana.Pubkey
 
 /**
  * Holds the necessary metadata to redeem a Corda token to Solana Token.

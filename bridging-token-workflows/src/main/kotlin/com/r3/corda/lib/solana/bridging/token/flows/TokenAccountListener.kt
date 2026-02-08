@@ -2,7 +2,7 @@ package com.r3.corda.lib.solana.bridging.token.flows
 
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.utilities.solana.SolanaClient
+import net.corda.solana.notary.common.SolanaClient
 import software.sava.core.accounts.PublicKey
 import software.sava.core.accounts.SolanaAccounts
 import software.sava.core.accounts.token.TokenAccount

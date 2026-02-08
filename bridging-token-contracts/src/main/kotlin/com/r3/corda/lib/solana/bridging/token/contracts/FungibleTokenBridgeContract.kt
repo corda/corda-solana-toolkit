@@ -6,9 +6,9 @@ import com.r3.corda.lib.tokens.contracts.commands.TokenCommand
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract
+import net.corda.core.solana.SolanaInstruction
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.solana.sdk.Token2022
-import net.corda.solana.sdk.instruction.SolanaInstruction
 
 /**
  * Contract that governs bridging of fungible token states (from the Corda Token SDK) to Solana.

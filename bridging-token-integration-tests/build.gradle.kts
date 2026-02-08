@@ -15,9 +15,8 @@ dependencies {
 
     detektPlugins(libs.detekt.ktlint.wrapper)
 
-    testImplementation(libs.ent.corda.solana.notary.common)
-    testImplementation(libs.ent.corda.solana.notary.client)
-    testImplementation(libs.ent.corda.solana.sdk)
+    testImplementation(libs.solana.notary.common)
+    testImplementation(libs.solana.notary.client)
     testImplementation(libs.ent.corda.test.common)
     testImplementation(libs.ent.corda.test.utils)
     testImplementation(libs.ent.corda.core.test.utils)
@@ -27,7 +26,6 @@ dependencies {
     testImplementation(libs.sava.core)
     testImplementation(libs.sava.rpc)
     testImplementation(libs.sava.programs)
-    testImplementation(libs.lmax.solana4j)
 
     // When using SNAPSHOT node-driver, make sure we are using the same build of the Enterprise Corda node
     testRuntimeOnly(libs.ent.corda.node.api)

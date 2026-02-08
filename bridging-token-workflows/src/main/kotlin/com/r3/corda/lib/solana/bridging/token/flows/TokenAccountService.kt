@@ -2,8 +2,8 @@ package com.r3.corda.lib.solana.bridging.token.flows
 
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
-import net.corda.node.utilities.solana.SolanaClient
-import net.corda.solana.notary.common.rpc.SolanaTransactionException
+import net.corda.solana.notary.common.SolanaClient
+import net.corda.solana.notary.common.SolanaTransactionException
 import org.slf4j.LoggerFactory
 import software.sava.core.accounts.PublicKey
 import software.sava.core.accounts.Signer
@@ -37,9 +37,6 @@ class TokenAccountService(
      *
      * @param mintAccount  The SPL token mint for which the associated token account is created.
      * @param ownerAccount The owner of the associated token account.
-     *
-     * @throws net.corda.solana.notary.common.rpc.SolanaException if the transaction cannot be constructed
-     *         or is too large.
      */
     fun createAta(mintAccount: PublicKey, ownerAccount: PublicKey) {
         if (existingAtaCache.contains(mintAccount, ownerAccount)) {

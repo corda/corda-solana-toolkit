@@ -9,8 +9,8 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.AppServiceHub
-import net.corda.node.utilities.solana.FileSigner
-import net.corda.solana.sdk.instruction.Pubkey
+import net.corda.core.solana.Pubkey
+import net.corda.solana.notary.common.FileSigner
 import software.sava.core.accounts.Signer
 import java.util.UUID
 import kotlin.io.path.Path
