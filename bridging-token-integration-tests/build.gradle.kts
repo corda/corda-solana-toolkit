@@ -13,8 +13,6 @@ dependencies {
     cordapp(project(":bridging-token-contracts"))
     cordapp(project(":bridging-token-workflows"))
 
-    detektPlugins(libs.detekt.ktlint.wrapper)
-
     testImplementation(libs.solana.notary.common)
     testImplementation(libs.solana.notary.client)
     testImplementation(libs.ent.corda.test.common)
@@ -22,7 +20,7 @@ dependencies {
     testImplementation(libs.ent.corda.core.test.utils)
     testImplementation(libs.ent.corda.node)
     testImplementation(libs.ent.corda.node.driver)
-    testImplementation(libs.quasar.core)
+    testImplementation(libs.quasar.core) // TODO IS this needed?
     testImplementation(libs.sava.core)
     testImplementation(libs.sava.rpc)
     testImplementation(libs.sava.programs)
@@ -30,6 +28,8 @@ dependencies {
     // When using SNAPSHOT node-driver, make sure we are using the same build of the Enterprise Corda node
     testRuntimeOnly(libs.ent.corda.node.api)
     testRuntimeOnly(libs.ent.corda.node)
+
+    detektPlugins(libs.detekt.ktlint.wrapper)
 }
 
 cordapp {

@@ -347,6 +347,7 @@ fun SolanaClient.getTokenBalance(publicKey: PublicKey): BigDecimal {
     return call(SolanaRpcClient::getTokenAccountBalance, publicKey).toDecimal()
 }
 
+// TODO Use AccountManagement.getAccountInfo
 fun SolanaClient.getAccountInfo(publicKey: PublicKey): AccountInfo<ByteArray>? {
     return call(SolanaRpcClient::getAccountInfo, publicKey).takeIf { it.data != null }
 }

@@ -6,31 +6,20 @@ plugins {
 }
 
 dependencies {
-    implementation(libs.sava.core)
+    implementation(project(":core"))
     implementation(libs.sava.rpc)
-    implementation(libs.sava.programs)
     implementation(libs.caffeine.cache)
 
     cordaProvided(libs.corda.core)
     cordaProvided(libs.ent.corda.solana.sdk)
-    cordaProvided(libs.solana.notary.common)
-    cordaProvided(libs.kotlin.reflect)
+//    cordaProvided(libs.solana.notary.common)
+//    cordaProvided(libs.kotlin.reflect)
 
     cordapp(project(":bridging-token-contracts"))
     cordapp(libs.tokens.contracts)
     cordapp(libs.tokens.workflows)
 
     detektPlugins(libs.detekt.ktlint.wrapper)
-
-    testImplementation(libs.ent.corda.node)  // TODO Remove once TokenManagement is moved to this repo
-    testImplementation(libs.ent.corda.test.common)
-    testImplementation(libs.ent.corda.test.utils)
-    testImplementation(libs.ent.corda.core.test.utils)
-    testImplementation(libs.ent.corda.node.driver)
-
-    // When using SNAPSHOT node-driver, make sure we are using the same build of the Enterprise Corda node
-    testRuntimeOnly(libs.ent.corda.node.api)
-    testRuntimeOnly(libs.ent.corda.node)
 }
 
 cordapp {
@@ -46,9 +35,6 @@ cordapp {
 }
 
 java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(17))
-    }
     withSourcesJar()
 }
 
