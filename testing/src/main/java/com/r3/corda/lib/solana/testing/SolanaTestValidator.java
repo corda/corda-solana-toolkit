@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.URI;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
@@ -21,20 +22,34 @@ public final class SolanaTestValidator implements AutoCloseable {
 
     private final Process process;
     private final int rpcPort;
+    private final Path ledger;
     private final SolanaClient client;
     private final AccountManagement accounts;
     private final TokenManagement tokens;
 
-    private SolanaTestValidator(Process process, int rpcPort) {
+    private SolanaTestValidator(Process process, int rpcPort, Path ledger) {
         this.process = process;
         this.rpcPort = rpcPort;
+        this.ledger = ledger;
         client = new SolanaClient(rpcUrl(), websocketUrl());
         accounts = new AccountManagement(client);
         tokens = new TokenManagement(client);
     }
 
+    public Process process() {
+        return process;
+    }
+
     public int rpcPort() {
         return rpcPort;
+    }
+
+    public int websocketPort() {
+        return rpcPort + 1;
+    }
+
+    public Path ledger() {
+        return ledger;
     }
 
     public URI rpcUrl() {
@@ -42,7 +57,7 @@ public final class SolanaTestValidator implements AutoCloseable {
     }
 
     public URI websocketUrl() {
-        return URI.create("ws://127.0.0.1:" + (rpcPort + 1));
+        return URI.create("ws://127.0.0.1:" + websocketPort());
     }
 
     public SolanaClient client() {
@@ -57,6 +72,10 @@ public final class SolanaTestValidator implements AutoCloseable {
         return tokens;
     }
 
+    /**
+     * Waits for the test validator to have fully initialised and be ready to accept transactions.
+     * @return this instance.
+     */
     public SolanaTestValidator waitForReadiness() {
         var processOutput = process.inputReader();
         try {
@@ -66,7 +85,8 @@ public final class SolanaTestValidator implements AutoCloseable {
                     throw new IllegalStateException("solana-test-validator didn't start or has terminated");
                 }
                 logger.debug("solana-test-validator: {}", line);
-                // Wait until the validator has finalized at least one slot otherwise it will drop transactions
+                // Wait until the validator has finalized at least one slot otherwise it will drop submitted
+                // transactions
                 var matcher = finalizedSlotPattern.matcher(line);
                 if (matcher.find() && Integer.parseInt(matcher.group(1)) > 0) {
                     break;
@@ -106,6 +126,7 @@ public final class SolanaTestValidator implements AutoCloseable {
 
     public static class Builder {
         private static final int DEFAULT_RPC_PORT = 8899;
+        private static final String DEFAULT_LEDGER_DIR_NAME = "test-ledger";
         private static final int MAX_PORT_ATTEMPTS = 100;
 
         private boolean reset;
@@ -154,15 +175,10 @@ public final class SolanaTestValidator implements AutoCloseable {
         }
 
         public SolanaTestValidator start() throws IOException {
-            var rpcPort = this.rpcPort;
-            var gossipPort = this.gossipPort;
-            var faucetPort = this.faucetPort;
-            if (dynamicPorts) {
-                var portsTaken = new HashSet<Integer>();
-                rpcPort = availableRpcAndWebsocketPorts(portsTaken);
-                gossipPort = availablePort(portsTaken);
-                faucetPort = availablePort(portsTaken);
-            }
+            var portsTaken = new HashSet<Integer>();
+            var rpcPort = availableRpcAndWebsocketPorts(portsTaken);
+            var gossipPort = availablePort(this.gossipPort, portsTaken);
+            var faucetPort = availablePort(this.faucetPort, portsTaken);
 
             final var command = new ArrayList<String>();
             command.add("solana-test-validator");
@@ -188,17 +204,25 @@ public final class SolanaTestValidator implements AutoCloseable {
             logger.debug("cmd: {}", command);
             var process = processBuilder.start();
             Runtime.getRuntime().addShutdownHook(new Thread(process::destroyForcibly));
-            return new SolanaTestValidator(process, rpcPort != null ? rpcPort : DEFAULT_RPC_PORT);
+            return new SolanaTestValidator(
+                process,
+                rpcPort != null ? rpcPort : DEFAULT_RPC_PORT,
+                ledger != null ? ledger : Paths.get(DEFAULT_LEDGER_DIR_NAME)
+            );
         }
 
-        private static int availablePort(Set<Integer> portsTaken) throws IOException {
-            for (int i = 0; i < MAX_PORT_ATTEMPTS; i++) {
-                var port = availablePort();
-                if (portsTaken.add(port)) {
-                    return port;
+        private Integer availablePort(Integer specifiedPort, Set<Integer> portsTaken) throws IOException {
+            if (dynamicPorts && specifiedPort == null) {
+                for (int i = 0; i < MAX_PORT_ATTEMPTS; i++) {
+                    var port = availablePort();
+                    if (portsTaken.add(port)) {
+                        return port;
+                    }
                 }
+                throw new IllegalStateException("Unable to find an available port");
+            } else {
+                return specifiedPort;
             }
-            throw new IllegalStateException("Unable to find an available port");
         }
 
         private static int availablePort() throws IOException {
@@ -215,17 +239,21 @@ public final class SolanaTestValidator implements AutoCloseable {
             }
         }
 
-        private static int availableRpcAndWebsocketPorts(Set<Integer> portsTaken) throws IOException {
-            for (int i = 0; i < MAX_PORT_ATTEMPTS; i++) {
-                var rpcPort = availablePort();
-                var websocketPort = rpcPort + 1;
-                if (isPortAvailable(websocketPort)) {
-                    portsTaken.add(rpcPort);
-                    portsTaken.add(websocketPort);
-                    return rpcPort;
+        private Integer availableRpcAndWebsocketPorts(Set<Integer> portsTaken) throws IOException {
+            if (dynamicPorts && rpcPort == null) {
+                for (int i = 0; i < MAX_PORT_ATTEMPTS; i++) {
+                    var rpcPort = availablePort();
+                    var websocketPort = rpcPort + 1;
+                    if (isPortAvailable(websocketPort)) {
+                        portsTaken.add(rpcPort);
+                        portsTaken.add(websocketPort);
+                        return rpcPort;
+                    }
                 }
+                throw new IllegalStateException("Unable to find available ports");
+            } else {
+                return rpcPort;
             }
-            throw new IllegalStateException("Unable to find available ports");
         }
 
         private static void addPortArg(String portName, Integer assignedPort, List<String> args) {

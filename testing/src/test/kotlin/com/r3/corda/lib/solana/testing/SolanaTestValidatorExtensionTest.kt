@@ -3,11 +3,38 @@ package com.r3.corda.lib.solana.testing
 import com.r3.corda.lib.solana.core.SolanaClient
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.RepeatedTest
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Path
 
 class SolanaTestValidatorExtensionTest {
+    @SolanaTestClass(waitForReadiness = false)
+    class General {
+        companion object {
+            @TempDir
+            lateinit var tempDir: Path
+
+            @ConfigureValidator
+            @JvmStatic
+            fun configureValidator(builder: SolanaTestValidator.Builder) {
+                builder.ledger(tempDir)
+            }
+        }
+
+        @Test
+        fun `SolanaClient available`(client: SolanaClient, testValidator: SolanaTestValidator) {
+            assertThat(client).isSameAs(testValidator.client())
+        }
+
+        @Test
+        fun `@ConfigureValidator annotation`(testValidator: SolanaTestValidator) {
+            assertThat(testValidator.ledger()).isEqualTo(tempDir)
+        }
+    }
+
     companion object {
         private var assertSameValidatorInstancePerTestValidator: SolanaTestValidator? = null
         private var assertDifferentValidatorInstancePerClassValidator: SolanaTestValidator? = null
@@ -29,15 +56,7 @@ class SolanaTestValidatorExtensionTest {
 
     @Nested
     @SolanaTestClass(waitForReadiness = false)
-    inner class General {
-        @Test
-        fun `SolanaClient available`(client: SolanaClient, testValidator: SolanaTestValidator) {
-            assertThat(client).isSameAs(testValidator.client())
-        }
-    }
-
-    @Nested
-    @SolanaTestClass(waitForReadiness = false)
+    @DisplayName("assert same validator instance per test")
     inner class AssertSameValidatorInstancePerTest {
         @RepeatedTest(2)
         fun test(testValidator: SolanaTestValidator) {
@@ -51,9 +70,10 @@ class SolanaTestValidatorExtensionTest {
 
     @Nested
     @SolanaTestClass(waitForReadiness = false)
+    @DisplayName("assert different validator instance per class")
     inner class AssertDifferentValidatorInstancePerClass {
         @Test
-        fun test(testValidator: SolanaTestValidator) {
+        fun captureInstance(testValidator: SolanaTestValidator) {
             assertDifferentValidatorInstancePerClassValidator = testValidator
         }
     }

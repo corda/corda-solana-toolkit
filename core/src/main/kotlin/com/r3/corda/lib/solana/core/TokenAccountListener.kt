@@ -8,11 +8,11 @@ import software.sava.rpc.json.http.client.SolanaRpcClient
 import software.sava.rpc.json.http.response.AccountInfo
 import software.sava.rpc.json.http.ws.SolanaRpcWebsocket
 import java.net.http.HttpClient
-import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletableFuture.delayedExecutor
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.ForkJoinPool
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicBoolean
 
 class TokenAccountListener(
@@ -106,7 +106,7 @@ class TokenAccountListener(
                 "Cannot reconnect to SolanaRpcWebsocket as it has been closed"
             }
             val connected = try {
-                connectFuture.get(CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                connectFuture.get(CONNECTION_TIMEOUT_SECONDS, SECONDS)
                 true
             } catch (e: Exception) {
                 logger.warn("Solana websocket failed to connect: ${e.message}")
@@ -118,13 +118,13 @@ class TokenAccountListener(
                     logger.warn("Failed to reconnect to websocket, trying again...")
                     val attemptNumber = MAX_BACKOFF_DELAY_SECS - remainingAttempts + 1
                     logger.info("Retrying to reconnect in $attemptNumber seconds (attempt $attemptNumber)")
-                    CompletableFuture.delayedExecutor(attemptNumber.toLong(), TimeUnit.SECONDS).execute {
+                    delayedExecutor(attemptNumber.toLong(), SECONDS).execute {
                         reconnect(remainingAttempts - 1)
                     }
                 }
                 else -> {
                     logger.info("Failed to reconnect to websocket. Trying again in $MAX_BACKOFF_DELAY_SECS seconds")
-                    CompletableFuture.delayedExecutor(MAX_BACKOFF_DELAY_SECS.toLong(), TimeUnit.SECONDS).execute {
+                    delayedExecutor(MAX_BACKOFF_DELAY_SECS.toLong(), SECONDS).execute {
                         reconnect(0)
                     }
                 }

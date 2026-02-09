@@ -1,15 +1,15 @@
 package com.r3.corda.lib.solana.bridging.token.test
 
 import com.r3.corda.lib.solana.bridging.token.flows.globalCommitmentLevel
+import com.r3.corda.lib.solana.core.AccountManagement
+import com.r3.corda.lib.solana.core.SolanaClient
+import com.r3.corda.lib.solana.core.SolanaUtils
+import com.r3.corda.lib.solana.core.TokenManagement
 import net.corda.core.utilities.contextLogger
-import net.corda.node.utilities.solana.AccountManagement
-import net.corda.node.utilities.solana.TokenManagement
 import net.corda.solana.notary.client.CordaNotary
 import net.corda.solana.notary.client.instructions.AuthorizeNotary
 import net.corda.solana.notary.client.instructions.CreateNetwork
 import net.corda.solana.notary.client.instructions.Initialize
-import net.corda.solana.notary.common.SolanaClient
-import net.corda.solana.notary.common.SolanaUtils
 import net.corda.testing.common.internal.isListening
 import software.sava.core.accounts.PublicKey
 import software.sava.core.accounts.Signer

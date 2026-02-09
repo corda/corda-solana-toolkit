@@ -1,7 +1,7 @@
 package com.r3.corda.lib.solana.bridging.token.test
 
+import com.r3.corda.lib.solana.core.FileSigner
 import net.corda.core.identity.Party
-import net.corda.solana.notary.common.FileSigner
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters
@@ -15,8 +15,7 @@ import java.util.UUID
 data class BridgeAuthorityInfo(
     val node: StartedMockNode,
     val party: Party,
-    val mintWalletFile: Path,
-    val mintWallet: Signer,
+    val mintWallet: FileSigner,
     val redemptionWallets: Map<Party, Signer>,
     private val redemptionTokenAccounts: Map<Party, List<AssociatedTokenAccountInfo>>,
 ) {
@@ -30,13 +29,16 @@ data class BridgeAuthorityInfo(
             mintAuthority: PublicKey,
             testValidator: SolanaTestValidator,
         ): BridgeAuthorityInfo {
-            val bridgingContractsCordapp =
-                TestCordapp.findCordapp("com.r3.corda.lib.solana.bridging.token.contracts")
+            val bridgingContractsCordapp = TestCordapp.findCordapp("com.r3.corda.lib.solana.bridging.token.contracts")
             val bridgingFlowsCordapp = TestCordapp.findCordapp("com.r3.corda.lib.solana.bridging.token.flows")
-            val redemptionWallets = parties.associate { it.party to FileSigner.random(keyDir) }
-            redemptionWallets.values.forEach {
-                testValidator.accounts.airdropSol(it.publicKey(), 10)
-            }
+            val redemptionWallets = parties.associateBy(
+                { it.party },
+                {
+                    val signer = FileSigner.random(keyDir)
+                    testValidator.accounts.airdropSol(signer.publicKey(), 10)
+                    signer
+                }
+            )
             val mintWallet = FileSigner.random(keyDir)
             testValidator.accounts.airdropSol(mintWallet.publicKey(), 10)
             val baConfig = mapOf(
@@ -73,7 +75,6 @@ data class BridgeAuthorityInfo(
             return BridgeAuthorityInfo(
                 node = node,
                 party = node.info.legalIdentities.first(),
-                mintWalletFile = mintWallet.file,
                 mintWallet = mintWallet,
                 redemptionWallets = redemptionWallets,
                 redemptionTokenAccounts = parties.associate { info ->

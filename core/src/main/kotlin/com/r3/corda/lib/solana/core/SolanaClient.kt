@@ -34,7 +34,7 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.ThreadPoolExecutor
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeUnit.MILLISECONDS
 import java.util.concurrent.TimeUnit.MINUTES
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -724,13 +724,15 @@ constructor(
                     }
                 }
             }
-        }, initialDelay.toMillis(), TimeUnit.MILLISECONDS)
+        }, initialDelay.toMillis(), MILLISECONDS)
 
         return returnFuture
     }
 
     override fun close() {
-        if (!started.get()) return
+        if (!started.compareAndSet(true, false)) {
+            return
+        }
         websocket.close()
         if (userMainExecutor == null) {
             (mainExecutor as ExecutorService).shutdownNow()

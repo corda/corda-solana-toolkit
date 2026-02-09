@@ -1,6 +1,9 @@
 package com.r3.corda.lib.solana.bridging.token.test
 
 import com.r3.corda.lib.solana.bridging.token.flows.tokenProgramId
+import com.r3.corda.lib.solana.core.FileSigner
+import com.r3.corda.lib.solana.core.SolanaClient
+import com.r3.corda.lib.solana.core.TokenProgram.TOKEN_2022
 import com.r3.corda.lib.tokens.contracts.types.TokenType
 import com.r3.corda.lib.tokens.contracts.utilities.sumTokenStatesOrThrow
 import com.r3.corda.lib.tokens.workflows.flows.rpc.MoveFungibleTokens
@@ -8,9 +11,6 @@ import net.corda.core.contracts.Amount
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.utilities.seconds
-import net.corda.node.utilities.solana.TokenProgram.TOKEN_2022
-import net.corda.solana.notary.common.FileSigner
-import net.corda.solana.notary.common.SolanaClient
 import net.corda.testing.common.internal.eventually
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME

@@ -11,7 +11,7 @@ import software.sava.core.accounts.PublicKey
 import software.sava.core.accounts.Signer
 import software.sava.core.accounts.token.TokenAccount
 import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeUnit.SECONDS
 
 @SolanaTestClass(waitForReadiness = false)
 class TokenAccountListenerTest {
@@ -115,7 +115,7 @@ class TokenAccountListenerTest {
         val queue = LinkedBlockingQueue<TokenAccount>()
 
         fun assertLatestUpdate(address: PublicKey, tokenMint: PublicKey, amount: Long) {
-            val tokenAccount = queue.poll(3, TimeUnit.SECONDS)
+            val tokenAccount = queue.poll(3, SECONDS)
             checkNotNull(tokenAccount) { "Did not receive new TokenAccount update" }
             assertThat(tokenAccount.address).isEqualTo(address)
             assertThat(tokenAccount.owner).isEqualTo(owner)
@@ -124,7 +124,7 @@ class TokenAccountListenerTest {
         }
 
         fun assertNoUpdates() {
-            assertThat(queue.poll(3, TimeUnit.SECONDS)).isNull()
+            assertThat(queue.poll(3, SECONDS)).isNull()
         }
     }
 }

@@ -7,6 +7,12 @@ import com.r3.corda.lib.solana.bridging.token.test.getAccountInfo
 import com.r3.corda.lib.solana.bridging.token.test.getTokenBalance
 import com.r3.corda.lib.solana.bridging.token.test.toRawAmount
 import com.r3.corda.lib.solana.bridging.token.testing.QuerySimpleTokensFlow
+import com.r3.corda.lib.solana.core.FileSigner
+import com.r3.corda.lib.solana.core.SolanaUtils
+import com.r3.corda.lib.solana.core.TokenProgram.TOKEN_2022
+import com.r3.corda.lib.solana.testing.ConfigureValidator
+import com.r3.corda.lib.solana.testing.SolanaTestClass
+import com.r3.corda.lib.solana.testing.SolanaTestValidator
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.contracts.types.TokenType
 import com.r3.corda.lib.tokens.contracts.utilities.sumTokenStatesOrThrow
@@ -20,9 +26,10 @@ import net.corda.core.messaging.vaultQueryBy
 import net.corda.core.node.NetworkParameters
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.node.utilities.solana.TokenProgram.TOKEN_2022
-import net.corda.solana.notary.common.FileSigner
-import net.corda.solana.notary.common.SolanaUtils
+import net.corda.solana.notary.client.CordaNotary
+import net.corda.solana.notary.client.instructions.AuthorizeNotary
+import net.corda.solana.notary.client.instructions.CreateNetwork
+import net.corda.solana.notary.client.instructions.Initialize
 import net.corda.testing.common.internal.eventually
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
@@ -35,9 +42,7 @@ import net.corda.testing.driver.driver
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.User
-import net.corda.testing.solana.SolanaTestValidator
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
@@ -51,11 +56,14 @@ import software.sava.core.accounts.Signer
 import software.sava.core.accounts.SolanaAccounts
 import software.sava.solana.programs.token.AssociatedTokenProgram
 import java.math.BigDecimal
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
 
+@SolanaTestClass
 abstract class DriverTests {
     companion object {
         const val TOKEN_DECIMALS = 3
@@ -73,8 +81,6 @@ abstract class DriverTests {
             packageOwnership = emptyMap(),
         )
 
-        private lateinit var validator: SolanaTestValidator
-
         private val solanaNotaryName = CordaX500Name("Solana Notary Service", "London", "GB")
         private val generalNotaryName = CordaX500Name("Notary Service", "Zurich", "CH")
         private val bridgeAuthority = CordaParticipant(CordaX500Name("Bridge Authority", "New York", "US"))
@@ -85,32 +91,36 @@ abstract class DriverTests {
         @TempDir
         lateinit var custodiedKeysDir: Path
 
+        private lateinit var validator: SolanaTestValidator
         private lateinit var solanaNotaryKey: FileSigner
         private lateinit var bridgeAuthorityWallet: FileSigner
         private lateinit var redemptionWalletForAlice: FileSigner
         private lateinit var redemptionWalletForBob: FileSigner
         private lateinit var mintAuthoritySigner: FileSigner
 
+        @ConfigureValidator
+        @JvmStatic
+        fun configureTestValidator(builder: SolanaTestValidator.Builder) {
+            val notaryProgramFile = Files.createTempFile("corda_notary", ".so").toAbsolutePath()
+            SolanaTestValidator::class.java
+                .getResourceAsStream("/net/corda/solana/notary/program/corda_notary.so")!!
+                .use {
+                    Files.copy(it, notaryProgramFile, REPLACE_EXISTING)
+                }
+            builder.bpfProgram(CordaNotary.PROGRAM_ID, notaryProgramFile)
+        }
+
         @JvmStatic
         @BeforeAll
-        fun startTestValidator1(@TempDir tempDir: Path) {
+        fun startTestValidator(validator: SolanaTestValidator, @TempDir tempDir: Path) {
+            this.validator = validator
             solanaNotaryKey = FileSigner.random(tempDir)
             mintAuthoritySigner = FileSigner.random(custodiedKeysDir)
             bridgeAuthorityWallet = FileSigner.random(custodiedKeysDir)
             redemptionWalletForAlice = FileSigner.random(custodiedKeysDir)
             redemptionWalletForBob = FileSigner.random(custodiedKeysDir)
 
-            validator = SolanaTestValidator()
-            try {
-                validator.startAndWait()
-            } catch (e: IllegalStateException) {
-                if (e.message == "Another solana-test-validator instance is already running") {
-                    // for these tests error is fine, tests create random new accounts
-                } else {
-                    throw e
-                }
-            }
-            validator.defaultNotaryProgramSetup(solanaNotaryKey.publicKey())
+            defaultNotaryProgramSetup(solanaNotaryKey.publicKey())
             setOf(
                 mintAuthoritySigner,
                 bridgeAuthorityWallet,
@@ -119,14 +129,47 @@ abstract class DriverTests {
                 redemptionWalletForAlice,
                 redemptionWalletForBob,
             ).forEach { account ->
-                validator.accounts.airdropSol(account.publicKey(), 10)
+                validator.accounts().airdropSol(account.publicKey(), 10)
             }
         }
 
-        @JvmStatic
-        @AfterAll
-        fun stopTestValidator() {
-            validator.close()
+        private val notaryProgramAdmin = SolanaUtils.randomSigner()
+
+        private fun defaultNotaryProgramSetup(notary: PublicKey) {
+            initialiseNotaryProgram()
+            createNewCordaNetwork()
+            validator.accounts().airdropSol(notary, 10)
+            addNotary(0, notary)
+        }
+
+        fun initialiseNotaryProgram() {
+            validator.accounts().airdropSol(notaryProgramAdmin.publicKey(), 10)
+            validator.client().sendAndConfirm(
+                { it.createTransaction(Initialize.instruction(notaryProgramAdmin.publicKey())) },
+                notaryProgramAdmin
+            )
+        }
+
+        fun createNewCordaNetwork() {
+            validator.client().sendAndConfirm(
+                { it.createTransaction(CreateNetwork.instruction(notaryProgramAdmin.publicKey(), 0)) },
+                notaryProgramAdmin
+            )
+        }
+
+        fun addNotary(networkId: Short, notary: PublicKey) {
+            validator.client().sendAndConfirm(
+                {
+                    it.createTransaction(
+                        AuthorizeNotary.instruction(
+                            notary,
+                            notaryProgramAdmin.publicKey(),
+                            networkId
+                        )
+                    )
+                },
+                notaryProgramAdmin
+            )
         }
     }
 
@@ -173,8 +216,8 @@ abstract class DriverTests {
                 "lockingIdentityLabel" to UUID.randomUUID().toString(),
                 "solanaNotaryName" to solanaNotaryName.toString(),
                 "generalNotaryName" to generalNotaryName.toString(),
-                "solanaRpcUrl" to SolanaTestValidator.RPC_URL,
-                "solanaWsUrl" to SolanaTestValidator.WS_URL,
+                "solanaRpcUrl" to "${validator.rpcUrl()}",
+                "solanaWsUrl" to "${validator.websocketUrl()}",
                 "bridgeAuthorityWalletFile" to bridgeAuthorityWallet.file.toString(),
             )
         )
@@ -186,8 +229,8 @@ abstract class DriverTests {
                 "validating" to false,
                 // "serviceLegalName" doesn't work with Driver, because it needs a distributed key that is not created
                 "solana" to mapOf(
-                    "rpcUrl" to SolanaTestValidator.RPC_URL,
-                    "websocketUrl" to SolanaTestValidator.WS_URL,
+                    "rpcUrl" to "${validator.rpcUrl()}",
+                    "websocketUrl" to "${validator.websocketUrl()}",
                     "notaryKeypairFile" to "${solanaNotaryKey.file}",
                     "custodiedKeysDir" to "$custodiedKeysDir",
                 )
@@ -197,16 +240,16 @@ abstract class DriverTests {
 
     @BeforeEach
     fun issueCordaTokens() {
-        msftTokenMint = validator.tokens.createToken(mintAuthoritySigner, TOKEN_2022, decimals = TOKEN_DECIMALS)
-        appleTokenMint = validator.tokens.createToken(mintAuthoritySigner, TOKEN_2022, decimals = TOKEN_DECIMALS)
+        msftTokenMint = validator.tokens().createToken(mintAuthoritySigner, TOKEN_2022, decimals = TOKEN_DECIMALS)
+        appleTokenMint = validator.tokens().createToken(mintAuthoritySigner, TOKEN_2022, decimals = TOKEN_DECIMALS)
         val assembleParticipantWithStock = fun(
             participant: SolanaParticipant,
             tokenDescriptor: TokenTypeDescriptor,
             tokenMintAccount: PublicKey,
             redemptionWallet: Signer,
         ): ParticipantAndStock {
-            val redemptionTokenAccount = validator.tokens.createTokenAccount(redemptionWallet, tokenMintAccount)
-            validator.accounts.airdropSol(redemptionTokenAccount, 10)
+            val redemptionTokenAccount = validator.tokens().createTokenAccount(redemptionWallet, tokenMintAccount)
+            validator.accounts().airdropSol(redemptionTokenAccount, 10)
             return ParticipantAndStock(
                 tokenDescriptor.ticker,
                 participant,
@@ -256,7 +299,7 @@ abstract class DriverTests {
                     )
                 }
                 assertNull(
-                    validator.client.getAccountInfo(participantAndStock.tokenAccount),
+                    validator.client().getAccountInfo(participantAndStock.tokenAccount),
                     "${participantAndStock.participant.nameAsString} ATA should not be created yet",
                 )
             }
@@ -312,7 +355,7 @@ abstract class DriverTests {
             holder !in listOf(participantAndStock.participant.identity, bridgeAuthority.identity),
             "Fungible token holder should be Locking Identity, but was $holder"
         )
-        val accountInfo = validator.client.getAccountInfo(participantAndStock.tokenAccount)
+        val accountInfo = validator.client().getAccountInfo(participantAndStock.tokenAccount)
         assertAtaAccount(
             accountInfo,
             participantAndStock.tokenMintAccount,
@@ -321,7 +364,7 @@ abstract class DriverTests {
         // SPL Token RPC returns decimal strings with trailing zeros trimmed,
         // BigDecimal.equals is scale-sensitive (1.0 != 1.00), so we compare numeric value instead.
         eventually(duration = 10.seconds, waitBetween = 1.seconds) {
-            assertThat(validator.client.getTokenBalance(participantAndStock.tokenAccount))
+            assertThat(validator.client().getTokenBalance(participantAndStock.tokenAccount))
                 .describedAs("Solana token amount numerically equals Corda bridged amount")
                 .isEqualByComparingTo(expectedCumulativeBridgedQuantity)
         }
@@ -334,7 +377,7 @@ abstract class DriverTests {
     ) {
         val participant = participantAndStock.participant
         // Simulate redemption transfer for participant's account on Solana
-        validator.tokens.transfer(
+        validator.tokens().transfer(
             participant.wallet,
             participantAndStock.tokenAccount,
             participantAndStock.redemptionTokenAccount,
@@ -342,7 +385,7 @@ abstract class DriverTests {
         )
         // We need to wait for the websocket listener to process the newly received event
         eventually(duration = 10.seconds) {
-            val balance = validator.client.getTokenBalance(participantAndStock.redemptionTokenAccount)
+            val balance = validator.client().getTokenBalance(participantAndStock.redemptionTokenAccount)
             assertEquals(
                 quantity.stripTrailingZeros(),
                 balance.stripTrailingZeros(),

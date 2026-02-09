@@ -41,6 +41,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
     )
     private val tokenAccountListener = TokenAccountListener(solanaClient, tokenProgramId)
     private val tokenManagement = TokenManagement(solanaClient)
+    private val accountManagement = AccountManagement(solanaClient)
 
     init {
         appServiceHub.registerUnloadHandler { onStop() }
@@ -143,7 +144,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
     fun createAta(mint: PublicKey, owner: PublicKey) {
         val ata = TokenManagement.getAssociatedTokenAccountAddress(mint, owner, TOKEN_2022)
         // First check the ATA doesn't exist before spending the transaction fee.
-        if (AccountManagement(solanaClient).getAccountInfo(ata) == null) {
+        if (accountManagement.getAccountInfo(ata) == null) {
             tokenManagement.createAssociatedTokenAccount(configHandler.bridgeAuthoritySigner, mint, owner)
         }
     }
