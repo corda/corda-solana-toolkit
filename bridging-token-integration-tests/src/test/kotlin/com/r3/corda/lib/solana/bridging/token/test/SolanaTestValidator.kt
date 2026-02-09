@@ -1,18 +1,15 @@
 package com.r3.corda.lib.solana.bridging.token.test
 
-import com.lmax.solana4j.Solana
 import com.r3.corda.lib.solana.bridging.token.flows.globalCommitmentLevel
 import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.getOrThrow
 import net.corda.node.utilities.solana.AccountManagement
-import net.corda.node.utilities.solana.SolanaClient
-import net.corda.node.utilities.solana.SolanaUtils
-import net.corda.node.utilities.solana.SolanaUtils.toSolana4j
 import net.corda.node.utilities.solana.TokenManagement
 import net.corda.solana.notary.client.CordaNotary
-import net.corda.solana.notary.common.AccountMeta
-import net.corda.solana.notary.common.AnchorInstruction
-import net.corda.solana.notary.common.addAnchorInstruction
+import net.corda.solana.notary.client.instructions.AuthorizeNotary
+import net.corda.solana.notary.client.instructions.CreateNetwork
+import net.corda.solana.notary.client.instructions.Initialize
+import net.corda.solana.notary.common.SolanaClient
+import net.corda.solana.notary.common.SolanaUtils
 import net.corda.testing.common.internal.isListening
 import software.sava.core.accounts.PublicKey
 import software.sava.core.accounts.Signer
@@ -77,7 +74,7 @@ class SolanaTestValidator : AutoCloseable {
                 "-ql=$ledgerDir",
                 "--rpc-port=$rpcPort",
                 "--bpf-program",
-                CordaNotary.PROGRAM_ID.base58(),
+                CordaNotary.PROGRAM_ID.toBase58(),
                 notaryProgramFile.toString()
             ).inheritIO()
             .start()
@@ -101,35 +98,26 @@ class SolanaTestValidator : AutoCloseable {
 
     fun initialiseNotaryProgram() {
         accounts.airdropSol(notaryProgramAdmin.publicKey(), 10)
-        sendAndConfirm(CordaNotary.Initialize(notaryProgramAdmin.toSolana4j()))
+        client.sendAndConfirm(
+            { it.createTransaction(Initialize.instruction(notaryProgramAdmin.publicKey())) },
+            notaryProgramAdmin
+        )
     }
 
     fun createNewCordaNetwork(): Short {
         val networkId = nextCordaNetworkId++
-        sendAndConfirm(CordaNotary.CreateNetwork(notaryProgramAdmin.toSolana4j(), networkId))
+        client.sendAndConfirm(
+            { it.createTransaction(CreateNetwork.instruction(notaryProgramAdmin.publicKey(), networkId)) },
+            notaryProgramAdmin
+        )
         return networkId
     }
 
     fun addNotary(networkId: Short, notary: PublicKey) {
-        sendAndConfirm(
-            CordaNotary.AuthorizeNotary(
-                addressToAuthorize = Solana.account(notary.toByteArray()),
-                admin = notaryProgramAdmin.toSolana4j(),
-                networkId = networkId
-            )
+        client.sendAndConfirm(
+            { it.createTransaction(AuthorizeNotary.instruction(notary, notaryProgramAdmin.publicKey(), networkId)) },
+            notaryProgramAdmin
         )
-    }
-
-    private fun sendAndConfirm(instruction: AnchorInstruction, remainingAccounts: List<AccountMeta> = emptyList()) {
-        val txFeePayer = requireNotNull(instruction.txFeePayer) {
-            "Instruction has not specified the transaction fee payer"
-        }
-        val transaction = client.serialiseTransaction(
-            { txBuilder -> txBuilder.addAnchorInstruction(instruction, remainingAccounts) },
-            txFeePayer,
-            instruction.signers
-        )
-        client.asyncSendAndConfirm(transaction).getOrThrow()
     }
 
     fun stopIfRunning() {

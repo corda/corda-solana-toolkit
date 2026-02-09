@@ -1,6 +1,6 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
-import net.corda.node.utilities.solana.SolanaUtils
+import net.corda.solana.notary.common.SolanaUtils
 import net.corda.testing.solana.SolanaTestValidator
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll

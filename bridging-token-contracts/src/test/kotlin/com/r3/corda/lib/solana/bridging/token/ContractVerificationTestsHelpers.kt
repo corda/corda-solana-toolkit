@@ -9,11 +9,11 @@ import net.corda.core.crypto.secureRandomBytes
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.solana.AccountMeta
+import net.corda.core.solana.Pubkey
+import net.corda.core.solana.SolanaInstruction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.solana.sdk.Token2022
-import net.corda.solana.sdk.instruction.AccountMeta
-import net.corda.solana.sdk.instruction.Pubkey
-import net.corda.solana.sdk.instruction.SolanaInstruction
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.TestIdentity

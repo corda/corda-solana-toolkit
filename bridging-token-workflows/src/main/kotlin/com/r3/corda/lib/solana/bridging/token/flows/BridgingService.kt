@@ -10,12 +10,10 @@ import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.ServiceLifecycleEvent
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.solana.Pubkey
 import net.corda.core.utilities.debug
-import net.corda.node.utilities.solana.SolanaClient
-import net.corda.solana.sdk.instruction.Pubkey
+import net.corda.solana.notary.common.SolanaClient
 import org.slf4j.LoggerFactory
-import software.sava.core.accounts.PublicKey
-import software.sava.core.accounts.SolanaAccounts
 import software.sava.core.accounts.token.TokenAccount
 import software.sava.rpc.json.http.client.SolanaRpcClient
 import java.net.URI
@@ -36,7 +34,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         URI(configHandler.solanaWsUrl),
         globalCommitmentLevel
     )
-    private val tokenAccountListener = TokenAccountListener(solanaClient, SolanaAccounts.MAIN_NET.token2022Program())
+    private val tokenAccountListener = TokenAccountListener(solanaClient, tokenProgramId)
     private val accountService = TokenAccountService(solanaClient, configHandler.bridgeAuthoritySigner)
 
     init {
@@ -81,8 +79,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
 
     private fun subscribeToWebsocket() {
         for (redemptionWallet in configHandler.redemptionWalletAccountToHolder.keys) {
-            val owner = PublicKey.createPubKey(redemptionWallet.bytes)
-            tokenAccountListener.listenToOwner(owner) { tokenAccount ->
+            tokenAccountListener.listenToOwner(redemptionWallet.toPublicKey()) { tokenAccount ->
                 processRedemptionEvent(redemptionWallet, tokenAccount)
             }
         }
@@ -104,8 +101,8 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
             val tokenAccounts = solanaClient
                 .call(
                     SolanaRpcClient::getTokenAccountsForProgramByOwner,
-                    PublicKey.createPubKey(redemptionWallet.bytes),
-                    SolanaAccounts.MAIN_NET.token2022Program()
+                    redemptionWallet.toPublicKey(),
+                    tokenProgramId
                 )
             for (accountInfo in tokenAccounts) {
                 processRedemptionEvent(redemptionWallet, accountInfo.data)
@@ -218,6 +215,4 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
 
         return holders.single()
     }
-
-    private fun PublicKey.toPubkey() = Pubkey(copyByteArray())
 }
