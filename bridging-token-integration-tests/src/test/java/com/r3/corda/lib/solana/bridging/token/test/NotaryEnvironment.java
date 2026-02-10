@@ -17,6 +17,7 @@ import java.util.Objects;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
+// TODO Copied from solana-notary repo. Use that one when it's updated to use the new SolanaClient.
 public class NotaryEnvironment {
     private final SolanaClient client;
     private final Signer admin;

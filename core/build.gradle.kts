@@ -3,6 +3,7 @@ plugins {
     id("r3-artifactory")
 }
 
+// This module must not have a depedency to Corda Core as it's meant to be a general purpose utility library.
 dependencies {
     api(libs.sava.programs)
 
@@ -11,15 +12,8 @@ dependencies {
     implementation(libs.bucket4j)
     implementation(libs.slf4j.api)
     implementation(libs.kotlin.reflect)
-//    implementation(libs.solana.notary.common)  // TODO
 
     testImplementation(project(":testing"))
-
-    // DELETE THESE
-    testImplementation(libs.ent.corda.node)
-    testImplementation(libs.ent.corda.test.utils)
-
-//    testRuntimeOnly(libs.slf4j.simple)
 
     detektPlugins(libs.detekt.ktlint.wrapper)
 }

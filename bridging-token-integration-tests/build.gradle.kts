@@ -15,20 +15,13 @@ dependencies {
 
     testImplementation(project(":core"))
     testImplementation(project(":testing"))
-//    testImplementation(libs.solana.notary.common)
     testImplementation(libs.solana.notary.client)
-    testImplementation(libs.ent.corda.test.common)
-    testImplementation(libs.ent.corda.test.utils)
-    testImplementation(libs.ent.corda.core.test.utils)
-//    testImplementation(libs.ent.corda.node)
-    testImplementation(libs.ent.corda.node.driver)
-    testImplementation(libs.quasar.core) // TODO IS this needed?
-    testImplementation(libs.sava.core)
-    testImplementation(libs.sava.rpc)
+    testImplementation(libs.corda.ent.core.test.utils)
+    testImplementation(libs.corda.ent.node.driver)
 
     // When using SNAPSHOT node-driver, make sure we are using the same build of the Enterprise Corda node
-    testRuntimeOnly(libs.ent.corda.node.api)
-    testRuntimeOnly(libs.ent.corda.node)
+    testRuntimeOnly(libs.corda.ent.node.api)
+    testRuntimeOnly(libs.corda.ent.node)
 
     detektPlugins(libs.detekt.ktlint.wrapper)
 }

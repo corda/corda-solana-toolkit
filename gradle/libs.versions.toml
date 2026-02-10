@@ -2,43 +2,40 @@
 artifactory = "6.0.2"
 axion-release = "1.21.0"
 ben-manes = "0.53.0"
+bucket4j = "8.16.0"
 caffeine-cache = "3.2.3"
 corda-ent = "4.14-20260206.004000-81"
 corda-os = "4.14-20260130_101700-d7fa3ea"
 corda-plugin = "5.1.3"
 detekt = "2.0.0-alpha.0"
+junit = "5.14.2" # Also update default-kotlin.gradle.kts
 kotlin = "1.9.25"  # Use the same minor version of Kotlin as Corda
 sava-core = "25.1.2-j17-2"
 sava-programs = "25.0.0-j17-1"
+slf4j = "2.0.17"
 solana-notary = "0.2.0"
 tokens-sdk = "1.3.2"
-bucket4j = "8.16.0"
-junit = "5.14.2" # Also update default-kotlin.gradle.kts
-slf4j = "2.0.17"
 
 [libraries]
 bucket4j = { module = "com.bucket4j:bucket4j_jdk17-core", version.ref = "bucket4j" }
 caffeine-cache = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "caffeine-cache" }
 corda-core = { module = "net.corda:corda-core", version.ref = "corda-os" }
+corda-ent-core-test-utils = { module = "com.r3.corda:corda-core-test-utils", version.ref = "corda-ent" }
+corda-ent-node = { module = "com.r3.corda:corda-node", version.ref = "corda-ent" }
+corda-ent-node-api = { module = "com.r3.corda:corda-node-api", version.ref = "corda-ent" }
+corda-ent-node-driver = { module = "com.r3.corda:corda-node-driver", version.ref = "corda-ent" }
+corda-ent-solana-sdk = { module = "com.r3.corda:corda-solana-sdk", version.ref = "corda-ent" }
+corda-ent-test-utils = { module = "com.r3.corda:corda-test-utils", version.ref = "corda-ent" }
 detekt-ktlint-wrapper = { module = "dev.detekt:detekt-rules-ktlint-wrapper", version.ref = "detekt" }
-ent-corda-core-test-utils = { module = "com.r3.corda:corda-core-test-utils", version.ref = "corda-ent" }
-ent-corda-node = { module = "com.r3.corda:corda-node", version.ref = "corda-ent" }
-ent-corda-node-api = { module = "com.r3.corda:corda-node-api", version.ref = "corda-ent" }
-ent-corda-node-driver = { module = "com.r3.corda:corda-node-driver", version.ref = "corda-ent" }
-ent-corda-solana-sdk = { module = "com.r3.corda:corda-solana-sdk", version.ref = "corda-ent" }
-ent-corda-test-common = { module = "com.r3.corda:corda-test-common", version.ref = "corda-ent" }
-ent-corda-test-utils = { module = "com.r3.corda:corda-test-utils", version.ref = "corda-ent" }
 junit-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit" }
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
 mockito-core = { module = "org.mockito:mockito-core", version = "5.5.0" } # ledger unit tests
-quasar-core = { module = "co.paralleluniverse:quasar-core", version = "0.7.6" }
 sava-core = { module = "software.sava:sava-core", version.ref = "sava-core" }
 sava-programs = { module = "software.sava:solana-programs", version.ref = "sava-programs" }
 sava-rpc = { module = "software.sava:sava-rpc", version.ref = "sava-core" }
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
 solana-notary-client = { module = "net.corda.solana.notary:kotlin-client", version.ref = "solana-notary" }
-solana-notary-common = { module = "net.corda.solana.notary:common", version.ref = "solana-notary" }
 tokens-contracts = { module = "com.r3.corda.lib.tokens:tokens-contracts", version.ref = "tokens-sdk" }
 tokens-workflows = { module = "com.r3.corda.lib.tokens:tokens-workflows", version.ref = "tokens-sdk" }
 
@@ -46,5 +43,4 @@ tokens-workflows = { module = "com.r3.corda.lib.tokens:tokens-workflows", versio
 axion-release = { id = "pl.allegro.tech.build.axion-release", version.ref = "axion-release"}
 ben-manes-versions = { id = "com.github.ben-manes.versions", version.ref = "ben-manes"}
 cordapp = { id = "net.corda.plugins.cordapp", version.ref = "corda-plugin" }
-cordformation = { id = "net.corda.plugins.cordformation", version.ref = "corda-plugin" }
 quasar-utils = { id = "net.corda.plugins.quasar-utils", version.ref = "corda-plugin" }

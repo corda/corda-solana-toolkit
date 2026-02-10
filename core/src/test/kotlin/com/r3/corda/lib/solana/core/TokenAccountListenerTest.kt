@@ -1,5 +1,6 @@
 package com.r3.corda.lib.solana.core
 
+import com.r3.corda.lib.solana.core.tokens.TokenAccountListener
 import com.r3.corda.lib.solana.testing.SolanaTestClass
 import com.r3.corda.lib.solana.testing.SolanaTestValidator
 import org.assertj.core.api.Assertions.assertThat

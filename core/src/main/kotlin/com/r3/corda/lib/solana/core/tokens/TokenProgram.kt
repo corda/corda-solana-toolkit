@@ -1,4 +1,4 @@
-package com.r3.corda.lib.solana.core
+package com.r3.corda.lib.solana.core.tokens
 
 import software.sava.core.accounts.PublicKey
 import software.sava.core.accounts.SolanaAccounts

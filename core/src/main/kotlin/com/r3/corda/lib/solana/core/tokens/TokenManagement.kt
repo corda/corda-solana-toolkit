@@ -1,5 +1,6 @@
-package com.r3.corda.lib.solana.core
+package com.r3.corda.lib.solana.core.tokens
 
+import com.r3.corda.lib.solana.core.SolanaClient
 import com.r3.corda.lib.solana.core.SolanaUtils.randomSigner
 import software.sava.core.accounts.PublicKey
 import software.sava.core.accounts.Signer

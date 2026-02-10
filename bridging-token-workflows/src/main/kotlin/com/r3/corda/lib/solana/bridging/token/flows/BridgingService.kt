@@ -2,9 +2,9 @@ package com.r3.corda.lib.solana.bridging.token.flows
 
 import com.r3.corda.lib.solana.core.AccountManagement
 import com.r3.corda.lib.solana.core.SolanaClient
-import com.r3.corda.lib.solana.core.TokenAccountListener
-import com.r3.corda.lib.solana.core.TokenManagement
-import com.r3.corda.lib.solana.core.TokenProgram.TOKEN_2022
+import com.r3.corda.lib.solana.core.tokens.TokenAccountListener
+import com.r3.corda.lib.solana.core.tokens.TokenManagement
+import com.r3.corda.lib.solana.core.tokens.TokenProgram.TOKEN_2022
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.workflows.utilities.toParty
 import net.corda.core.contracts.StateAndRef

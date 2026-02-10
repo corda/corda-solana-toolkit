@@ -9,7 +9,7 @@ import com.r3.corda.lib.solana.bridging.token.test.toRawAmount
 import com.r3.corda.lib.solana.bridging.token.testing.QuerySimpleTokensFlow
 import com.r3.corda.lib.solana.core.FileSigner
 import com.r3.corda.lib.solana.core.SolanaUtils
-import com.r3.corda.lib.solana.core.TokenProgram.TOKEN_2022
+import com.r3.corda.lib.solana.core.tokens.TokenProgram.TOKEN_2022
 import com.r3.corda.lib.solana.testing.ConfigureValidator
 import com.r3.corda.lib.solana.testing.SolanaTestClass
 import com.r3.corda.lib.solana.testing.SolanaTestValidator

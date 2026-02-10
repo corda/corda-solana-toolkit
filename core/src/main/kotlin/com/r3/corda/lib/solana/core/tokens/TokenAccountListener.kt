@@ -1,5 +1,6 @@
-package com.r3.corda.lib.solana.core
+package com.r3.corda.lib.solana.core.tokens
 
+import com.r3.corda.lib.solana.core.SolanaClient
 import org.slf4j.LoggerFactory
 import software.sava.core.accounts.PublicKey
 import software.sava.core.accounts.SolanaAccounts

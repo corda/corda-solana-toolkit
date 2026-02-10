@@ -3,7 +3,7 @@ package com.r3.corda.lib.solana.bridging.token.test
 import com.r3.corda.lib.solana.bridging.token.flows.tokenProgramId
 import com.r3.corda.lib.solana.core.FileSigner
 import com.r3.corda.lib.solana.core.SolanaClient
-import com.r3.corda.lib.solana.core.TokenProgram.TOKEN_2022
+import com.r3.corda.lib.solana.core.tokens.TokenProgram.TOKEN_2022
 import com.r3.corda.lib.solana.testing.SolanaTestValidator
 import com.r3.corda.lib.tokens.contracts.types.TokenType
 import com.r3.corda.lib.tokens.contracts.utilities.sumTokenStatesOrThrow

@@ -2,7 +2,7 @@ package com.r3.corda.lib.solana.testing;
 
 import com.r3.corda.lib.solana.core.AccountManagement;
 import com.r3.corda.lib.solana.core.SolanaClient;
-import com.r3.corda.lib.solana.core.TokenManagement;
+import com.r3.corda.lib.solana.core.tokens.TokenManagement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.sava.core.accounts.PublicKey;

@@ -50,6 +50,7 @@ class RecoveryTests : ValidatorTests() {
             if (validator.rpcPort() != originalRpcPort) {
                 break
             }
+            validator.close()
         }
 
         // Before continuing, ensure the alternative config validator is available and responds to RPC calls

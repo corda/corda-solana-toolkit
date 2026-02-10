@@ -7,13 +7,9 @@ plugins {
 
 dependencies {
     implementation(project(":core"))
-    implementation(libs.sava.rpc)
-    implementation(libs.caffeine.cache)
 
     cordaProvided(libs.corda.core)
-    cordaProvided(libs.ent.corda.solana.sdk)
-//    cordaProvided(libs.solana.notary.common)
-//    cordaProvided(libs.kotlin.reflect)
+    cordaProvided(libs.corda.ent.solana.sdk) // TODO Have a corda-core module?
 
     cordapp(project(":bridging-token-contracts"))
     cordapp(libs.tokens.contracts)

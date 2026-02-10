@@ -6,20 +6,18 @@ plugins {
 
 dependencies {
     cordaProvided(libs.corda.core)
-    cordaProvided(libs.solana.notary.common)
-    cordaProvided(libs.ent.corda.solana.sdk)
+    cordaProvided(libs.corda.ent.solana.sdk)
 
     cordapp(libs.tokens.contracts)
 
-    testImplementation(libs.ent.corda.node.driver)
-    testImplementation(libs.ent.corda.core.test.utils)
-    testImplementation(libs.ent.corda.test.utils)
+    testImplementation(libs.corda.ent.node.driver)
+    testImplementation(libs.corda.ent.core.test.utils)
+    testImplementation(libs.corda.ent.test.utils)
     testImplementation(libs.mockito.core)
-    testImplementation(libs.sava.core)
 
     // When using SNAPSHOT node-driver, make sure we are using the same build of the Enterprise Corda node
-    testRuntimeOnly(libs.ent.corda.node.api)
-    testRuntimeOnly(libs.ent.corda.node)
+    testRuntimeOnly(libs.corda.ent.node.api)
+    testRuntimeOnly(libs.corda.ent.node)
 
     detektPlugins(libs.detekt.ktlint.wrapper)
 }
