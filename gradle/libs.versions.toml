@@ -24,7 +24,6 @@ corda-ent-core-test-utils = { module = "com.r3.corda:corda-core-test-utils", ver
 corda-ent-node = { module = "com.r3.corda:corda-node", version.ref = "corda-ent" }
 corda-ent-node-api = { module = "com.r3.corda:corda-node-api", version.ref = "corda-ent" }
 corda-ent-node-driver = { module = "com.r3.corda:corda-node-driver", version.ref = "corda-ent" }
-corda-ent-solana-sdk = { module = "com.r3.corda:corda-solana-sdk", version.ref = "corda-ent" }
 corda-ent-test-utils = { module = "com.r3.corda:corda-test-utils", version.ref = "corda-ent" }
 detekt-ktlint-wrapper = { module = "dev.detekt:detekt-rules-ktlint-wrapper", version.ref = "detekt" }
 junit-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit" }

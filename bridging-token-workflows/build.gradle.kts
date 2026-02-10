@@ -7,9 +7,9 @@ plugins {
 
 dependencies {
     implementation(project(":core"))
+    implementation(project(":corda-utils"))
 
     cordaProvided(libs.corda.core)
-    cordaProvided(libs.corda.ent.solana.sdk) // TODO Have a corda-core module?
 
     cordapp(project(":bridging-token-contracts"))
     cordapp(libs.tokens.contracts)
