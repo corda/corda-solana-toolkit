@@ -153,8 +153,14 @@ constructor(
 
     private val rpcRateLimiters = ConcurrentHashMap<String, RpcRateLimiter>()
 
-    private val rpc: SolanaRpcClient
-    private val websocket: SolanaRpcWebsocket
+    /**
+     * Returns the underlying [SolanaRpcClient].
+     *
+     * Using this directly will not handle any throttling.
+     */
+    val rpc: SolanaRpcClient
+
+    val websocket: SolanaRpcWebsocket
 
     @Volatile
     private var cachedBlockhashInfo: BlockhashInfo? = null
