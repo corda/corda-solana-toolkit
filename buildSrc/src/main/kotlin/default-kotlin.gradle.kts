@@ -24,8 +24,9 @@ kotlin {
         apiVersion.set(kotlinMinorVersion)
         // Make sure Java 17 bytecode is produced, even if the java.toolchain uses a newer JDK
         jvmTarget.set(JvmTarget.JVM_17)
+        javaParameters.set(true)
         // Make sure only JDK 17 APIs are used.
-        freeCompilerArgs.add("-Xjdk-release=17")
+        freeCompilerArgs.addAll("-Xjdk-release=17")
     }
 }
 

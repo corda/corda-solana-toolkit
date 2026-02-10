@@ -174,7 +174,11 @@ public final class SolanaTestValidator implements AutoCloseable {
             return this;
         }
 
-        public SolanaTestValidator start() throws IOException {
+        /**
+         * Start a new validator instance from the current builder configuration.
+         * @throws IllegalStateException The test validator couldn't be started.
+         */
+        public SolanaTestValidator start() {
             var portsTaken = new HashSet<Integer>();
             var rpcPort = availableRpcAndWebsocketPorts(portsTaken);
             var gossipPort = availablePort(this.gossipPort, portsTaken);
@@ -202,7 +206,12 @@ public final class SolanaTestValidator implements AutoCloseable {
                 processBuilder.directory(ledger.getParent().toFile());
             }
             logger.debug("cmd: {}", command);
-            var process = processBuilder.start();
+            Process process;
+            try {
+                process = processBuilder.start();
+            } catch (IOException e) {
+                throw new IllegalStateException("Unable to start solana-test-validator process", e);
+            }
             Runtime.getRuntime().addShutdownHook(new Thread(process::destroyForcibly));
             return new SolanaTestValidator(
                 process,
@@ -211,7 +220,7 @@ public final class SolanaTestValidator implements AutoCloseable {
             );
         }
 
-        private Integer availablePort(Integer specifiedPort, Set<Integer> portsTaken) throws IOException {
+        private Integer availablePort(Integer specifiedPort, Set<Integer> portsTaken) {
             if (dynamicPorts && specifiedPort == null) {
                 for (int i = 0; i < MAX_PORT_ATTEMPTS; i++) {
                     var port = availablePort();
@@ -225,9 +234,11 @@ public final class SolanaTestValidator implements AutoCloseable {
             }
         }
 
-        private static int availablePort() throws IOException {
+        private static int availablePort() {
             try (var server = new ServerSocket(0)) {
                 return server.getLocalPort();
+            } catch (IOException e) {
+                throw new IllegalStateException("Unable to get an available port", e);
             }
         }
 
@@ -239,7 +250,7 @@ public final class SolanaTestValidator implements AutoCloseable {
             }
         }
 
-        private Integer availableRpcAndWebsocketPorts(Set<Integer> portsTaken) throws IOException {
+        private Integer availableRpcAndWebsocketPorts(Set<Integer> portsTaken) {
             if (dynamicPorts && rpcPort == null) {
                 for (int i = 0; i < MAX_PORT_ATTEMPTS; i++) {
                     var rpcPort = availablePort();

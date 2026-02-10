@@ -6,9 +6,11 @@ import org.junit.jupiter.api.extension.AfterAllCallback
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.extension.ExtensionContext.Namespace
 import org.junit.jupiter.api.extension.ParameterContext
+import org.junit.jupiter.api.extension.ParameterResolutionException
 import org.junit.jupiter.api.extension.ParameterResolver
 import org.slf4j.LoggerFactory
 import java.lang.reflect.InvocationTargetException
+import java.lang.reflect.Modifier.isPublic
 import java.lang.reflect.Modifier.isStatic
 import java.net.Socket
 import java.net.SocketException
@@ -87,17 +89,30 @@ class SolanaTestValidatorExtension : ParameterResolver, AfterAllCallback {
     }
 
     private fun configureBuilder(testClass: Class<*>, builder: Builder) {
-        val methods = testClass.methods.filter { it.isAnnotationPresent(ConfigureValidator::class.java) }
-        if (methods.isEmpty()) {
-            return
+        val methods = generateSequence(testClass) { it.superclass }
+            .flatMap { it.declaredMethods.asSequence() }
+            .filter { it.isAnnotationPresent(ConfigureValidator::class.java) }
+            .toList()
+        val method = when (methods.size) {
+            0 -> return
+            1 -> methods[0]
+            else ->
+                throw ParameterResolutionException("Multiple @ConfigureValidator methods found in ${testClass.name}")
         }
-        check(methods.size == 1) { "Multiple @ConfigureValidator methods found in ${testClass.name}" }
-        val method = methods[0]
-        check(isStatic(method.modifiers)) { "@ConfigureValidator method ${method.name} must be static" }
-        check(method.parameterCount == 1 && method.parameterTypes[0] == Builder::class.java) {
-            "@ConfigureValidator method ${method.name} must have a single SolanaTestValidator.Builder parameter"
+        if (!isPublic(method.modifiers)) {
+            throw ParameterResolutionException("@ConfigureValidator method ${method.name} must be public")
         }
-        check(method.returnType == Void.TYPE) { "@ConfigureValidator method ${method.name} must be void" }
+        if (!isStatic(method.modifiers)) {
+            throw ParameterResolutionException("@ConfigureValidator method ${method.name} must be static")
+        }
+        if (method.parameterCount != 1 || method.parameterTypes[0] != Builder::class.java) {
+            throw ParameterResolutionException(
+                "@ConfigureValidator method ${method.name} must have a single SolanaTestValidator.Builder parameter"
+            )
+        }
+        if (method.returnType != Void.TYPE) {
+            throw ParameterResolutionException("@ConfigureValidator method ${method.name} must be void")
+        }
         try {
             method.invoke(null, builder)
         } catch (e: InvocationTargetException) {

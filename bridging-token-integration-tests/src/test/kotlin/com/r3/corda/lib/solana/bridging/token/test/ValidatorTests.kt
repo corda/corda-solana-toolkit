@@ -4,6 +4,7 @@ import com.r3.corda.lib.solana.bridging.token.flows.tokenProgramId
 import com.r3.corda.lib.solana.core.FileSigner
 import com.r3.corda.lib.solana.core.SolanaClient
 import com.r3.corda.lib.solana.core.TokenProgram.TOKEN_2022
+import com.r3.corda.lib.solana.testing.SolanaTestValidator
 import com.r3.corda.lib.tokens.contracts.types.TokenType
 import com.r3.corda.lib.tokens.contracts.utilities.sumTokenStatesOrThrow
 import com.r3.corda.lib.tokens.workflows.flows.rpc.MoveFungibleTokens
@@ -90,7 +91,6 @@ abstract class ValidatorTests {
     lateinit var custodiedKeysDir: Path
 
     protected lateinit var validator: SolanaTestValidator
-    private var closeTestValidator = true
 
     private lateinit var solanaNotaryKey: FileSigner
     private lateinit var mintAuthoritySigner: FileSigner
@@ -102,8 +102,8 @@ abstract class ValidatorTests {
     protected lateinit var bob: CordaNodeAndSolanaAccounts
 
     @BeforeEach
-    fun setup() {
-        startTestValidator()
+    fun setup(@TempDir ledger: Path) {
+        startTestValidator(ledger)
         startCordaNetwork()
         alice = CordaNodeAndSolanaAccounts.createAndInitialise(
             network,
@@ -137,25 +137,26 @@ abstract class ValidatorTests {
         stopTestValidator()
     }
 
-    private fun startTestValidator() {
-        validator = SolanaTestValidator()
+    private fun startTestValidator(ledger: Path) {
+        validator = SolanaTestValidator
+            .builder()
+            .ledger(ledger)
+            .dynamicPorts()
+            .also(NotaryEnvironment::addNotaryProgram)
+            .start()
+            .waitForReadiness()
         solanaNotaryKey = FileSigner.random(generalDir)
         mintAuthoritySigner = FileSigner.random(custodiedKeysDir)
-        try {
-            validator.start()
-        } catch (e: IllegalStateException) {
-            if (e.message == "Another solana-test-validator instance is already running") {
-                // for these tests error is fine, tests create random new accounts
-                closeTestValidator = false // let the test which started it close it
-            } else {
-                throw e
-            }
-        }
-        validator.defaultNotaryProgramSetup(solanaNotaryKey.publicKey())
-        validator.accounts.airdropSol(mintAuthoritySigner.publicKey(), 10)
 
-        msftTokenMint = validator.tokens.createToken(mintAuthoritySigner, TOKEN_2022, decimals = TOKEN_DECIMALS)
-        aaplTokenMint = validator.tokens.createToken(mintAuthoritySigner, TOKEN_2022, decimals = TOKEN_DECIMALS)
+        with(NotaryEnvironment(validator.client())) {
+            initializeProgram()
+            addCordaNotary(solanaNotaryKey.publicKey())
+        }
+        validator.accounts().airdropSol(solanaNotaryKey.publicKey(), 10)
+        validator.accounts().airdropSol(mintAuthoritySigner.publicKey(), 10)
+
+        msftTokenMint = validator.tokens().createToken(mintAuthoritySigner, TOKEN_2022, decimals = TOKEN_DECIMALS)
+        aaplTokenMint = validator.tokens().createToken(mintAuthoritySigner, TOKEN_2022, decimals = TOKEN_DECIMALS)
     }
 
     fun stopTestValidator() {
@@ -198,8 +199,8 @@ abstract class ValidatorTests {
         """
         validating = false
         solana {
-            rpcUrl = "${validator.rpcUrl}"
-            websocketUrl = "${validator.wsUrl}"
+            rpcUrl = "${validator.rpcUrl()}"
+            websocketUrl = "${validator.websocketUrl()}"
             notaryKeypairFile = "${solanaNotaryKey.file}"
             custodiedKeysDir = "$custodiedKeysDir"
         }
@@ -278,7 +279,7 @@ abstract class ValidatorTests {
             "Fungible token holder should be Locking Identity, but was $holder"
         )
         val tokenAccount = requireNotNull(stakeholderInfo.mintToAta[mint]) { "Token account must not be null" }
-        val accountInfo = validator.client.getAccountInfo(tokenAccount)
+        val accountInfo = validator.accounts().getAccountInfo(tokenAccount)
         assertAtaAccount(accountInfo, mint, stakeholderInfo.signer.publicKey())
         ensureSolanaTokenAccountBalance(stakeholderInfo, tokenType, mint)
     }
@@ -291,11 +292,7 @@ abstract class ValidatorTests {
         val expectedSolanaBalanceAfter = stakeholderInfo.expectedSolanaBalance[mint]
         val tokenAccount = requireNotNull(stakeholderInfo.mintToAta[mint]) { "Token account must not be null" }
         eventually(duration = 10.seconds) {
-            val balance = try {
-                validator.client.getTokenBalance(tokenAccount)
-            } catch (_: Exception) {
-                null
-            }
+            val balance = validator.client().getTokenBalance(tokenAccount)
             assertThat(balance)
                 .describedAs("Solana ${tokenType.tokenIdentifier} token amount equals to $expectedSolanaBalanceAfter")
                 .isEqualByComparingTo(expectedSolanaBalanceAfter)
@@ -314,10 +311,15 @@ abstract class ValidatorTests {
             "Source token account must not be null"
         }
         val toTokenAccount = bridgeAuthority.redemptionTokenAccountForPartyAndMint(stakeholderInfo.party, mint)
-        validator.tokens.transfer(stakeholderInfo.signer, fromTokenAccount, toTokenAccount, moveQuantity.toRawAmount())
+        validator.tokens().transfer(
+            stakeholderInfo.signer,
+            fromTokenAccount,
+            toTokenAccount,
+            moveQuantity.toRawAmount()
+        )
         val party = stakeholderInfo.node.party()
         eventually(duration = 10.seconds) {
-            val balance = validator.client.getTokenBalance(toTokenAccount)
+            val balance = validator.client().getTokenBalance(toTokenAccount)
             assertEquals(
                 0,
                 balance.compareTo(moveQuantity),
@@ -345,11 +347,6 @@ fun BigDecimal.toRawAmount(decimals: Int): Long {
 
 fun SolanaClient.getTokenBalance(publicKey: PublicKey): BigDecimal {
     return call(SolanaRpcClient::getTokenAccountBalance, publicKey).toDecimal()
-}
-
-// TODO Use AccountManagement.getAccountInfo
-fun SolanaClient.getAccountInfo(publicKey: PublicKey): AccountInfo<ByteArray>? {
-    return call(SolanaRpcClient::getAccountInfo, publicKey).takeIf { it.data != null }
 }
 
 fun assertAtaAccount(

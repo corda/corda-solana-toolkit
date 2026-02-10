@@ -1,6 +1,7 @@
 package com.r3.corda.lib.solana.bridging.token.test
 
 import com.r3.corda.lib.solana.core.FileSigner
+import com.r3.corda.lib.solana.testing.SolanaTestValidator
 import net.corda.core.identity.Party
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.node.MockNetwork
@@ -35,12 +36,12 @@ data class BridgeAuthorityInfo(
                 { it.party },
                 {
                     val signer = FileSigner.random(keyDir)
-                    testValidator.accounts.airdropSol(signer.publicKey(), 10)
+                    testValidator.accounts().airdropSol(signer.publicKey(), 10)
                     signer
                 }
             )
             val mintWallet = FileSigner.random(keyDir)
-            testValidator.accounts.airdropSol(mintWallet.publicKey(), 10)
+            testValidator.accounts().airdropSol(mintWallet.publicKey(), 10)
             val baConfig = mapOf(
                 "participants" to parties.associate { it.party.name.toString() to it.signer.publicKey().toBase58() },
                 "redemptionWalletAccountToHolder" to redemptionWallets
@@ -56,8 +57,8 @@ data class BridgeAuthorityInfo(
                 "lockingIdentityLabel" to UUID.randomUUID().toString(),
                 "solanaNotaryName" to solanaNotaryName.toString(),
                 "generalNotaryName" to generalNotaryName.toString(),
-                "solanaWsUrl" to testValidator.wsUrl,
-                "solanaRpcUrl" to testValidator.rpcUrl,
+                "solanaRpcUrl" to "${testValidator.rpcUrl()}",
+                "solanaWsUrl" to "${testValidator.websocketUrl()}",
                 "bridgeAuthorityWalletFile" to mintWallet.file.toString(),
                 // Set to very height value interval to effectively disable redemption in tests in order
                 // to validate "core" real time processing and Sava listeners
@@ -81,7 +82,7 @@ data class BridgeAuthorityInfo(
                     info.party to tokenDescriptorToMint.map { (_, mint) ->
                         AssociatedTokenAccountInfo(
                             mint = mint,
-                            tokenAccount = testValidator.tokens.createTokenAccount(
+                            tokenAccount = testValidator.tokens().createTokenAccount(
                                 redemptionWallets[info.party]!!,
                                 mint
                             )

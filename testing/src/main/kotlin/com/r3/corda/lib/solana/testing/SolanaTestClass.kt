@@ -1,27 +1,22 @@
 package com.r3.corda.lib.solana.testing
 
 import com.r3.corda.lib.solana.core.SolanaClient
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.extension.ExtendWith
-import java.util.function.Consumer
 
 /**
- * Automatically starts a [SolanaTestValidator] before all the tests and closes it after they have run.
+ * When annotated on a test class automatically starts a [SolanaTestValidator] before all the tests and closes it after
+ * they have all run. This is a convenience annotation for [SolanaTestValidatorExtension].
  *
  * Tests and lifecycle methods can specify a [SolanaClient] parameter whiich will be connected to the validator. They
  * can also specify a [SolanaTestValidator] parameter to get access to the instance itself.
  *
  * By default, the test validator uses a temporary directory for its ledger and listens on dynamically assigned ports.
- * This can be changed, or further configured, by having a [BeforeAll] method with a [SolanaTestValidator.Builder]
- * parameter.
+ * This can be changed, or the validator further configured, by having a static method annotated with
+ * [ConfigureValidator] which takes in a [SolanaTestValidator.Builder] as a single parameter.
  *
- * If such a method is defined, then it's not possible to have a second [BeforeAll] for the final [SolanaTestValidator].
- * This is becuase it is not possible to guarantee the builder method will be called before the validator method.
- * Instead, the [BeforeAll] method must manually start the validator and pass in the instance to a second [Consumer]
- * parameter. If there is no need to access the [SolanaTestValidator] in the [BeforeAll] method then the [Consumer]
- * parameter is not required. The extension will automatically start the validator when needed.
- *
- *
+ * @property waitForReadiness By default the extension will wait for the validator to be in a state where it can
+ * receive transactions. This adds some time to the test startup. This can be turned off by specifying `false`. See
+ * [SolanaTestValidator.waitForReadiness].
  */
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)

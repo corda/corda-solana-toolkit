@@ -1,9 +1,9 @@
 package com.r3.corda.lib.solana.bridging.token.test.driver
 
 import com.r3.corda.lib.solana.bridging.token.flows.tokenProgramId
+import com.r3.corda.lib.solana.bridging.token.test.NotaryEnvironment
 import com.r3.corda.lib.solana.bridging.token.test.TokenTypeDescriptor
 import com.r3.corda.lib.solana.bridging.token.test.assertAtaAccount
-import com.r3.corda.lib.solana.bridging.token.test.getAccountInfo
 import com.r3.corda.lib.solana.bridging.token.test.getTokenBalance
 import com.r3.corda.lib.solana.bridging.token.test.toRawAmount
 import com.r3.corda.lib.solana.bridging.token.testing.QuerySimpleTokensFlow
@@ -26,10 +26,6 @@ import net.corda.core.messaging.vaultQueryBy
 import net.corda.core.node.NetworkParameters
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.solana.notary.client.CordaNotary
-import net.corda.solana.notary.client.instructions.AuthorizeNotary
-import net.corda.solana.notary.client.instructions.CreateNetwork
-import net.corda.solana.notary.client.instructions.Initialize
 import net.corda.testing.common.internal.eventually
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
@@ -56,9 +52,7 @@ import software.sava.core.accounts.Signer
 import software.sava.core.accounts.SolanaAccounts
 import software.sava.solana.programs.token.AssociatedTokenProgram
 import java.math.BigDecimal
-import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
@@ -101,13 +95,7 @@ abstract class DriverTests {
         @ConfigureValidator
         @JvmStatic
         fun configureTestValidator(builder: SolanaTestValidator.Builder) {
-            val notaryProgramFile = Files.createTempFile("corda_notary", ".so").toAbsolutePath()
-            SolanaTestValidator::class.java
-                .getResourceAsStream("/net/corda/solana/notary/program/corda_notary.so")!!
-                .use {
-                    Files.copy(it, notaryProgramFile, REPLACE_EXISTING)
-                }
-            builder.bpfProgram(CordaNotary.PROGRAM_ID, notaryProgramFile)
+            NotaryEnvironment.addNotaryProgram(builder)
         }
 
         @JvmStatic
@@ -120,8 +108,13 @@ abstract class DriverTests {
             redemptionWalletForAlice = FileSigner.random(custodiedKeysDir)
             redemptionWalletForBob = FileSigner.random(custodiedKeysDir)
 
-            defaultNotaryProgramSetup(solanaNotaryKey.publicKey())
+            with(NotaryEnvironment(validator.client())) {
+                initializeProgram()
+                addCordaNotary(solanaNotaryKey.publicKey())
+            }
+
             setOf(
+                solanaNotaryKey,
                 mintAuthoritySigner,
                 bridgeAuthorityWallet,
                 alice.wallet,
@@ -131,45 +124,6 @@ abstract class DriverTests {
             ).forEach { account ->
                 validator.accounts().airdropSol(account.publicKey(), 10)
             }
-        }
-
-        private val notaryProgramAdmin = SolanaUtils.randomSigner()
-
-        private fun defaultNotaryProgramSetup(notary: PublicKey) {
-            initialiseNotaryProgram()
-            createNewCordaNetwork()
-            validator.accounts().airdropSol(notary, 10)
-            addNotary(0, notary)
-        }
-
-        fun initialiseNotaryProgram() {
-            validator.accounts().airdropSol(notaryProgramAdmin.publicKey(), 10)
-            validator.client().sendAndConfirm(
-                { it.createTransaction(Initialize.instruction(notaryProgramAdmin.publicKey())) },
-                notaryProgramAdmin
-            )
-        }
-
-        fun createNewCordaNetwork() {
-            validator.client().sendAndConfirm(
-                { it.createTransaction(CreateNetwork.instruction(notaryProgramAdmin.publicKey(), 0)) },
-                notaryProgramAdmin
-            )
-        }
-
-        fun addNotary(networkId: Short, notary: PublicKey) {
-            validator.client().sendAndConfirm(
-                {
-                    it.createTransaction(
-                        AuthorizeNotary.instruction(
-                            notary,
-                            notaryProgramAdmin.publicKey(),
-                            networkId
-                        )
-                    )
-                },
-                notaryProgramAdmin
-            )
         }
     }
 
@@ -299,7 +253,7 @@ abstract class DriverTests {
                     )
                 }
                 assertNull(
-                    validator.client().getAccountInfo(participantAndStock.tokenAccount),
+                    validator.accounts().getAccountInfo(participantAndStock.tokenAccount),
                     "${participantAndStock.participant.nameAsString} ATA should not be created yet",
                 )
             }
@@ -355,7 +309,7 @@ abstract class DriverTests {
             holder !in listOf(participantAndStock.participant.identity, bridgeAuthority.identity),
             "Fungible token holder should be Locking Identity, but was $holder"
         )
-        val accountInfo = validator.client().getAccountInfo(participantAndStock.tokenAccount)
+        val accountInfo = validator.accounts().getAccountInfo(participantAndStock.tokenAccount)
         assertAtaAccount(
             accountInfo,
             participantAndStock.tokenMintAccount,
