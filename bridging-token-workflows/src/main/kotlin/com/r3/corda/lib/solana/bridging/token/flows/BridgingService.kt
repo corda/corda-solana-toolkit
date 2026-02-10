@@ -4,7 +4,7 @@ import com.r3.corda.lib.solana.core.AccountManagement
 import com.r3.corda.lib.solana.core.SolanaClient
 import com.r3.corda.lib.solana.core.tokens.TokenAccountListener
 import com.r3.corda.lib.solana.core.tokens.TokenManagement
-import com.r3.corda.lib.solana.core.tokens.TokenProgram.TOKEN_2022
+import com.r3.corda.lib.solana.core.tokens.TokenProgram
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.workflows.utilities.toParty
 import net.corda.core.contracts.StateAndRef
@@ -142,7 +142,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
     }
 
     fun createAta(mint: PublicKey, owner: PublicKey) {
-        val ata = TokenManagement.getAssociatedTokenAccountAddress(mint, owner, TOKEN_2022)
+        val ata = TokenManagement.getAssociatedTokenAccountAddress(mint, owner, TokenProgram.valueOf(tokenProgramId))
         // First check the ATA doesn't exist before spending the transaction fee.
         if (accountManagement.getAccountInfo(ata) == null) {
             tokenManagement.createAssociatedTokenAccount(configHandler.bridgeAuthoritySigner, mint, owner)

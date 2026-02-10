@@ -3,7 +3,7 @@ plugins {
     id("r3-artifactory")
 }
 
-// This module must not have a depedency to Corda Core as it's meant to be a general purpose utility library.
+// Don't add any Corda dependencies as this module is meant to be a general-purpose library.
 dependencies {
     implementation(project(":core"))
     implementation(libs.junit.api)

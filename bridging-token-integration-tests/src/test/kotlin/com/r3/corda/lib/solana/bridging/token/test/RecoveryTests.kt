@@ -50,6 +50,8 @@ class RecoveryTests : ValidatorTests() {
             if (validator.rpcPort() != originalRpcPort) {
                 break
             }
+            // The validator has coincidentally restarted on the original port, which we don't want so we shut it down
+            // and try again.
             validator.close()
         }
 

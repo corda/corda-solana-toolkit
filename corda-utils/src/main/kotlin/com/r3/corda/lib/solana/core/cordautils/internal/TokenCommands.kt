@@ -7,11 +7,7 @@ import net.corda.core.utilities.OpaqueBytes
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-/**
- * Generic collection of internal utilities for SPL and Token2022 programs.
- */
 internal object TokenCommands {
-    @JvmStatic
     fun mintTo(
         programId: Pubkey,
         mint: Pubkey,
@@ -35,7 +31,6 @@ internal object TokenCommands {
         )
     }
 
-    @JvmStatic
     fun burn(programId: Pubkey, mint: Pubkey, source: Pubkey, owner: Pubkey, amount: Long): SolanaInstruction {
         val data = ByteBuffer.allocate(9)
             .order(ByteOrder.LITTLE_ENDIAN)
@@ -53,7 +48,6 @@ internal object TokenCommands {
         )
     }
 
-    @JvmStatic
     fun transferChecked(
         programId: Pubkey,
         source: Pubkey,
