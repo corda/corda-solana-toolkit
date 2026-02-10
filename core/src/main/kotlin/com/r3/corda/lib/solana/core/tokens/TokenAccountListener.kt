@@ -1,6 +1,7 @@
 package com.r3.corda.lib.solana.core.tokens
 
 import com.r3.corda.lib.solana.core.SolanaClient
+import com.r3.corda.lib.solana.core.internal.reconnect
 import org.slf4j.LoggerFactory
 import software.sava.core.accounts.PublicKey
 import software.sava.core.accounts.SolanaAccounts
@@ -9,11 +10,9 @@ import software.sava.rpc.json.http.client.SolanaRpcClient
 import software.sava.rpc.json.http.response.AccountInfo
 import software.sava.rpc.json.http.ws.SolanaRpcWebsocket
 import java.net.http.HttpClient
-import java.util.concurrent.CompletableFuture.delayedExecutor
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
-import java.util.concurrent.ForkJoinPool
-import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.ForkJoinPool.commonPool
 import java.util.concurrent.atomic.AtomicBoolean
 
 class TokenAccountListener(
@@ -21,8 +20,6 @@ class TokenAccountListener(
     private val programId: PublicKey = SolanaAccounts.MAIN_NET.tokenProgram(),
 ) : AutoCloseable {
     companion object {
-        private const val CONNECTION_TIMEOUT_SECONDS = 3L
-        private const val MAX_BACKOFF_DELAY_SECS = 10
         private val logger = LoggerFactory.getLogger(TokenAccountListener::class.java)
     }
 
@@ -68,10 +65,11 @@ class TokenAccountListener(
         private val checkTokenAccounts = AtomicBoolean(false)
         private val tokenAccounts = ConcurrentHashMap<PublicKey, TokenAccount>()
         val websocket: SolanaRpcWebsocket = websocketBuilder
-            .onClose { _, errorCode, reason ->
+            .onClose { websocket, errorCode, reason ->
                 logger.info("Websocket for $owner closed: $errorCode, $reason. Reconnecting...")
-                ForkJoinPool.commonPool().submit { reconnect() }
-            }.create()
+                commonPool().execute { reconnect(websocket, logger) }
+            }
+            .create()
 
         fun subscribe(onTokenAccount: (TokenAccount) -> Unit) {
             websocket.programSubscribe(
@@ -100,36 +98,6 @@ class TokenAccountListener(
 
         private fun getAllTokenAccounts(): List<AccountInfo<TokenAccount>> {
             return solanaClient.call(SolanaRpcClient::getTokenAccountsForProgramByOwner, owner, programId)
-        }
-
-        private fun reconnect(remainingAttempts: Int = MAX_BACKOFF_DELAY_SECS) {
-            val connectFuture = checkNotNull(websocket.connect()) {
-                "Cannot reconnect to SolanaRpcWebsocket as it has been closed"
-            }
-            val connected = try {
-                connectFuture.get(CONNECTION_TIMEOUT_SECONDS, SECONDS)
-                true
-            } catch (e: Exception) {
-                logger.warn("Solana websocket failed to connect: ${e.message}")
-                false
-            }
-            when {
-                connected -> logger.info("Reconnected to websocket for $owner")
-                remainingAttempts > 0 -> {
-                    logger.warn("Failed to reconnect to websocket, trying again...")
-                    val attemptNumber = MAX_BACKOFF_DELAY_SECS - remainingAttempts + 1
-                    logger.info("Retrying to reconnect in $attemptNumber seconds (attempt $attemptNumber)")
-                    delayedExecutor(attemptNumber.toLong(), SECONDS).execute {
-                        reconnect(remainingAttempts - 1)
-                    }
-                }
-                else -> {
-                    logger.info("Failed to reconnect to websocket. Trying again in $MAX_BACKOFF_DELAY_SECS seconds")
-                    delayedExecutor(MAX_BACKOFF_DELAY_SECS.toLong(), SECONDS).execute {
-                        reconnect(0)
-                    }
-                }
-            }
         }
     }
 }

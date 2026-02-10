@@ -1,5 +1,6 @@
 package com.r3.corda.lib.solana.core
 
+import com.r3.corda.lib.solana.core.internal.reconnect
 import io.github.bucket4j.Bucket
 import org.slf4j.LoggerFactory
 import software.sava.core.accounts.Signer
@@ -24,6 +25,7 @@ import java.time.temporal.ChronoUnit
 import java.util.Base64
 import java.util.TreeSet
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletableFuture.delayedExecutor
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executor
@@ -31,7 +33,6 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
 import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit.MILLISECONDS
@@ -133,9 +134,6 @@ constructor(
     // in HttpClient are asynchronous we might risk deadlock.
     private val internalExecutor = Executors.newCachedThreadPool(NamedThreadFactory("SolanaClient-Internal"))
 
-    // Use directly only for short-lived tasks, otherwise use scheduleLongTask
-    private val scheduler = Executors.newSingleThreadScheduledExecutor(NamedThreadFactory("SolanaClient-Scheduler"))
-
     private val mainExecutor = userMainExecutor ?: run {
         // Use the largest RPC rate limit as a reasonable backup value for the pool size
         val rateLimits = TreeSet(specificRateLimits.values)
@@ -172,6 +170,10 @@ constructor(
             .uri(websocketUrl)
             .webSocketBuilder(httpClient)
             .commitment(commitment)
+            .onClose { websocket, statusCode, reason ->
+                log.debug("Websocket disconnected ({}: {}), reconnecting...", statusCode, reason)
+                mainExecutor.execute { reconnect(websocket, log) }
+            }
             .create()
     }
 
@@ -701,30 +703,17 @@ constructor(
     // We want to keep the singleton scheduler free from long running tasks and so instead the given task is scheduled
     // to be _submitted_ to the general executor after the given delay.
     private fun <T> scheduleLongTask(taskExecutor: Executor, initialDelay: Duration, longTask: () -> T): Future<T> {
-        lateinit var scheduledFuture: ScheduledFuture<*>
+        val returnFuture = CompletableFuture<T>()
 
-        val returnFuture = object : CompletableFuture<T>() {
-            // Make sure the underlying scheduled future is also cancelled
-            override fun cancel(mayInterruptIfRunning: Boolean): Boolean {
-                var result = super.cancel(mayInterruptIfRunning)
-                if (scheduledFuture.cancel(mayInterruptIfRunning)) {
-                    result = true
+        delayedExecutor(initialDelay.toMillis(), MILLISECONDS, taskExecutor).execute {
+            if (!returnFuture.isCancelled) {
+                try {
+                    returnFuture.complete(longTask())
+                } catch (t: Throwable) {
+                    returnFuture.completeExceptionally(t)
                 }
-                return result
             }
         }
-
-        scheduledFuture = scheduler.schedule({
-            taskExecutor.execute {
-                if (!returnFuture.isCancelled) {
-                    try {
-                        returnFuture.complete(longTask())
-                    } catch (t: Throwable) {
-                        returnFuture.completeExceptionally(t)
-                    }
-                }
-            }
-        }, initialDelay.toMillis(), MILLISECONDS)
 
         return returnFuture
     }
@@ -737,7 +726,6 @@ constructor(
         if (userMainExecutor == null) {
             (mainExecutor as ExecutorService).shutdownNow()
         }
-        scheduler.shutdownNow()
         internalExecutor.shutdownNow()
     }
 
