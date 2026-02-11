@@ -10,7 +10,7 @@ ktlint:
     FunctionExpressionBody:
         active: false
     ChainMethodContinuation:
-        forceMultilineWhenChainOperatorCountGreaterOrEqualThan: 5
+        active: false
 style:
     ThrowsCount:
         active: false
@@ -19,6 +19,8 @@ style:
     ReturnCount:
         max: 5
 exceptions:
+    SwallowedException:
+        active: false
     TooGenericExceptionCaught:
         active: false
 complexity:

@@ -1,5 +1,6 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
+import com.r3.corda.lib.solana.core.FileSigner
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.contracts.types.TokenPointer
 import net.corda.core.contracts.StateAndRef
@@ -10,7 +11,6 @@ import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.AppServiceHub
 import net.corda.core.solana.Pubkey
-import net.corda.solana.notary.common.FileSigner
 import software.sava.core.accounts.Signer
 import java.util.UUID
 import kotlin.io.path.Path

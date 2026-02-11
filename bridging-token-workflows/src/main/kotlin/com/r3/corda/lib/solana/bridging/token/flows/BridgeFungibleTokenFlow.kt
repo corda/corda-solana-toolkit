@@ -3,6 +3,7 @@ package com.r3.corda.lib.solana.bridging.token.flows
 import co.paralleluniverse.fibers.Suspendable
 import com.r3.corda.lib.solana.bridging.token.contracts.FungibleTokenBridgeContract
 import com.r3.corda.lib.solana.bridging.token.states.BridgedFungibleTokenProxy
+import com.r3.corda.lib.solana.core.cordautils.Token2022
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.workflows.utilities.sessionsForParties
 import net.corda.core.contracts.StateAndRef
@@ -17,7 +18,6 @@ import net.corda.core.flows.StartableByService
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.solana.sdk.Token2022
 
 /**
  * Bridges a Corda-side fungible token position to an equivalent SPL token on Solana.
@@ -54,7 +54,10 @@ class BridgeFungibleTokenFlow(
             val bridgingCoordinates = bridgingService.getBridgingCoordinates(token, originalHolder)
 
             // Idempotent creation, safe to invoke again if the flow restarts from a checkpoint.
-            bridgingService.createAta(bridgingCoordinates.mintAccount, bridgingCoordinates.mintWalletAccount)
+            bridgingService.createAta(
+                bridgingCoordinates.mintAccount.toPublicKey(),
+                bridgingCoordinates.mintWalletAccount.toPublicKey()
+            )
 
             // Move the token from ourIdentity (implied BridgeAuthority) to the lock holder (confidential identity).
             // Also, create a proxy of Fungible Token that will be later used to mint a token on Solana

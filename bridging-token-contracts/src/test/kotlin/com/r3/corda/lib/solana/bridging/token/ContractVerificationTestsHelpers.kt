@@ -1,5 +1,6 @@
 package com.r3.corda.lib.solana.bridging.token
 
+import com.r3.corda.lib.solana.core.cordautils.Token2022
 import com.r3.corda.lib.tokens.contracts.FungibleTokenContract
 import com.r3.corda.lib.tokens.contracts.types.TokenType
 import com.r3.corda.lib.tokens.contracts.utilities.issuedBy
@@ -13,7 +14,6 @@ import net.corda.core.solana.AccountMeta
 import net.corda.core.solana.Pubkey
 import net.corda.core.solana.SolanaInstruction
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.solana.sdk.Token2022
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.TestIdentity

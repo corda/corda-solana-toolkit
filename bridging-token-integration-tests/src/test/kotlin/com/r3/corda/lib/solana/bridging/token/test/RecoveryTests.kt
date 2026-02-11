@@ -1,5 +1,6 @@
 package com.r3.corda.lib.solana.bridging.token.test
 
+import com.r3.corda.lib.solana.testing.SolanaTestValidator
 import net.corda.core.identity.CordaX500Name
 import net.corda.testing.node.StartedMockNode
 import org.junit.jupiter.api.Test
@@ -21,7 +22,7 @@ class RecoveryTests : ValidatorTests() {
         val msftTokenType = issuingBank.issue(msftDescriptor, ISSUING_QUANTITY, generalNotaryName)
 
         assertNull(
-            validator.client.getAccountInfo(bob.mintToAta[msftTokenMint]!!),
+            validator.accounts().getAccountInfo(bob.mintToAta[msftTokenMint]!!),
             "Bob MSFT ATA should not be created yet"
         )
 
@@ -34,10 +35,24 @@ class RecoveryTests : ValidatorTests() {
 
         ensureLockedAmount(msftTokenType, MOVE_TOTAL_QUANTITY)
 
-        // Restart the validator on an alternative configuration simulating the connection drop
-        validator.stopIfRunning()
-        validator = SolanaTestValidator().also {
-            it.start(validator.ledgerDir, SolanaTestValidator.ALTERNATIVE_RPC_PORT)
+        val originalRpcPort = validator.rpcPort()
+        val ledger = validator.ledger()
+
+        // Restart the validator on an alternative RPC port which simulates a connection drop
+        validator.close()
+        while (true) {
+            validator = SolanaTestValidator
+                .builder()
+                .ledger(ledger)
+                .dynamicPorts()
+                .start()
+                .waitForReadiness()
+            if (validator.rpcPort() != originalRpcPort) {
+                break
+            }
+            // The validator has coincidentally restarted on the original port, which we don't want so we shut it down
+            // and try again.
+            validator.close()
         }
 
         // Before continuing, ensure the alternative config validator is available and responds to RPC calls
@@ -45,11 +60,15 @@ class RecoveryTests : ValidatorTests() {
 
         redeemAndCheck(bob, msftTokenMint, msftTokenType, MOVE_QUANTITY_3, false)
 
-        // Restart the validator on the default configuration simulating the connection restore
-        validator.stopIfRunning()
-        validator = SolanaTestValidator().also {
-            it.start(validator.ledgerDir, SolanaTestValidator.DEFAULT_RPC_PORT)
-        }
+        // Restart the validator on the original RPC port simulating the connection restoration
+        validator.close()
+        validator = SolanaTestValidator
+            .builder()
+            .ledger(ledger)
+            .dynamicPorts()
+            .rpcPort(originalRpcPort)
+            .start()
+            .waitForReadiness()
         val expectedBobNodeBalance = MOVE_TOTAL_QUANTITY - MOVE_QUANTITY_3
         ensureLockedAmount(msftTokenType, expectedBobNodeBalance)
     }

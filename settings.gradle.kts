@@ -4,6 +4,9 @@ include(
     "bridging-token-contracts",
     "bridging-token-workflows",
     "bridging-token-integration-tests",
+    "core",
+    "corda-utils",
+    "testing",
 )
 
 pluginManagement {

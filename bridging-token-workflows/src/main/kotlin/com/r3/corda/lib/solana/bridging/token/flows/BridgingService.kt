@@ -1,5 +1,10 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
+import com.r3.corda.lib.solana.core.AccountManagement
+import com.r3.corda.lib.solana.core.SolanaClient
+import com.r3.corda.lib.solana.core.tokens.TokenAccountListener
+import com.r3.corda.lib.solana.core.tokens.TokenManagement
+import com.r3.corda.lib.solana.core.tokens.TokenProgram
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.workflows.utilities.toParty
 import net.corda.core.contracts.StateAndRef
@@ -12,8 +17,8 @@ import net.corda.core.node.services.ServiceLifecycleEvent
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.solana.Pubkey
 import net.corda.core.utilities.debug
-import net.corda.solana.notary.common.SolanaClient
 import org.slf4j.LoggerFactory
+import software.sava.core.accounts.PublicKey
 import software.sava.core.accounts.token.TokenAccount
 import software.sava.rpc.json.http.client.SolanaRpcClient
 import java.net.URI
@@ -35,7 +40,8 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         globalCommitmentLevel
     )
     private val tokenAccountListener = TokenAccountListener(solanaClient, tokenProgramId)
-    private val accountService = TokenAccountService(solanaClient, configHandler.bridgeAuthoritySigner)
+    private val tokenManagement = TokenManagement(solanaClient)
+    private val accountManagement = AccountManagement(solanaClient)
 
     init {
         appServiceHub.registerUnloadHandler { onStop() }
@@ -135,8 +141,12 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         }
     }
 
-    fun createAta(mint: Pubkey, owner: Pubkey) {
-        accountService.createAta(mint.toPublicKey(), owner.toPublicKey())
+    fun createAta(mint: PublicKey, owner: PublicKey) {
+        val ata = TokenManagement.getAssociatedTokenAccountAddress(mint, owner, TokenProgram.valueOf(tokenProgramId))
+        // First check the ATA doesn't exist before spending the transaction fee.
+        if (accountManagement.getAccountInfo(ata) == null) {
+            tokenManagement.createAssociatedTokenAccount(configHandler.bridgeAuthoritySigner, mint, owner)
+        }
     }
 
     private fun callRedemptionFlow(

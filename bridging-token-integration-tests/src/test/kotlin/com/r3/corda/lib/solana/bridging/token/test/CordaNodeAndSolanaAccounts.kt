@@ -1,9 +1,10 @@
 package com.r3.corda.lib.solana.bridging.token.test
 
 import com.r3.corda.lib.solana.bridging.token.flows.tokenProgramId
+import com.r3.corda.lib.solana.core.SolanaUtils
+import com.r3.corda.lib.solana.testing.SolanaTestValidator
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.solana.notary.common.SolanaUtils
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.StartedMockNode
 import software.sava.core.accounts.PublicKey
@@ -28,7 +29,7 @@ data class CordaNodeAndSolanaAccounts(
             testValidator: SolanaTestValidator,
         ): CordaNodeAndSolanaAccounts {
             val signer = SolanaUtils.randomSigner()
-            testValidator.accounts.airdropSol(signer.publicKey(), 10)
+            testValidator.accounts().airdropSol(signer.publicKey(), 10)
             val node = network.createPartyNode(cordaName)
             return CordaNodeAndSolanaAccounts(
                 signer = signer,

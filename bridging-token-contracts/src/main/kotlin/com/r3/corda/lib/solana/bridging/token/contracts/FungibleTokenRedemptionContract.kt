@@ -1,6 +1,7 @@
 package com.r3.corda.lib.solana.bridging.token.contracts
 
 import com.r3.corda.lib.solana.bridging.token.states.FungibleTokenBurnReceipt
+import com.r3.corda.lib.solana.core.cordautils.Token2022
 import com.r3.corda.lib.tokens.contracts.commands.MoveTokenCommand
 import com.r3.corda.lib.tokens.contracts.commands.TokenCommand
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
@@ -10,7 +11,6 @@ import net.corda.core.contracts.Contract
 import net.corda.core.identity.AbstractParty
 import net.corda.core.solana.SolanaInstruction
 import net.corda.core.transactions.LedgerTransaction
-import net.corda.solana.sdk.Token2022
 
 class FungibleTokenRedemptionContract : Contract {
     override fun verify(tx: LedgerTransaction) {

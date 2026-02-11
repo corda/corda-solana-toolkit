@@ -11,19 +11,19 @@ abstract class FlowTests : ValidatorTests() {
         val aaplTokenType = issuingBank.issue(aaplDescriptor, ISSUING_QUANTITY * BigDecimal(2), generalNotaryName)
 
         assertNull(
-            validator.client.getAccountInfo(alice.mintToAta[msftTokenMint]!!),
+            validator.accounts().getAccountInfo(alice.mintToAta[msftTokenMint]!!),
             "Alice MSFT ATA should not be created yet"
         )
         assertNull(
-            validator.client.getAccountInfo(alice.mintToAta[aaplTokenMint]!!),
+            validator.accounts().getAccountInfo(alice.mintToAta[aaplTokenMint]!!),
             "Alice AAPL ATA should not be created yet"
         )
         assertNull(
-            validator.client.getAccountInfo(bob.mintToAta[msftTokenMint]!!),
+            validator.accounts().getAccountInfo(bob.mintToAta[msftTokenMint]!!),
             "Bob MSFT ATA should not be created yet"
         )
         assertNull(
-            validator.client.getAccountInfo(bob.mintToAta[aaplTokenMint]!!),
+            validator.accounts().getAccountInfo(bob.mintToAta[aaplTokenMint]!!),
             "Bob AAPL ATA should not be created yet"
         )
 

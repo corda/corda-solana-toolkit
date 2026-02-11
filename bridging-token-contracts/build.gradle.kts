@@ -5,23 +5,22 @@ plugins {
 }
 
 dependencies {
+    implementation(project(":corda-utils"))
+
     cordaProvided(libs.corda.core)
-    cordaProvided(libs.solana.notary.common)
-    cordaProvided(libs.ent.corda.solana.sdk)
 
     cordapp(libs.tokens.contracts)
 
-    detektPlugins(libs.detekt.ktlint.wrapper)
-
-    testImplementation(libs.ent.corda.node.driver)
-    testImplementation(libs.ent.corda.core.test.utils)
-    testImplementation(libs.ent.corda.test.utils)
+    testImplementation(libs.corda.ent.node.driver)
+    testImplementation(libs.corda.ent.core.test.utils)
+    testImplementation(libs.corda.ent.test.utils)
     testImplementation(libs.mockito.core)
-    testImplementation(libs.sava.core)
 
     // When using SNAPSHOT node-driver, make sure we are using the same build of the Enterprise Corda node
-    testRuntimeOnly(libs.ent.corda.node.api)
-    testRuntimeOnly(libs.ent.corda.node)
+    testRuntimeOnly(libs.corda.ent.node.api)
+    testRuntimeOnly(libs.corda.ent.node)
+
+    detektPlugins(libs.detekt.ktlint.wrapper)
 }
 
 cordapp {
@@ -37,9 +36,6 @@ cordapp {
 }
 
 java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(17))
-    }
     withSourcesJar()
 }
 
