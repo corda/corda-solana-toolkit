@@ -4,10 +4,10 @@ import com.r3.corda.lib.solana.core.SolanaClient
 import org.junit.jupiter.api.extension.ExtendWith
 
 /**
- * When annotated on a test class automatically starts a [SolanaTestValidator] before all the tests and closes it after
- * they have all run. This is a convenience annotation for [SolanaTestValidatorExtension].
+ * Automatically starts a [SolanaTestValidator] before all the tests of a class and closes it after they have all run.
+ * This is a convenience annotation for [SolanaTestValidatorExtension].
  *
- * Tests and lifecycle methods can specify a [SolanaClient] parameter whiich will be connected to the validator. They
+ * Tests and lifecycle methods can specify a [SolanaClient] parameter which will be connected to the validator. They
  * can also specify a [SolanaTestValidator] parameter to get access to the instance itself.
  *
  * By default, the test validator uses a temporary directory for its ledger and listens on dynamically assigned ports.
