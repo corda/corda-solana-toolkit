@@ -3,7 +3,6 @@ artifactory = "6.0.2"
 axion-release = "1.21.0"
 ben-manes = "0.53.0"
 bucket4j = "8.16.0"
-caffeine-cache = "3.2.3"
 corda-ent = "4.14-20260206.004000-81"
 corda-os = "4.14-20260130_101700-d7fa3ea"
 corda-plugin = "5.1.3"
@@ -18,7 +17,6 @@ tokens-sdk = "1.3.2"
 
 [libraries]
 bucket4j = { module = "com.bucket4j:bucket4j_jdk17-core", version.ref = "bucket4j" }
-caffeine-cache = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "caffeine-cache" }
 corda-core = { module = "net.corda:corda-core", version.ref = "corda-os" }
 corda-ent-core-test-utils = { module = "com.r3.corda:corda-core-test-utils", version.ref = "corda-ent" }
 corda-ent-node = { module = "com.r3.corda:corda-node", version.ref = "corda-ent" }
