@@ -21,6 +21,7 @@ data class BridgeAuthorityInfo(
     private val redemptionTokenAccounts: Map<Party, List<AssociatedTokenAccountInfo>>,
 ) {
     companion object {
+        @Suppress("LongMethod")
         fun createAndInitialise(
             network: MockNetwork,
             identity: TestIdentity,
@@ -52,6 +53,7 @@ data class BridgeAuthorityInfo(
                         it.key.tokenTypeIdentifier to mapOf(
                             "tokenMint" to it.value.toBase58(),
                             "mintAuthority" to mintAuthority.toBase58(),
+                            "cordaToSolanaTokenRatio" to 1
                         )
                     }.toMap(),
                 "lockingIdentityLabel" to UUID.randomUUID().toString(),

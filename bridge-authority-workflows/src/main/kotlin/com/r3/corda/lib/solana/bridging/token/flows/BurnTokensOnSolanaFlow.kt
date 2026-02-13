@@ -12,7 +12,8 @@ import net.corda.core.transactions.TransactionBuilder
 class BurnTokensOnSolanaFlow(
     private val redemptionCoordinates: RedemptionCoordinates,
     private val solanaNotary: Party,
-    private val amount: Long,
+    private val cordaAmount: Long,
+    private val solanaAmount: Long,
 ) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
@@ -22,7 +23,7 @@ class BurnTokensOnSolanaFlow(
                 mint = mintAccount,
                 owner = redemptionWalletAccount,
                 source = redemptionTokenAccount,
-                amount = amount,
+                amount = solanaAmount,
             )
         }
         transactionBuilder.addNotaryInstruction(instruction)
@@ -32,7 +33,7 @@ class BurnTokensOnSolanaFlow(
         )
         // We issue FungibleTokenBurnReceipt state to record burning of tokens on Solana
         val redeemReceiptState = redemptionCoordinates.toRedeemReceiptState(
-            amount = amount,
+            amount = cordaAmount,
             bridgeAuthority = ourIdentity
         )
         transactionBuilder.addOutputState(redeemReceiptState)

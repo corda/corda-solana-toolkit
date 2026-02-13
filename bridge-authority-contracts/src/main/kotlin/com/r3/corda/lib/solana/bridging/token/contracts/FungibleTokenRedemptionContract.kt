@@ -105,7 +105,8 @@ class FungibleTokenRedemptionContract : Contract {
             burnReceiptState.mintAccount,
             burnReceiptState.redemptionTokenAccount,
             burnReceiptState.redemptionWalletAccount,
-            burnReceiptState.amount
+            // TODO wrong conversion
+            burnReceiptState.amount * if (burnReceiptState.decimals != 0) burnReceiptState.decimals else 1
         )
         require(solanaInstruction == expectedInstruction) {
             "The Solana instruction in the transaction not the expected burn instruction:\n" +

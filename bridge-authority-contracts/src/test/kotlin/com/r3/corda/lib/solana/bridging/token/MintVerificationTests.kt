@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test
 class MintVerificationTests {
     val bridgedFungibleTokenProxy = BridgedFungibleTokenProxy(
         10000,
+        DECIMALS,
         tokenAccount,
         mintAccount,
         mintAuthority,

@@ -43,11 +43,15 @@ class RedeemFungibleTokenFlow(
 ) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
+        val cordaAmount = truncateByFactor(amount, redemptionCoordinates.cordaToSolanaTokenRatio.toLong())
+        val newSolanaAmount = zeroOutFractionDigits(amount, redemptionCoordinates.cordaToSolanaTokenRatio.toLong())
+
         val redeemStateAndRef = subFlow(
             BurnTokensOnSolanaFlow(
                 redemptionCoordinates,
                 solanaNotary,
-                amount
+                cordaAmount,
+                newSolanaAmount
             )
         ).toLedgerTransaction(serviceHub).outRefsOfType<FungibleTokenBurnReceipt>().single()
         val notaryChangeTx = subFlow(
@@ -55,7 +59,7 @@ class RedeemFungibleTokenFlow(
         ).single()
 
         // Unlock the fungible tokens from the locking holder
-        val moveAmount = Amount(amount, findTokenTypeOfFungibleTokenBy(redemptionCoordinates.tokenId))
+        val moveAmount = Amount(cordaAmount, findTokenTypeOfFungibleTokenBy(redemptionCoordinates.tokenId))
         val lockCapture = FungibleTokenLockCapture()
         val unlockLedgerTx = subFlow(
             MoveAndUnlockFungibleTokenFlow(

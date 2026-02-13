@@ -44,6 +44,7 @@ val mintAccount = Pubkey(secureRandomBytes(32))
 val mintAuthority = Pubkey(secureRandomBytes(32))
 val tokenAccount = Pubkey(secureRandomBytes(32))
 val bridgeAuthorityWallet = Pubkey(secureRandomBytes(32))
+const val DECIMALS = 0
 
 fun instructionWithWrongOperation(programId: Pubkey): SolanaInstruction {
     val operation = 6

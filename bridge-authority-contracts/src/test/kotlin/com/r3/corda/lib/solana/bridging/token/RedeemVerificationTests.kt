@@ -18,6 +18,7 @@ class RedeemVerificationTests {
         bridgeAuthorityWallet,
         mintAccount,
         10000,
+        DECIMALS,
         bridgeAuthority
     )
 

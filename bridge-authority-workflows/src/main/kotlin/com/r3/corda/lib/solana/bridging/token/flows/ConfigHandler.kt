@@ -94,18 +94,21 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
 
     fun getTokenIdentifierByMint(mint: Pubkey) = mintAccountToTokenId[mint]
 
-    private fun toMintWithAuthority(data: Map<String, String>): MintWithAuthority {
+    private fun toMintWithAuthority(data: Map<String, Any>): MintWithAuthority {
         val mint = Pubkey.fromBase58(
-            checkNotNull(data[MintWithAuthority::tokenMint.name]) {
+            checkNotNull(data[MintWithAuthority::tokenMint.name] as String) {
                 "${MintWithAuthority::tokenMint.name} is missing in mintWithAuthority config"
             }
         )
         val authority = Pubkey.fromBase58(
-            checkNotNull(data[MintWithAuthority::mintAuthority.name]) {
+            checkNotNull(data[MintWithAuthority::mintAuthority.name] as String) {
                 "${MintWithAuthority::mintAuthority.name} is missing in mintWithAuthority config"
             }
         )
-        return MintWithAuthority(mint, authority)
+        val cordaToSolanaTokenRatioText = checkNotNull(data[MintWithAuthority::cordaToSolanaTokenRatio.name] as Int) {
+            "${MintWithAuthority::cordaToSolanaTokenRatio.name} is missing in cordaToSolanaTokenRatio config"
+        }
+        return MintWithAuthority(mint, authority, cordaToSolanaTokenRatioText)
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -149,7 +152,8 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
         return BridgingCoordinates(
             mintWithAuthority.tokenMint,
             mintWithAuthority.mintAuthority,
-            mintWalletAccount
+            mintWalletAccount,
+            mintWithAuthority.cordaToSolanaTokenRatio,
         )
     }
 
@@ -163,6 +167,7 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
         }
         return RedemptionCoordinates(
             mintWithAuthority.tokenMint,
+            mintWithAuthority.cordaToSolanaTokenRatio,
             redemptionWalletAccount,
             redemptionTokenAccount,
             tokenTypeId
@@ -170,4 +175,4 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
     }
 }
 
-private data class MintWithAuthority(val tokenMint: Pubkey, val mintAuthority: Pubkey)
+private data class MintWithAuthority(val tokenMint: Pubkey, val mintAuthority: Pubkey, val cordaToSolanaTokenRatio: Int)

@@ -60,7 +60,8 @@ import java.util.UUID
 @SolanaTestClass
 abstract class DriverTests {
     companion object {
-        const val TOKEN_DECIMALS = 3
+        const val CORDA_TOKEN_DECIMALS = 3
+        const val SOLANA_TOKEN_DECIMALS = 4
         private val ISSUING_QUANTITY = BigDecimal("2000.000")
         private val BRIDGE_QUANTITY = BigDecimal("10.250")
         private val networkParameters = NetworkParameters(
@@ -159,12 +160,14 @@ abstract class DriverTests {
                     msftDescriptor.tokenTypeIdentifier to
                         mapOf(
                             "tokenMint" to msftTokenMint.toBase58(),
-                            "mintAuthority" to mintAuthoritySigner.publicKey().toBase58()
+                            "mintAuthority" to mintAuthoritySigner.publicKey().toBase58(),
+                            "cordaToSolanaTokenRatio" to 10
                         ),
                     appleDescriptor.tokenTypeIdentifier to
                         mapOf(
                             "tokenMint" to appleTokenMint.toBase58(),
-                            "mintAuthority" to mintAuthoritySigner.publicKey().toBase58()
+                            "mintAuthority" to mintAuthoritySigner.publicKey().toBase58(),
+                            "cordaToSolanaTokenRatio" to 10
                         )
                 ),
                 "lockingIdentityLabel" to UUID.randomUUID().toString(),
@@ -194,8 +197,10 @@ abstract class DriverTests {
 
     @BeforeEach
     fun issueCordaTokens() {
-        msftTokenMint = validator.tokens().createToken(mintAuthoritySigner, TOKEN_2022, decimals = TOKEN_DECIMALS)
-        appleTokenMint = validator.tokens().createToken(mintAuthoritySigner, TOKEN_2022, decimals = TOKEN_DECIMALS)
+        msftTokenMint =
+            validator.tokens().createToken(mintAuthoritySigner, TOKEN_2022, decimals = SOLANA_TOKEN_DECIMALS)
+        appleTokenMint =
+            validator.tokens().createToken(mintAuthoritySigner, TOKEN_2022, decimals = SOLANA_TOKEN_DECIMALS)
         val assembleParticipantWithStock = fun(
             participant: SolanaParticipant,
             tokenDescriptor: TokenTypeDescriptor,
@@ -335,7 +340,7 @@ abstract class DriverTests {
             participant.wallet,
             participantAndStock.tokenAccount,
             participantAndStock.redemptionTokenAccount,
-            quantity.toRawAmount(TOKEN_DECIMALS)
+            quantity.toRawAmount(SOLANA_TOKEN_DECIMALS)
         )
         // We need to wait for the websocket listener to process the newly received event
         eventually(duration = 10.seconds) {
