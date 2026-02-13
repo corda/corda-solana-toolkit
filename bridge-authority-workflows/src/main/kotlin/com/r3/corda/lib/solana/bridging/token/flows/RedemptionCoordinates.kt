@@ -15,7 +15,7 @@ import net.corda.core.solana.Pubkey
  */
 data class RedemptionCoordinates(
     val mintAccount: Pubkey,
-    val cordaToSolanaTokenRatio: Int,
+    val conversionMultiplier: Int,
     val redemptionWalletAccount: Pubkey,
     val redemptionTokenAccount: Pubkey,
     val tokenId: String,
@@ -33,7 +33,7 @@ data class RedemptionCoordinates(
         redemptionWalletAccount = redemptionWalletAccount,
         mintAccount = mintAccount,
         amount = amount,
-        decimals = cordaToSolanaTokenRatio,
+        conversionMultiplier = conversionMultiplier,
         bridgeAuthority = bridgeAuthority
     )
 }

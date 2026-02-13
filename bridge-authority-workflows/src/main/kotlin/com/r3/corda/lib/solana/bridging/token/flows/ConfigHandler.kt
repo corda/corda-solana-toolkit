@@ -105,10 +105,10 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
                 "${MintWithAuthority::mintAuthority.name} is missing in mintWithAuthority config"
             }
         )
-        val cordaToSolanaTokenRatioText = checkNotNull(data[MintWithAuthority::cordaToSolanaTokenRatio.name] as Int) {
-            "${MintWithAuthority::cordaToSolanaTokenRatio.name} is missing in cordaToSolanaTokenRatio config"
+        val conversionMultiplierText = checkNotNull(data[MintWithAuthority::conversionMultiplier.name] as Int) {
+            "${MintWithAuthority::conversionMultiplier.name} is missing in conversionMultiplier config"
         }
-        return MintWithAuthority(mint, authority, cordaToSolanaTokenRatioText)
+        return MintWithAuthority(mint, authority, conversionMultiplierText)
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -153,7 +153,7 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
             mintWithAuthority.tokenMint,
             mintWithAuthority.mintAuthority,
             mintWalletAccount,
-            mintWithAuthority.cordaToSolanaTokenRatio,
+            mintWithAuthority.conversionMultiplier,
         )
     }
 
@@ -167,7 +167,7 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
         }
         return RedemptionCoordinates(
             mintWithAuthority.tokenMint,
-            mintWithAuthority.cordaToSolanaTokenRatio,
+            mintWithAuthority.conversionMultiplier,
             redemptionWalletAccount,
             redemptionTokenAccount,
             tokenTypeId
@@ -175,4 +175,4 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
     }
 }
 
-private data class MintWithAuthority(val tokenMint: Pubkey, val mintAuthority: Pubkey, val cordaToSolanaTokenRatio: Int)
+private data class MintWithAuthority(val tokenMint: Pubkey, val mintAuthority: Pubkey, val conversionMultiplier: Int)

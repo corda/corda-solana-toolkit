@@ -161,13 +161,13 @@ abstract class DriverTests {
                         mapOf(
                             "tokenMint" to msftTokenMint.toBase58(),
                             "mintAuthority" to mintAuthoritySigner.publicKey().toBase58(),
-                            "cordaToSolanaTokenRatio" to 10
+                            "conversionMultiplier" to 10
                         ),
                     appleDescriptor.tokenTypeIdentifier to
                         mapOf(
                             "tokenMint" to appleTokenMint.toBase58(),
                             "mintAuthority" to mintAuthoritySigner.publicKey().toBase58(),
-                            "cordaToSolanaTokenRatio" to 10
+                            "conversionMultiplier" to 10
                         )
                 ),
                 "lockingIdentityLabel" to UUID.randomUUID().toString(),

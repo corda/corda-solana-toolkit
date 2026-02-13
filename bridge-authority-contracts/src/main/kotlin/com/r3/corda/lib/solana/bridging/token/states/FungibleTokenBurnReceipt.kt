@@ -29,7 +29,7 @@ data class FungibleTokenBurnReceipt(
     val redemptionWalletAccount: Pubkey,
     val mintAccount: Pubkey,
     val amount: Long,
-    val decimals: Int,
+    val conversionMultiplier: Int,
     val bridgeAuthority: Party,
     override val participants: List<AbstractParty> = listOf(bridgeAuthority),
 ) : ContractState {

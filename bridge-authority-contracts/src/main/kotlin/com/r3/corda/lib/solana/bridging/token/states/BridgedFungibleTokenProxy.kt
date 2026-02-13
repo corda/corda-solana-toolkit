@@ -32,7 +32,7 @@ import net.corda.core.solana.Pubkey
 @BelongsToContract(FungibleTokenBridgeContract::class)
 data class BridgedFungibleTokenProxy(
     val amount: Long,
-    val decimals: Int,
+    val conversionMultiplier: Int,
     val bridgeTokenAccount: Pubkey,
     val mintAccount: Pubkey,
     val mintAuthority: Pubkey,

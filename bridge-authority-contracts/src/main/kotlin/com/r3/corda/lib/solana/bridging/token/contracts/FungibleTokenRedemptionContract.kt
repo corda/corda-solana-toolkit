@@ -101,12 +101,15 @@ class FungibleTokenRedemptionContract : Contract {
         val solanaInstruction = tx.notaryInstructionsOfType<SolanaInstruction>().requireSingle {
             "Exactly one Solana instruction required"
         }
+        require(burnReceiptState.conversionMultiplier > 0) {
+            // TODO and power of 10
+            "Conversion multiplier must be greater than zero"
+        }
         val expectedInstruction = Token2022.burn(
             burnReceiptState.mintAccount,
             burnReceiptState.redemptionTokenAccount,
             burnReceiptState.redemptionWalletAccount,
-            // TODO wrong conversion
-            burnReceiptState.amount * if (burnReceiptState.decimals != 0) burnReceiptState.decimals else 1
+            burnReceiptState.amount * burnReceiptState.conversionMultiplier
         )
         require(solanaInstruction == expectedInstruction) {
             "The Solana instruction in the transaction not the expected burn instruction:\n" +

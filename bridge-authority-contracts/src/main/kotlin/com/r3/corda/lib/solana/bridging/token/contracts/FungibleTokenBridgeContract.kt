@@ -54,10 +54,12 @@ class FungibleTokenBridgeContract : Contract {
             "The token holder must change when locking the token"
         }
 
-        require(
-            outputToken.amount.quantity == tokenProxy.amount /
-                if (tokenProxy.decimals != 0) tokenProxy.decimals else 1 // TODO wrong conversion
-        ) {
+        require(tokenProxy.conversionMultiplier > 0) {
+            // TODO and power of 10
+            "Conversion multiplier must be greater than zero"
+        }
+
+        require(outputToken.amount.quantity == tokenProxy.amount / tokenProxy.conversionMultiplier) {
             "BridgedFungibleTokenProxy must have the same amount as the locked token"
         }
 

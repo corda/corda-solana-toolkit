@@ -19,7 +19,7 @@ data class BridgingCoordinates(
     val mintAccount: Pubkey,
     val mintAuthority: Pubkey,
     val mintWalletAccount: Pubkey,
-    val cordaToSolanaTokenRatio: Int,
+    val conversionMultiplier: Int,
 ) {
     /**
      * Creates an unminted [BridgedFungibleTokenProxy] with ATA destination to bridge to.
@@ -36,8 +36,8 @@ data class BridgingCoordinates(
             ).publicKey()
             .toPubkey()
         return BridgedFungibleTokenProxy(
-            amount = token.amount.quantity * cordaToSolanaTokenRatio,
-            decimals = cordaToSolanaTokenRatio,
+            amount = token.amount.quantity * conversionMultiplier,
+            conversionMultiplier = conversionMultiplier,
             mintAccount = this.mintAccount,
             mintAuthority = this.mintAuthority,
             bridgeTokenAccount = tokenAccount,

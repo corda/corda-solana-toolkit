@@ -43,8 +43,8 @@ class RedeemFungibleTokenFlow(
 ) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
-        val cordaAmount = truncateByFactor(amount, redemptionCoordinates.cordaToSolanaTokenRatio.toLong())
-        val newSolanaAmount = zeroOutFractionDigits(amount, redemptionCoordinates.cordaToSolanaTokenRatio.toLong())
+        val cordaAmount = truncateByFactor(amount, redemptionCoordinates.conversionMultiplier.toLong())
+        val newSolanaAmount = zeroOutFractionDigits(amount, redemptionCoordinates.conversionMultiplier.toLong())
 
         val redeemStateAndRef = subFlow(
             BurnTokensOnSolanaFlow(
