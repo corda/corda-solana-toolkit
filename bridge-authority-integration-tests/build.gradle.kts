@@ -10,8 +10,8 @@ dependencies {
     cordapp(libs.tokens.contracts)
     cordapp(libs.tokens.workflows)
 
-    cordapp(project(":bridging-token-contracts"))
-    cordapp(project(":bridging-token-workflows"))
+    cordapp(project(":bridge-authority-contracts"))
+    cordapp(project(":bridge-authority-workflows"))
 
     testImplementation(project(":core"))
     testImplementation(project(":testing"))

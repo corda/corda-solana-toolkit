@@ -1,9 +1,9 @@
 rootProject.name = "corda-solana-toolkit"
 
 include(
-    "bridging-token-contracts",
-    "bridging-token-workflows",
-    "bridging-token-integration-tests",
+    "bridge-authority-contracts",
+    "bridge-authority-workflows",
+    "bridge-authority-integration-tests",
     "core",
     "corda-utils",
     "testing",

@@ -1,24 +1,19 @@
 plugins {
     id("default-kotlin")
     alias(libs.plugins.cordapp)
+    alias(libs.plugins.quasar.utils)
     id("r3-artifactory")
 }
 
 dependencies {
+    implementation(project(":core"))
     implementation(project(":corda-utils"))
 
     cordaProvided(libs.corda.core)
 
+    cordapp(project(":bridge-authority-contracts"))
     cordapp(libs.tokens.contracts)
-
-    testImplementation(libs.corda.ent.node.driver)
-    testImplementation(libs.corda.ent.core.test.utils)
-    testImplementation(libs.corda.ent.test.utils)
-    testImplementation(libs.mockito.core)
-
-    // When using SNAPSHOT node-driver, make sure we are using the same build of the Enterprise Corda node
-    testRuntimeOnly(libs.corda.ent.node.api)
-    testRuntimeOnly(libs.corda.ent.node)
+    cordapp(libs.tokens.workflows)
 
     detektPlugins(libs.detekt.ktlint.wrapper)
 }
@@ -29,7 +24,7 @@ cordapp {
     minimumPlatformVersion.set(platformVersion)
 
     workflow {
-        name.set("Corda Bridging Tokens Contracts")
+        name.set("Solana Bridge Authority Workflows")
         versionId.set(properties["cordaVersionId"].toString().toInt())
         vendor.set("R3")
     }
@@ -39,10 +34,13 @@ java {
     withSourcesJar()
 }
 
+tasks.jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
 publishing {
     publications {
         create<MavenPublication>(project.name) {
-            artifactId = "corda-bridging-token-contracts"
             from(components["cordapp"])
         }
     }
