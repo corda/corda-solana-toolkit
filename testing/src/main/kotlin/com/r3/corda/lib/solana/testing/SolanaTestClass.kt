@@ -17,6 +17,8 @@ import org.junit.jupiter.api.extension.ExtendWith
  * @property waitForReadiness By default the extension will wait for the validator to be in a state where it can
  * receive transactions. This adds some time to the test startup. This can be turned off by specifying `false`. See
  * [SolanaTestValidator.waitForReadiness].
+ *
+ * Note, Solana must be [installed](https://solana.com/docs/intro/installation) locally to use this extension.
  */
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)

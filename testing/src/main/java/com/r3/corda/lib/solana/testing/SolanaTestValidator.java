@@ -16,6 +16,11 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
+/**
+ * Wrapper around the {@link
+ * <a href="https://docs.anza.xyz/cli/examples/test-validator"><code>solana-test-validator</code></a>}. Requires
+ * Solana to be [installed](https://solana.com/docs/intro/installation) locally.
+ */
 public final class SolanaTestValidator implements AutoCloseable {
     private static final Logger logger = LoggerFactory.getLogger(SolanaTestValidator.class);
     private static final Pattern finalizedSlotPattern = Pattern.compile("Finalized Slot: (\\d+)");
