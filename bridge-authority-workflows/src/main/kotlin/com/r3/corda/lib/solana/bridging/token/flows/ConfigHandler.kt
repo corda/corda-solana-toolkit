@@ -12,12 +12,13 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.AppServiceHub
 import net.corda.core.solana.Pubkey
 import software.sava.core.accounts.Signer
+import java.time.Duration
 import java.util.UUID
 import kotlin.io.path.Path
 
 class ConfigHandler(appServiceHub: AppServiceHub) {
     companion object {
-        private const val DEFAULT_REDEMPTION_CHECK_INTERVAL_SECONDS = 10L
+        private val DEFAULT_REDEMPTION_CHECK_INTERVAL = Duration.ofSeconds(10)
     }
 
     private val participants: Map<CordaX500Name, Pubkey>
@@ -31,7 +32,7 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
     val solanaRpcUrl: String
     val redemptionWalletAccountToHolder: Map<Pubkey, CordaX500Name>
     val bridgeAuthoritySigner: Signer
-    val redemptionCheckIntervalSeconds: Long
+    val redemptionCheckInterval: Duration
 
     init {
         val config = appServiceHub.getAppContext().config
@@ -54,10 +55,10 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
         solanaWsUrl = config.getString("solanaWsUrl")
         solanaRpcUrl = config.getString("solanaRpcUrl")
         bridgeAuthoritySigner = FileSigner.read(Path(config.getString("bridgeAuthorityWalletFile")))
-        redemptionCheckIntervalSeconds = if (config.exists("redemptionCheckIntervalSeconds")) {
-            config.getLong("redemptionCheckIntervalSeconds")
+        redemptionCheckInterval = if (config.exists("redemptionCheckIntervalSeconds")) {
+            Duration.ofSeconds(config.getLong("redemptionCheckIntervalSeconds"))
         } else {
-            DEFAULT_REDEMPTION_CHECK_INTERVAL_SECONDS
+            DEFAULT_REDEMPTION_CHECK_INTERVAL
         }
     }
 

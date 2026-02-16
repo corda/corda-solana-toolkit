@@ -60,9 +60,7 @@ data class BridgeAuthorityInfo(
                 "solanaRpcUrl" to "${testValidator.rpcUrl()}",
                 "solanaWsUrl" to "${testValidator.websocketUrl()}",
                 "bridgeAuthorityWalletFile" to mintWallet.file.toString(),
-                // Set to very height value interval to effectively disable redemption in tests in order
-                // to validate "core" real time processing and Sava listeners
-                "redemptionCheckIntervalSeconds" to 300, // 5 minutes
+                "redemptionCheckIntervalSeconds" to 1,
             )
             val node = network.createNode(
                 MockNodeParameters(

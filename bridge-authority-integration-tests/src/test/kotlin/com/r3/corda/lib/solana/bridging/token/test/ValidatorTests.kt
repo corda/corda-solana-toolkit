@@ -310,16 +310,16 @@ abstract class ValidatorTests {
         val fromTokenAccount = requireNotNull(stakeholderInfo.mintToAta[mint]) {
             "Source token account must not be null"
         }
-        val toTokenAccount = bridgeAuthority.redemptionTokenAccountForPartyAndMint(stakeholderInfo.party, mint)
+        val redemptionAccount = bridgeAuthority.redemptionTokenAccountForPartyAndMint(stakeholderInfo.party, mint)
         validator.tokens().transfer(
             stakeholderInfo.signer,
             fromTokenAccount,
-            toTokenAccount,
+            redemptionAccount,
             moveQuantity.toRawAmount()
         )
         val party = stakeholderInfo.node.party()
         eventually(duration = 10.seconds) {
-            val balance = validator.client().getTokenBalance(toTokenAccount)
+            val balance = validator.client().getTokenBalance(redemptionAccount)
             assertEquals(
                 0,
                 balance.compareTo(moveQuantity),

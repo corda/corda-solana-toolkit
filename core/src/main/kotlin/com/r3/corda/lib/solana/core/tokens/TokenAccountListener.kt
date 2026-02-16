@@ -10,14 +10,19 @@ import software.sava.rpc.json.http.client.SolanaRpcClient
 import software.sava.rpc.json.http.response.AccountInfo
 import software.sava.rpc.json.http.ws.SolanaRpcWebsocket
 import java.net.http.HttpClient
+import java.time.Duration
+import java.util.concurrent.CompletableFuture.delayedExecutor
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.ForkJoinPool.commonPool
-import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.TimeUnit.MILLISECONDS
 
-class TokenAccountListener(
+class TokenAccountListener
+@JvmOverloads
+constructor(
     private val solanaClient: SolanaClient,
     private val programId: PublicKey = SolanaAccounts.MAIN_NET.tokenProgram(),
+    private val pollingInterval: Duration = Duration.ofSeconds(10),
 ) : AutoCloseable {
     companion object {
         private val logger = LoggerFactory.getLogger(TokenAccountListener::class.java)
@@ -62,7 +67,6 @@ class TokenAccountListener(
     }
 
     private inner class Subscription(val owner: PublicKey) {
-        private val checkTokenAccounts = AtomicBoolean(false)
         private val tokenAccounts = ConcurrentHashMap<PublicKey, TokenAccount>()
         val websocket: SolanaRpcWebsocket = websocketBuilder
             .onClose { websocket, errorCode, reason ->
@@ -72,28 +76,35 @@ class TokenAccountListener(
             .create()
 
         fun subscribe(onTokenAccount: (TokenAccount) -> Unit) {
-            websocket.programSubscribe(
-                programId,
-                listOf(TokenAccount.createOwnerFilter(owner)),
-                { _ ->
-                    // This flag is to prevent checking existing token accounts on first subscription. We only want
-                    // to check for existing token accounts if we've reconnected and thus might have missed some
-                    // updates.
-                    if (checkTokenAccounts.getAndSet(true)) {
-                        for (account in getAllTokenAccounts()) {
-                            val previous = tokenAccounts.put(account.pubKey, account.data)
-                            if (previous != account.data) {
-                                onTokenAccount(account.data)
-                            }
+            websocket.programSubscribe(programId, listOf(TokenAccount.createOwnerFilter(owner))) { accountInfo ->
+                commonPool().execute {
+                    try {
+                        val tokenAccount = TokenAccount.read(accountInfo.pubKey, accountInfo.data)
+                        tokenAccounts[tokenAccount.address] = tokenAccount
+                        onTokenAccount(tokenAccount)
+                    } catch (e: Exception) {
+                        logger.warn("Error processing websocket update for $owner ($accountInfo)", e)
+                    }
+                }
+            }
+            // Perform polling as a backup in case websocket missed events due to disconnect or any other reason.
+            schedulePoll(onTokenAccount)
+        }
+
+        private fun schedulePoll(onTokenAccount: (TokenAccount) -> Unit) {
+            delayedExecutor(pollingInterval.toMillis(), MILLISECONDS).execute {
+                try {
+                    for (account in getAllTokenAccounts()) {
+                        val previous = tokenAccounts.put(account.pubKey, account.data)
+                        if (previous != account.data) {
+                            onTokenAccount(account.data)
                         }
                     }
-                },
-                { accountInfo ->
-                    val tokenAccount = TokenAccount.read(accountInfo.pubKey, accountInfo.data)
-                    tokenAccounts[tokenAccount.address] = tokenAccount
-                    onTokenAccount(tokenAccount)
+                } catch (e: Exception) {
+                    logger.warn("Error processing polling update for $owner", e)
                 }
-            )
+                schedulePoll(onTokenAccount)
+            }
         }
 
         private fun getAllTokenAccounts(): List<AccountInfo<TokenAccount>> {
