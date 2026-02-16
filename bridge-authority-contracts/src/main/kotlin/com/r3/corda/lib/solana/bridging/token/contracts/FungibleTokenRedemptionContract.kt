@@ -77,7 +77,7 @@ class FungibleTokenRedemptionContract : Contract {
                 e
             )
         }
-        require(burnReceiptState.amount == redeemedAmount.quantity) {
+        require(burnReceiptState.cordaAmount.quantity == redeemedAmount.quantity) {
             "The amount in the FungibleTokenBurnReceipt must match the sum FungibleToken amounts"
         }
         // Presence of individual commands had been verified till this point
@@ -101,15 +101,16 @@ class FungibleTokenRedemptionContract : Contract {
         val solanaInstruction = tx.notaryInstructionsOfType<SolanaInstruction>().requireSingle {
             "Exactly one Solana instruction required"
         }
-        require(burnReceiptState.conversionMultiplier > 0) {
-            // TODO and power of 10
-            "Conversion multiplier must be greater than zero"
+
+        require(burnReceiptState.cordaAmount == burnReceiptState.solanaAmount) {
+            "Corda token amount equals converted Solana token amount"
         }
+
         val expectedInstruction = Token2022.burn(
             burnReceiptState.mintAccount,
             burnReceiptState.redemptionTokenAccount,
             burnReceiptState.redemptionWalletAccount,
-            burnReceiptState.amount * burnReceiptState.conversionMultiplier
+            burnReceiptState.solanaAmount.quantity
         )
         require(solanaInstruction == expectedInstruction) {
             "The Solana instruction in the transaction not the expected burn instruction:\n" +

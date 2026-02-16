@@ -94,21 +94,18 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
 
     fun getTokenIdentifierByMint(mint: Pubkey) = mintAccountToTokenId[mint]
 
-    private fun toMintWithAuthority(data: Map<String, Any>): MintWithAuthority {
+    private fun toMintWithAuthority(data: Map<String, String>): MintWithAuthority {
         val mint = Pubkey.fromBase58(
-            checkNotNull(data[MintWithAuthority::tokenMint.name] as String) {
+            checkNotNull(data[MintWithAuthority::tokenMint.name]) {
                 "${MintWithAuthority::tokenMint.name} is missing in mintWithAuthority config"
             }
         )
         val authority = Pubkey.fromBase58(
-            checkNotNull(data[MintWithAuthority::mintAuthority.name] as String) {
+            checkNotNull(data[MintWithAuthority::mintAuthority.name]) {
                 "${MintWithAuthority::mintAuthority.name} is missing in mintWithAuthority config"
             }
         )
-        val conversionMultiplierText = checkNotNull(data[MintWithAuthority::conversionMultiplier.name] as Int) {
-            "${MintWithAuthority::conversionMultiplier.name} is missing in conversionMultiplier config"
-        }
-        return MintWithAuthority(mint, authority, conversionMultiplierText)
+        return MintWithAuthority(mint, authority)
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -153,7 +150,7 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
             mintWithAuthority.tokenMint,
             mintWithAuthority.mintAuthority,
             mintWalletAccount,
-            mintWithAuthority.conversionMultiplier,
+            0 // TODO conversion
         )
     }
 
@@ -161,13 +158,14 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
         tokenTypeId: String,
         redemptionWalletAccount: Pubkey,
         redemptionTokenAccount: Pubkey,
+        tokenMintDecimals: Int,
     ): RedemptionCoordinates {
         val mintWithAuthority = checkNotNull(mintsWithAuthorities[tokenTypeId]) {
             "No mint with authority mapping found for token type id $tokenTypeId"
         }
         return RedemptionCoordinates(
             mintWithAuthority.tokenMint,
-            mintWithAuthority.conversionMultiplier,
+            tokenMintDecimals,
             redemptionWalletAccount,
             redemptionTokenAccount,
             tokenTypeId
@@ -175,4 +173,4 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
     }
 }
 
-private data class MintWithAuthority(val tokenMint: Pubkey, val mintAuthority: Pubkey, val conversionMultiplier: Int)
+private data class MintWithAuthority(val tokenMint: Pubkey, val mintAuthority: Pubkey)

@@ -1,5 +1,6 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
+import com.r3.corda.lib.solana.bridging.token.states.Amount
 import com.r3.corda.lib.solana.bridging.token.states.FungibleTokenBurnReceipt
 import net.corda.core.identity.Party
 import net.corda.core.solana.Pubkey
@@ -15,7 +16,7 @@ import net.corda.core.solana.Pubkey
  */
 data class RedemptionCoordinates(
     val mintAccount: Pubkey,
-    val conversionMultiplier: Int,
+    val tokenMintDecimals: Int,
     val redemptionWalletAccount: Pubkey,
     val redemptionTokenAccount: Pubkey,
     val tokenId: String,
@@ -27,13 +28,14 @@ data class RedemptionCoordinates(
      * */
     fun toRedeemReceiptState(
         amount: Long,
+        amountDecimals: Int,
         bridgeAuthority: Party,
     ) = FungibleTokenBurnReceipt(
         redemptionTokenAccount = redemptionTokenAccount,
         redemptionWalletAccount = redemptionWalletAccount,
         mintAccount = mintAccount,
-        amount = amount,
-        conversionMultiplier = conversionMultiplier,
+        cordaAmount = Amount(amount,amountDecimals),
+        solanaAmount = Amount(0, tokenMintDecimals), // TODO conversion
         bridgeAuthority = bridgeAuthority
     )
 }

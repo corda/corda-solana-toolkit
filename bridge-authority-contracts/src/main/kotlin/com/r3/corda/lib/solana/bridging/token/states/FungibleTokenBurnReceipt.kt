@@ -28,13 +28,14 @@ data class FungibleTokenBurnReceipt(
     val redemptionTokenAccount: Pubkey,
     val redemptionWalletAccount: Pubkey,
     val mintAccount: Pubkey,
-    val amount: Long,
-    val conversionMultiplier: Int,
+    val cordaAmount: Amount,
+    val solanaAmount: Amount,
     val bridgeAuthority: Party,
     override val participants: List<AbstractParty> = listOf(bridgeAuthority),
 ) : ContractState {
     init {
         // extra check when object is deserialized by AMQP on a node that redeemed token and doesn't have this class
         require(bridgeAuthority in participants) { "Bridge Authority is not present in participants list." }
+        require(cordaAmount == solanaAmount) { "Corda amount must be equal to Solana amount in the burn receipt." }
     }
 }

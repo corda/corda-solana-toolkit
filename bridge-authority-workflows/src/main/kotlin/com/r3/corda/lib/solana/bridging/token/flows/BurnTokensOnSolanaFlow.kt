@@ -13,6 +13,7 @@ class BurnTokensOnSolanaFlow(
     private val redemptionCoordinates: RedemptionCoordinates,
     private val solanaNotary: Party,
     private val cordaAmount: Long,
+    private val cordaAmountDecimals: Int,
     private val solanaAmount: Long,
 ) : FlowLogic<SignedTransaction>() {
     @Suspendable
@@ -34,6 +35,7 @@ class BurnTokensOnSolanaFlow(
         // We issue FungibleTokenBurnReceipt state to record burning of tokens on Solana
         val redeemReceiptState = redemptionCoordinates.toRedeemReceiptState(
             amount = cordaAmount,
+            amountDecimals = cordaAmountDecimals,
             bridgeAuthority = ourIdentity
         )
         transactionBuilder.addOutputState(redeemReceiptState)

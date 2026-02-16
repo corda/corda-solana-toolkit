@@ -1,5 +1,6 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
+import com.r3.corda.lib.solana.bridging.token.states.Amount
 import com.r3.corda.lib.solana.bridging.token.states.BridgedFungibleTokenProxy
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import net.corda.core.identity.Party
@@ -19,7 +20,7 @@ data class BridgingCoordinates(
     val mintAccount: Pubkey,
     val mintAuthority: Pubkey,
     val mintWalletAccount: Pubkey,
-    val conversionMultiplier: Int,
+    val mintDecimals: Int,
 ) {
     /**
      * Creates an unminted [BridgedFungibleTokenProxy] with ATA destination to bridge to.
@@ -36,8 +37,8 @@ data class BridgingCoordinates(
             ).publicKey()
             .toPubkey()
         return BridgedFungibleTokenProxy(
-            amount = token.amount.quantity * conversionMultiplier,
-            conversionMultiplier = conversionMultiplier,
+            cordaAmount = Amount(token.amount.quantity, token.tokenType.fractionDigits),
+            solanaAmount = Amount(0, mintDecimals), //TODO conversion
             mintAccount = this.mintAccount,
             mintAuthority = this.mintAuthority,
             bridgeTokenAccount = tokenAccount,

@@ -54,12 +54,15 @@ class FungibleTokenBridgeContract : Contract {
             "The token holder must change when locking the token"
         }
 
-        require(tokenProxy.conversionMultiplier > 0) {
-            // TODO and power of 10
-            "Conversion multiplier must be greater than zero"
+        require(tokenProxy.cordaAmount.fractionalDigits >= 0) {
+            "Corda"
         }
 
-        require(outputToken.amount.quantity == tokenProxy.amount / tokenProxy.conversionMultiplier) {
+        require(tokenProxy.cordaAmount.fractionalDigits < tokenProxy.solanaAmount.fractionalDigits) {
+            "Solana has equal or higher number for fraction digits"
+        }
+
+        require(outputToken.amount.quantity == tokenProxy.cordaAmount.quantity) {
             "BridgedFungibleTokenProxy must have the same amount as the locked token"
         }
 
@@ -89,7 +92,7 @@ class FungibleTokenBridgeContract : Contract {
             bridgedFungibleTokenProxy.mintAccount,
             bridgedFungibleTokenProxy.bridgeTokenAccount,
             bridgedFungibleTokenProxy.mintAuthority,
-            bridgedFungibleTokenProxy.amount,
+            bridgedFungibleTokenProxy.solanaAmount.quantity,
         )
         require(solanaInstruction == expectedMintInstruction) {
             "Solana instruction in the transaction not the expected mint instruction:\n" +

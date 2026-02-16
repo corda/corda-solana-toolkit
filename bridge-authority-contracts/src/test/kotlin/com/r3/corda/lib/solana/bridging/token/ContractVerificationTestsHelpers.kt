@@ -21,6 +21,7 @@ import net.corda.testing.node.MockServices
 import org.mockito.Mockito.mock
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import kotlin.math.pow
 
 val tokenIssuer = Party(
     DUMMY_BANK_A_NAME,
@@ -38,13 +39,14 @@ val services = MockServices(
     networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
 )
 val TOKEN_PROGRAM_ID: String = FungibleTokenContract.contractId
-val cordaTokenAmount = (10000 of TokenType("TEST", 0)).issuedBy(tokenIssuer)
-
+val bridgeAuthorityWallet = Pubkey(secureRandomBytes(32))
+const val CORDA_DECIMALS = 1
+const val SOLANA_DECIMALS = 2
+val cordaTokenAmount = (10000 of TokenType("TEST", CORDA_DECIMALS)).issuedBy(tokenIssuer)
+const val solanaAmount = 1000000L // raw value is 10x greater than corda amount to reflect the difference in decimals
 val mintAccount = Pubkey(secureRandomBytes(32))
 val mintAuthority = Pubkey(secureRandomBytes(32))
 val tokenAccount = Pubkey(secureRandomBytes(32))
-val bridgeAuthorityWallet = Pubkey(secureRandomBytes(32))
-const val DECIMALS = 1
 
 fun instructionWithWrongOperation(programId: Pubkey): SolanaInstruction {
     val operation = 6

@@ -1,6 +1,7 @@
 package com.r3.corda.lib.solana.bridging.token
 
 import com.r3.corda.lib.solana.bridging.token.contracts.FungibleTokenRedemptionContract
+import com.r3.corda.lib.solana.bridging.token.states.Amount
 import com.r3.corda.lib.solana.bridging.token.states.FungibleTokenBurnReceipt
 import com.r3.corda.lib.solana.core.cordautils.Token2022
 import com.r3.corda.lib.tokens.contracts.commands.IssueTokenCommand
@@ -17,8 +18,8 @@ class RedeemVerificationTests {
         tokenAccount,
         bridgeAuthorityWallet,
         mintAccount,
-        10000,
-        DECIMALS,
+        Amount(cordaTokenAmount.quantity, cordaTokenAmount.token.fractionDigits),
+        Amount(solanaAmount, SOLANA_DECIMALS),
         bridgeAuthority
     )
 
@@ -52,7 +53,9 @@ class RedeemVerificationTests {
                 attachment(FungibleTokenRedemptionContract.CONTRACT_ID)
                 input(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
                 input(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
-                input(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState.copy(amount = redeemState.amount * 2))
+                val cordaQuantity = Amount(redeemState.cordaAmount.quantity * 2, CORDA_DECIMALS)
+                val solanaQuantity = Amount(redeemState.solanaAmount.quantity * 2, SOLANA_DECIMALS)
+                input(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState.copy(cordaAmount = cordaQuantity, solanaAmount = solanaQuantity))
                 output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
                 output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
                 command(
@@ -83,7 +86,7 @@ class RedeemVerificationTests {
                     FungibleTokenRedemptionContract.RedeemCommand.BurnOnSolana
                 )
                 notaryInstruction(
-                    Token2022.burn(mintAccount, tokenAccount, bridgeAuthorityWallet, 10000)
+                    Token2022.burn(mintAccount, tokenAccount, bridgeAuthorityWallet, solanaAmount)
                 )
                 verifies()
             }
@@ -97,7 +100,9 @@ class RedeemVerificationTests {
                 attachment(TOKEN_PROGRAM_ID)
                 attachment(FungibleTokenRedemptionContract.CONTRACT_ID)
                 input(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
-                input(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState.copy(amount = redeemState.amount * 2))
+                val cordaQuantity = Amount(redeemState.cordaAmount.quantity * 2, CORDA_DECIMALS)
+                val solanaQuantity = Amount(redeemState.solanaAmount.quantity * 2, SOLANA_DECIMALS)
+                input(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState.copy(cordaAmount = cordaQuantity, solanaAmount = solanaQuantity))
                 command(
                     listOf(bridgeAuthority.owningKey),
                     FungibleTokenRedemptionContract.RedeemCommand.UnlockToken(confidentialIdentity)
@@ -147,7 +152,9 @@ class RedeemVerificationTests {
                 )
                 tweak {
                     output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
-                    input(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState.copy(amount = 9999))
+                    val cordaQuantity = Amount(99990, CORDA_DECIMALS)
+                    val solanaQuantity = Amount(999900, SOLANA_DECIMALS)
+                    input(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState.copy(cordaAmount = cordaQuantity, solanaAmount = solanaQuantity))
                     `fails with`(
                         "The amount in the FungibleTokenBurnReceipt must match the sum FungibleToken amounts"
                     )
@@ -157,13 +164,15 @@ class RedeemVerificationTests {
                         TOKEN_PROGRAM_ID,
                         FungibleToken(cordaTokenAmount, bridgeAuthority)
                     )
-                    input(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState.copy(amount = 10001))
+                    val cordaQuantity = Amount(100010, CORDA_DECIMALS)
+                    val solanaQuantity = Amount(1000100, SOLANA_DECIMALS)
+                    input(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState.copy(cordaAmount = cordaQuantity, solanaAmount = solanaQuantity))
                     `fails with`(
                         "The amount in the FungibleTokenBurnReceipt must match the sum FungibleToken amounts"
                     )
                 }
                 tweak {
-                    val overspendCordaIssuedTokenType = (10001 of TokenType("TEST", 0)).issuedBy(tokenIssuer)
+                    val overspendCordaIssuedTokenType = (10001 of TokenType("TEST", CORDA_DECIMALS)).issuedBy(tokenIssuer)
                     output(
                         TOKEN_PROGRAM_ID,
                         FungibleToken(overspendCordaIssuedTokenType, bridgeAuthority)
@@ -172,7 +181,7 @@ class RedeemVerificationTests {
                     `fails with`("In move groups the amount of input tokens MUST EQUAL the amount of output tokens")
                 }
                 tweak {
-                    val underspendCordaIssuedTokenType = (9999 of TokenType("TEST", 0)).issuedBy(tokenIssuer)
+                    val underspendCordaIssuedTokenType = (9999 of TokenType("TEST", CORDA_DECIMALS)).issuedBy(tokenIssuer)
                     output(
                         TOKEN_PROGRAM_ID,
                         FungibleToken(underspendCordaIssuedTokenType, bridgeAuthority)
@@ -275,15 +284,15 @@ class RedeemVerificationTests {
                 )
 
                 tweak {
-                    notaryInstruction(Token2022.burn(mintAccount, tokenAccount, bridgeAuthorityWallet, 10001))
+                    notaryInstruction(Token2022.burn(mintAccount, tokenAccount, bridgeAuthorityWallet, 1000100))
                     `fails with`("The Solana instruction in the transaction not the expected burn instruction:")
                 }
                 tweak {
-                    notaryInstruction(Token2022.burn(mintAccount, tokenAccount, bridgeAuthorityWallet, 9999))
+                    notaryInstruction(Token2022.burn(mintAccount, tokenAccount, bridgeAuthorityWallet, 999900))
                     `fails with`("The Solana instruction in the transaction not the expected burn instruction:")
                 }
 
-                notaryInstruction(Token2022.burn(mintAccount, tokenAccount, bridgeAuthorityWallet, 10000))
+                notaryInstruction(Token2022.burn(mintAccount, tokenAccount, bridgeAuthorityWallet, 1000000))
 
                 verifies()
             }
@@ -296,7 +305,7 @@ class RedeemVerificationTests {
             transaction {
                 attachment(FungibleTokenRedemptionContract.CONTRACT_ID)
                 output(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState)
-                notaryInstruction(Token2022.burn(mintAccount, tokenAccount, bridgeAuthorityWallet, 10000))
+                notaryInstruction(Token2022.burn(mintAccount, tokenAccount, bridgeAuthorityWallet, solanaAmount))
 
                 // no commands
                 tweak { `fails with`("A transaction must contain at least one command") }
@@ -341,15 +350,15 @@ class RedeemVerificationTests {
                 )
 
                 tweak {
-                    notaryInstruction(Token2022.burn(mintAccount, mintAuthority, mintAuthority, 10000))
+                    notaryInstruction(Token2022.burn(mintAccount, mintAuthority, mintAuthority, solanaAmount))
                     `fails with`("The Solana instruction in the transaction not the expected burn instruction:")
                 }
 
                 tweak { `fails with`("Exactly one Solana instruction required") }
 
                 tweak {
-                    notaryInstruction(Token2022.burn(mintAccount, tokenAccount, bridgeAuthorityWallet, 10000))
-                    notaryInstruction(Token2022.burn(mintAccount, tokenAccount, bridgeAuthorityWallet, 10000))
+                    notaryInstruction(Token2022.burn(mintAccount, tokenAccount, bridgeAuthorityWallet, solanaAmount))
+                    notaryInstruction(Token2022.burn(mintAccount, tokenAccount, bridgeAuthorityWallet, solanaAmount))
                     `fails with`("Exactly one Solana instruction required")
                 }
 
@@ -359,16 +368,16 @@ class RedeemVerificationTests {
                 }
                 // wrong owner
                 tweak {
-                    notaryInstruction(Token2022.burn(mintAccount, tokenAccount, tokenAccount, 10000))
+                    notaryInstruction(Token2022.burn(mintAccount, tokenAccount, tokenAccount, solanaAmount))
                     `fails with`("The Solana instruction in the transaction not the expected burn instruction:")
                 }
                 // wrong amount
                 tweak {
-                    notaryInstruction(Token2022.burn(mintAccount, tokenAccount, bridgeAuthorityWallet, 9999))
+                    notaryInstruction(Token2022.burn(mintAccount, tokenAccount, bridgeAuthorityWallet, 999900))
                     `fails with`("The Solana instruction in the transaction not the expected burn instruction:")
                 }
 
-                notaryInstruction(Token2022.burn(mintAccount, tokenAccount, bridgeAuthorityWallet, 10000))
+                notaryInstruction(Token2022.burn(mintAccount, tokenAccount, bridgeAuthorityWallet, solanaAmount))
 
                 verifies()
             }

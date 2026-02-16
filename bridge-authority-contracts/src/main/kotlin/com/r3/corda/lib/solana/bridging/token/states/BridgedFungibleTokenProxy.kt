@@ -1,11 +1,15 @@
 package com.r3.corda.lib.solana.bridging.token.states
 
 import com.r3.corda.lib.solana.bridging.token.contracts.FungibleTokenBridgeContract
+import com.r3.corda.lib.tokens.contracts.types.TokenType
+import com.r3.corda.lib.solana.bridging.token.states.Amount
 import net.corda.core.contracts.BelongsToContract
 import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.Issued
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.solana.Pubkey
+import kotlin.math.pow
 
 /**
  * A proxy state that mirrors a Corda `FungibleToken` while carrying
@@ -31,8 +35,8 @@ import net.corda.core.solana.Pubkey
  */
 @BelongsToContract(FungibleTokenBridgeContract::class)
 data class BridgedFungibleTokenProxy(
-    val amount: Long,
-    val conversionMultiplier: Int,
+    val cordaAmount: Amount,
+    val solanaAmount: Amount,
     val bridgeTokenAccount: Pubkey,
     val mintAccount: Pubkey,
     val mintAuthority: Pubkey,
@@ -42,5 +46,6 @@ data class BridgedFungibleTokenProxy(
     init {
         // future-proof extra check in case an object is deserialized by AMQP on a node that doesn't have this class
         require(bridgeAuthority in participants) { "Bridge Authority is not present in participants list." }
+        require(cordaAmount == solanaAmount) { "Corda amount must be equal to Solana amount." }
     }
 }

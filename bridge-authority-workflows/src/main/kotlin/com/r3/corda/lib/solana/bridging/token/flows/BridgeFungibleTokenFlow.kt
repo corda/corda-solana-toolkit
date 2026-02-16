@@ -102,7 +102,7 @@ class BridgeFungibleTokenFlow(
             bridgedFungibleTokenProxy.mintAccount,
             bridgedFungibleTokenProxy.bridgeTokenAccount,
             bridgedFungibleTokenProxy.mintAuthority,
-            bridgedFungibleTokenProxy.amount,
+            bridgedFungibleTokenProxy.solanaAmount.quantity,
         )
         transactionBuilder.addNotaryInstruction(instruction)
         transactionBuilder.addCommand(
