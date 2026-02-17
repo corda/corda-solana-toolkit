@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNull
 import java.math.BigDecimal
 
-abstract class FlowTests : ValidatorTests() {
+abstract class FlowTests : MockNetworkTest() {
     @Test
     fun `e2e bridge and redemption`() {
         val msftTokenType = issuingBank.issue(msftDescriptor, ISSUING_QUANTITY * BigDecimal(2), generalNotaryName)

@@ -1,6 +1,6 @@
 package com.r3.corda.lib.solana.bridging.token.test
 
-import com.r3.corda.lib.solana.bridging.token.test.ValidatorTests.Companion.TOKEN_DECIMALS
+import com.r3.corda.lib.solana.bridging.token.test.MockNetworkTest.Companion.TOKEN_DECIMALS
 import net.corda.core.identity.CordaX500Name
 import net.corda.testing.node.StartedMockNode
 import java.math.BigDecimal

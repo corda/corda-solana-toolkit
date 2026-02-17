@@ -7,9 +7,13 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNull
 import java.math.BigDecimal
 
-class RecoveryTests : ValidatorTests() {
+class RecoveryTests : MockNetworkTest() {
     override val msftDescriptor: TokenTypeDescriptor = SimpleDescriptor(MSFT_TICKER)
     override val aaplDescriptor: TokenTypeDescriptor = SimpleDescriptor(APPL_TICKER)
+
+    // Use quicker polling so that the test doesn't take too long
+    override val redemptionCheckIntervalSeconds: Int
+        get() = 1
 
     override fun StartedMockNode.issue(
         tokenDescriptor: TokenTypeDescriptor,

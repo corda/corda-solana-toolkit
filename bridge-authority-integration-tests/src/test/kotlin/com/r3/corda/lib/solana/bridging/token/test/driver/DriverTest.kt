@@ -58,7 +58,7 @@ import java.time.Instant
 import java.util.UUID
 
 @SolanaTestClass
-abstract class DriverTests {
+abstract class DriverTest {
     companion object {
         const val CORDA_TOKEN_DECIMALS = 3
         const val SOLANA_TOKEN_DECIMALS = 4
