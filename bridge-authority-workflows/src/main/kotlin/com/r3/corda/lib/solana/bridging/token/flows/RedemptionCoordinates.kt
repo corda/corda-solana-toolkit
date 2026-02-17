@@ -34,8 +34,8 @@ data class RedemptionCoordinates(
         redemptionTokenAccount = redemptionTokenAccount,
         redemptionWalletAccount = redemptionWalletAccount,
         mintAccount = mintAccount,
-        cordaAmount = Amount(amount,amountDecimals),
+        cordaAmount = Amount(amount, amountDecimals),
         solanaAmount = Amount(0, tokenMintDecimals), // TODO conversion
-        bridgeAuthority = bridgeAuthority
+        bridgeAuthority = bridgeAuthority,
     )
 }

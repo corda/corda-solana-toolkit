@@ -5,7 +5,6 @@ import kotlin.math.pow
 
 @CordaSerializable
 data class Amount(val quantity: Long, val fractionalDigits: Int) {
-
     fun convertTo(fractionalDigits: Int): Amount {
         val multiplier = getConversionMultiplier(fractionalDigits)
         return if (this.fractionalDigits < fractionalDigits) {

@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test
 class MintVerificationTests {
     val bridgedFungibleTokenProxy = BridgedFungibleTokenProxy(
         Amount(cordaTokenAmount.quantity, cordaTokenAmount.token.fractionDigits),
-        Amount(solanaAmount, SOLANA_DECIMALS),
+        Amount(SOLANA_AMOUNT, SOLANA_DECIMALS),
         tokenAccount,
         mintAccount,
         mintAuthority,
@@ -94,14 +94,17 @@ class MintVerificationTests {
                     output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
                     output(
                         FungibleTokenBridgeContract.CONTRACT_ID,
-                        bridgedFungibleTokenProxy.copy(cordaAmount = Amount(99990, CORDA_DECIMALS), solanaAmount = Amount(999900, SOLANA_DECIMALS))
+                        bridgedFungibleTokenProxy.withNewAmounts(99990, 999900)
                     )
                     `fails with`("BridgedFungibleTokenProxy must have the same amount as the locked token")
                 }
 
                 tweak {
                     output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
-                    output(FungibleTokenBridgeContract.CONTRACT_ID, bridgedFungibleTokenProxy.copy(cordaAmount = Amount(100010, CORDA_DECIMALS), solanaAmount = Amount(1000100, SOLANA_DECIMALS)))
+                    output(
+                        FungibleTokenBridgeContract.CONTRACT_ID,
+                        bridgedFungibleTokenProxy.withNewAmounts(100010, 1000100)
+                    )
                     `fails with`("BridgedFungibleTokenProxy must have the same amount as the locked token")
                 }
 
@@ -116,7 +119,8 @@ class MintVerificationTests {
                 }
 
                 tweak {
-                    val underspendCordaIssuedTokenType = (9999 of TokenType("TEST", CORDA_DECIMALS)).issuedBy(tokenIssuer)
+                    val underspendCordaIssuedTokenType =
+                        (9999 of TokenType("TEST", CORDA_DECIMALS)).issuedBy(tokenIssuer)
                     output(
                         TOKEN_PROGRAM_ID,
                         FungibleToken(underspendCordaIssuedTokenType, confidentialIdentity)
@@ -326,4 +330,10 @@ class MintVerificationTests {
             }
         }
     }
+
+    private fun BridgedFungibleTokenProxy.withNewAmounts(cordaQuantity: Long, solanaQuantity: Long) =
+        copy(
+            cordaAmount = Amount(cordaQuantity, CORDA_DECIMALS),
+            solanaAmount = Amount(solanaQuantity, SOLANA_DECIMALS)
+        )
 }

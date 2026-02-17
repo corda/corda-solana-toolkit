@@ -44,7 +44,7 @@ class RedeemFungibleTokenFlow(
     @Suspendable
     override fun call(): SignedTransaction {
         val tokenType = findTokenTypeOfFungibleTokenBy(redemptionCoordinates.tokenId)
-        val conversionMultiplier : Long = 1 // TODO conversion
+        val conversionMultiplier: Long = 1 // TODO conversion
 
         val cordaAmount = truncateByFactor(amount, conversionMultiplier)
         val newSolanaAmount = zeroOutFractionDigits(amount, conversionMultiplier)

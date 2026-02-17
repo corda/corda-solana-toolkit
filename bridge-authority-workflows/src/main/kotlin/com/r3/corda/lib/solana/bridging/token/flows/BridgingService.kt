@@ -5,9 +5,7 @@ import com.r3.corda.lib.solana.core.SolanaClient
 import com.r3.corda.lib.solana.core.tokens.TokenAccountListener
 import com.r3.corda.lib.solana.core.tokens.TokenManagement
 import com.r3.corda.lib.solana.core.tokens.TokenProgram
-import com.r3.corda.lib.tokens.contracts.internal.schemas.PersistentFungibleToken
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
-import com.r3.corda.lib.tokens.contracts.types.TokenType
 import com.r3.corda.lib.tokens.workflows.utilities.toParty
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.identity.AbstractParty
@@ -16,9 +14,6 @@ import net.corda.core.messaging.FlowHandle
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.ServiceLifecycleEvent
-import net.corda.core.node.services.vault.Builder.equal
-import net.corda.core.node.services.vault.PageSpecification
-import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.solana.Pubkey
 import net.corda.core.utilities.debug
@@ -27,7 +22,6 @@ import software.sava.core.accounts.PublicKey
 import software.sava.core.accounts.token.Mint
 import software.sava.core.accounts.token.TokenAccount
 import software.sava.rpc.json.http.client.SolanaRpcClient
-import software.sava.rpc.json.http.response.AccountInfo
 import java.net.URI
 import java.util.concurrent.CompletionException
 import java.util.concurrent.ForkJoinPool.commonPool
@@ -63,7 +57,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         solanaClient.close()
     }
 
-    fun getBridgingCoordinates(token: StateAndRef<FungibleToken>, originalHolder: Party) : BridgingCoordinates {
+    fun getBridgingCoordinates(token: StateAndRef<FungibleToken>, originalHolder: Party): BridgingCoordinates {
         val coordinates = configHandler.getBridgingCoordinates(token, originalHolder)
         val solanaDecimals = getAccountMintDecimals(coordinates.mintAccount.toPublicKey())
         return coordinates.copy(mintDecimals = solanaDecimals)
@@ -207,7 +201,6 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
 
         return holders.single()
     }
-
 
     fun getAccountMintDecimals(account: PublicKey): Int {
         val accountInfo = solanaClient.call(SolanaRpcClient::getAccountInfo, account)

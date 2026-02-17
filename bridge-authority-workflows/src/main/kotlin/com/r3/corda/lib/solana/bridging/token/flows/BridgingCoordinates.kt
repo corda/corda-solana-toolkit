@@ -38,7 +38,7 @@ data class BridgingCoordinates(
             .toPubkey()
         return BridgedFungibleTokenProxy(
             cordaAmount = Amount(token.amount.quantity, token.tokenType.fractionDigits),
-            solanaAmount = Amount(0, mintDecimals), //TODO conversion
+            solanaAmount = Amount(0, mintDecimals), // TODO conversion
             mintAccount = this.mintAccount,
             mintAuthority = this.mintAuthority,
             bridgeTokenAccount = tokenAccount,

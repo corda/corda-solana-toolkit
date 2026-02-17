@@ -1,12 +1,13 @@
 package com.r3.corda.lib.solana.bridging.token.states
 
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.Assertions.*
 
 class AmountTest {
-
     // Tests for strict object comparison
-
     @Test
     fun `equals returns true for same amount with same fractional digits`() {
         val amount1 = Amount(100, 2)
@@ -154,4 +155,3 @@ class AmountTest {
         assertTrue(amount1.hasSameValueAs(amount2))
     }
 }
-
