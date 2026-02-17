@@ -21,41 +21,26 @@ dependencyResolutionManagement {
     repositories {
         mavenLocal()
         mavenCentral()
-        maven {
-            url = uri("https://software.r3.com/artifactory/corda-dev")
-            credentials { artifactory(this) }
-        }
-        maven {
-            url = uri("https://software.r3.com/artifactory/corda-releases")
-            credentials { artifactory(this) }
-        }
-        maven {
-            url = uri("https://software.r3.com/artifactory/corda-lib")
-            credentials { artifactory(this) }
-        }
-        maven {
-            url = uri("https://software.r3.com/artifactory/corda-dependencies")
-            credentials { artifactory(this) }
-        }
+        maven { r3Artifactory("corda-lib") }
+        maven { r3Artifactory("corda-dependencies") }
+        maven { r3Artifactory("corda-releases") }
+        maven { r3Artifactory("corda-dev") }
         // For com.r3.libs:r3-libs-obfuscator:1.4.1 required by corda-node-driver
-        maven {
-            url = uri("https://software.r3.com/artifactory/r3-corda-releases")
-            credentials { artifactory(this) }
-            mavenContent {
-                releasesOnly()
-            }
-        }
-        // For gradle-tooling-api-7.6.4.
-        maven { url = uri("https://repo.gradle.org/gradle/libs-releases") }
+        maven { r3Artifactory("r3-corda-releases") }
         // For Corda SNAPSHOT version
-        maven {
-            url = uri("https://software.r3.com/artifactory/r3-corda-dev")
-            credentials { artifactory(this) }
-        }
+        maven { r3Artifactory("r3-corda-dev") }
+        maven { url = uri("https://download.corda.net/maven/corda-lib") }
+        maven { url = uri("https://download.corda.net/maven/corda-dependencies") }
+        maven { url = uri("https://download.corda.net/maven/corda-releases") }
+        // For gradle-tooling-api-7.6.4 needed by corda-node-driver.
+        maven { url = uri("https://repo.gradle.org/gradle/libs-releases") }
     }
 }
 
-fun artifactory(credentials: PasswordCredentials) {
-    credentials.username = System.getenv("CORDA_ARTIFACTORY_USERNAME")
-    credentials.password = System.getenv("CORDA_ARTIFACTORY_PASSWORD")
+fun MavenArtifactRepository.r3Artifactory(repo: String) {
+    url = uri("https://software.r3.com/artifactory/$repo")
+    credentials {
+        username = System.getenv("CORDA_ARTIFACTORY_USERNAME")
+        password = System.getenv("CORDA_ARTIFACTORY_PASSWORD")
+    }
 }

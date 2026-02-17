@@ -8,13 +8,16 @@ import org.junit.jupiter.api.extension.ExtensionContext.Namespace
 import org.junit.jupiter.api.extension.ParameterContext
 import org.junit.jupiter.api.extension.ParameterResolutionException
 import org.junit.jupiter.api.extension.ParameterResolver
+import org.junit.platform.commons.support.AnnotationSupport.findAnnotatedMethods
+import org.junit.platform.commons.support.HierarchyTraversalMode.BOTTOM_UP
+import org.junit.platform.commons.support.ModifierSupport.isPublic
+import org.junit.platform.commons.support.ModifierSupport.isStatic
 import org.slf4j.LoggerFactory
 import java.lang.reflect.InvocationTargetException
-import java.lang.reflect.Modifier.isPublic
-import java.lang.reflect.Modifier.isStatic
 import java.net.Socket
 import java.net.SocketException
 import java.nio.file.Files
+import kotlin.jvm.java
 
 class SolanaTestValidatorExtension : ParameterResolver, AfterAllCallback {
     private companion object {
@@ -89,20 +92,18 @@ class SolanaTestValidatorExtension : ParameterResolver, AfterAllCallback {
     }
 
     private fun configureBuilder(testClass: Class<*>, builder: Builder) {
-        val methods = generateSequence(testClass) { it.superclass }
-            .flatMap { it.declaredMethods.asSequence() }
-            .filter { it.isAnnotationPresent(ConfigureValidator::class.java) }
-            .toList()
+        val methods = findAnnotatedMethods(testClass, ConfigureValidator::class.java, BOTTOM_UP)
         val method = when (methods.size) {
             0 -> return
             1 -> methods[0]
-            else ->
-                throw ParameterResolutionException("Multiple @ConfigureValidator methods found in ${testClass.name}")
+            else -> throw ParameterResolutionException(
+                "Multiple @ConfigureValidator methods found in ${testClass.name}"
+            )
         }
-        if (!isPublic(method.modifiers)) {
+        if (!isPublic(method)) {
             throw ParameterResolutionException("@ConfigureValidator method ${method.name} must be public")
         }
-        if (!isStatic(method.modifiers)) {
+        if (!isStatic(method)) {
             throw ParameterResolutionException("@ConfigureValidator method ${method.name} must be static")
         }
         if (method.parameterCount != 1 || method.parameterTypes[0] != Builder::class.java) {
