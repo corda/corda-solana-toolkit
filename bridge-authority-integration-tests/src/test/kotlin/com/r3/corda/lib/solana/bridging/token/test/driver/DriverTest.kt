@@ -58,7 +58,7 @@ import java.time.Instant
 import java.util.UUID
 
 @SolanaTestClass
-abstract class DriverTests {
+abstract class DriverTest {
     companion object {
         const val TOKEN_DECIMALS = 3
         private val ISSUING_QUANTITY = BigDecimal("2000.000")

@@ -63,7 +63,8 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         if (event != ServiceLifecycleEvent.STATE_MACHINE_STARTED) return
         solanaClient.start()
         checkAndListenForBridging()
-        checkAndListenForRedemption()
+        checkAllBalancesForRedemption()
+        listenForRedemptions()
     }
 
     private fun checkAndListenForBridging() {
@@ -77,11 +78,6 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
                 callBridgeFlow(appServiceHub, newToken)
             }
         }
-    }
-
-    private fun checkAndListenForRedemption() {
-        checkAllBalancesForRedemption()
-        listenForRedemptions()
     }
 
     private fun listenForRedemptions() {

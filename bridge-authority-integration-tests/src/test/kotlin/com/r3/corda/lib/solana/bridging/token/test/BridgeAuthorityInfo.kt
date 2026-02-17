@@ -29,6 +29,7 @@ data class BridgeAuthorityInfo(
             tokenDescriptorToMint: Map<TokenTypeDescriptor, PublicKey>,
             mintAuthority: PublicKey,
             testValidator: SolanaTestValidator,
+            redemptionCheckIntervalSeconds: Int
         ): BridgeAuthorityInfo {
             val bridgingContractsCordapp = TestCordapp.findCordapp("com.r3.corda.lib.solana.bridging.token.contracts")
             val bridgingFlowsCordapp = TestCordapp.findCordapp("com.r3.corda.lib.solana.bridging.token.flows")
@@ -60,7 +61,7 @@ data class BridgeAuthorityInfo(
                 "solanaRpcUrl" to "${testValidator.rpcUrl()}",
                 "solanaWsUrl" to "${testValidator.websocketUrl()}",
                 "bridgeAuthorityWalletFile" to mintWallet.file.toString(),
-                "redemptionCheckIntervalSeconds" to 1,
+                "redemptionCheckIntervalSeconds" to redemptionCheckIntervalSeconds,
             )
             val node = network.createNode(
                 MockNodeParameters(
