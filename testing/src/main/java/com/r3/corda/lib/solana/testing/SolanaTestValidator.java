@@ -106,9 +106,9 @@ public final class SolanaTestValidator implements AutoCloseable {
 
     @Override
     public void close() {
+        client.close();
         var interrupted = false;
         while (process.isAlive()) {
-            client.close();
             process.destroy();
             try {
                 if (process.waitFor(1, TimeUnit.MINUTES)) {

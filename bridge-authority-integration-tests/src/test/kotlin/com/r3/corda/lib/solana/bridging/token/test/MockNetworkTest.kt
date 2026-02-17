@@ -40,7 +40,7 @@ import java.nio.file.Path
 val solanaNotaryName = CordaX500Name("Solana Notary Service", "London", "GB")
 val generalNotaryName = CordaX500Name("Notary Service", "Zurich", "CH")
 
-abstract class ValidatorTests {
+abstract class MockNetworkTest {
     abstract val msftDescriptor: TokenTypeDescriptor
     abstract val aaplDescriptor: TokenTypeDescriptor
 
@@ -85,9 +85,6 @@ abstract class ValidatorTests {
     }
 
     @TempDir
-    lateinit var generalDir: Path
-
-    @TempDir
     lateinit var custodiedKeysDir: Path
 
     protected lateinit var validator: SolanaTestValidator
@@ -102,8 +99,8 @@ abstract class ValidatorTests {
     protected lateinit var bob: CordaNodeAndSolanaAccounts
 
     @BeforeEach
-    fun setup(@TempDir ledger: Path) {
-        startTestValidator(ledger)
+    fun setup(@TempDir ledger: Path, @TempDir tempDir: Path) {
+        startTestValidator(ledger, tempDir)
         startCordaNetwork()
         alice = CordaNodeAndSolanaAccounts.createAndInitialise(
             network,
@@ -128,6 +125,7 @@ abstract class ValidatorTests {
             ),
             mintAuthoritySigner.publicKey(),
             validator,
+            redemptionCheckIntervalSeconds
         )
     }
 
@@ -137,7 +135,10 @@ abstract class ValidatorTests {
         stopTestValidator()
     }
 
-    private fun startTestValidator(ledger: Path) {
+    // By default use a long poll to ensure notifications come via the websocket
+    protected open val redemptionCheckIntervalSeconds: Int = 5 * 60
+
+    private fun startTestValidator(ledger: Path, tempDir: Path) {
         validator = SolanaTestValidator
             .builder()
             .ledger(ledger)
@@ -145,7 +146,7 @@ abstract class ValidatorTests {
             .also(NotaryEnvironment::addNotaryProgram)
             .start()
             .waitForReadiness()
-        solanaNotaryKey = FileSigner.random(generalDir)
+        solanaNotaryKey = FileSigner.random(tempDir)
         mintAuthoritySigner = FileSigner.random(custodiedKeysDir)
 
         with(NotaryEnvironment(validator.client())) {
@@ -310,16 +311,16 @@ abstract class ValidatorTests {
         val fromTokenAccount = requireNotNull(stakeholderInfo.mintToAta[mint]) {
             "Source token account must not be null"
         }
-        val toTokenAccount = bridgeAuthority.redemptionTokenAccountForPartyAndMint(stakeholderInfo.party, mint)
+        val redemptionAccount = bridgeAuthority.redemptionTokenAccountForPartyAndMint(stakeholderInfo.party, mint)
         validator.tokens().transfer(
             stakeholderInfo.signer,
             fromTokenAccount,
-            toTokenAccount,
+            redemptionAccount,
             moveQuantity.toRawAmount()
         )
         val party = stakeholderInfo.node.party()
         eventually(duration = 10.seconds) {
-            val balance = validator.client().getTokenBalance(toTokenAccount)
+            val balance = validator.client().getTokenBalance(redemptionAccount)
             assertEquals(
                 0,
                 balance.compareTo(moveQuantity),

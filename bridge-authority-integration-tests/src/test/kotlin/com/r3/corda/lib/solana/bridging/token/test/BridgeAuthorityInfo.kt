@@ -29,6 +29,7 @@ data class BridgeAuthorityInfo(
             tokenDescriptorToMint: Map<TokenTypeDescriptor, PublicKey>,
             mintAuthority: PublicKey,
             testValidator: SolanaTestValidator,
+            redemptionCheckIntervalSeconds: Int,
         ): BridgeAuthorityInfo {
             val bridgingContractsCordapp = TestCordapp.findCordapp("com.r3.corda.lib.solana.bridging.token.contracts")
             val bridgingFlowsCordapp = TestCordapp.findCordapp("com.r3.corda.lib.solana.bridging.token.flows")
@@ -60,9 +61,7 @@ data class BridgeAuthorityInfo(
                 "solanaRpcUrl" to "${testValidator.rpcUrl()}",
                 "solanaWsUrl" to "${testValidator.websocketUrl()}",
                 "bridgeAuthorityWalletFile" to mintWallet.file.toString(),
-                // Set to very height value interval to effectively disable redemption in tests in order
-                // to validate "core" real time processing and Sava listeners
-                "redemptionCheckIntervalSeconds" to 300, // 5 minutes
+                "redemptionCheckIntervalSeconds" to redemptionCheckIntervalSeconds,
             )
             val node = network.createNode(
                 MockNodeParameters(

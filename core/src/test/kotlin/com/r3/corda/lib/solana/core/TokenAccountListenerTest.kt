@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test
 import software.sava.core.accounts.PublicKey
 import software.sava.core.accounts.Signer
 import software.sava.core.accounts.token.TokenAccount
+import java.time.Duration.ofMinutes
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.SECONDS
 
@@ -41,7 +42,8 @@ class TokenAccountListenerTest {
 
     @BeforeEach
     fun create(client: SolanaClient) {
-        tokenAccountListener = TokenAccountListener(client)
+        // Use large polling interval to ensure websocket is tested
+        tokenAccountListener = TokenAccountListener(client, pollingInterval = ofMinutes(5))
     }
 
     @AfterEach
