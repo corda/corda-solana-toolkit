@@ -23,19 +23,23 @@ data class RedemptionCoordinates(
 ) {
     /**
      * Creates a [FungibleTokenBurnReceipt].
-     * @param amount the amount of tokens to redeem
+     * @param cordaQuantity the amount of tokens to redeem
      * @param bridgeAuthority the Corda party operating the bridge
      * */
     fun toRedeemReceiptState(
-        amount: Long,
-        amountDecimals: Int,
+        cordaQuantity: Long,
+        coraDecimals: Int,
         bridgeAuthority: Party,
-    ) = FungibleTokenBurnReceipt(
-        redemptionTokenAccount = redemptionTokenAccount,
-        redemptionWalletAccount = redemptionWalletAccount,
-        mintAccount = mintAccount,
-        cordaAmount = Amount(amount, amountDecimals),
-        solanaAmount = Amount(0, tokenMintDecimals), // TODO conversion
-        bridgeAuthority = bridgeAuthority,
-    )
+    ): FungibleTokenBurnReceipt {
+        val cordaAmount = Amount(cordaQuantity, coraDecimals)
+        val solanaAmount = cordaAmount.convertTo(tokenMintDecimals)
+        return FungibleTokenBurnReceipt(
+            redemptionTokenAccount,
+            redemptionWalletAccount,
+            mintAccount,
+            cordaAmount,
+            solanaAmount,
+            bridgeAuthority,
+        )
+    }
 }

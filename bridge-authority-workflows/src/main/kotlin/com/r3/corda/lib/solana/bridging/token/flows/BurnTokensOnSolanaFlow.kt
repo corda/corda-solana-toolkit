@@ -34,8 +34,8 @@ class BurnTokensOnSolanaFlow(
         )
         // We issue FungibleTokenBurnReceipt state to record burning of tokens on Solana
         val redeemReceiptState = redemptionCoordinates.toRedeemReceiptState(
-            amount = cordaAmount,
-            amountDecimals = cordaAmountDecimals,
+            cordaQuantity = cordaAmount,
+            coraDecimals = cordaAmountDecimals,
             bridgeAuthority = ourIdentity
         )
         transactionBuilder.addOutputState(redeemReceiptState)

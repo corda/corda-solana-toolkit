@@ -4,7 +4,6 @@ import com.r3.corda.lib.solana.bridging.token.test.MockNetworkTest.Companion.APP
 import com.r3.corda.lib.solana.bridging.token.test.MockNetworkTest.Companion.MSFT_TICKER
 import com.r3.corda.lib.solana.bridging.token.test.SimpleDescriptor
 import com.r3.corda.lib.solana.bridging.token.test.TokenTypeDescriptor
-import com.r3.corda.lib.solana.bridging.token.test.driver.DriverTest.Companion.CORDA_TOKEN_DECIMALS
 import com.r3.corda.lib.solana.bridging.token.testing.IssueSimpleTokenFlow
 import com.r3.corda.lib.tokens.contracts.types.TokenType
 import net.corda.core.identity.CordaX500Name

@@ -354,7 +354,7 @@ abstract class DriverTest {
             quantity.toRawAmount(SOLANA_TOKEN_DECIMALS)
         )
         // We need to wait for the websocket listener to process the newly received event
-        // TODO
+        // TODO verify
 //        eventually(duration = 10.seconds) {
 //            val balance = validator.client().getTokenBalance(participantAndStock.redemptionTokenAccount)
 //            assertEquals(

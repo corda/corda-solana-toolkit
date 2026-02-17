@@ -36,13 +36,15 @@ data class BridgingCoordinates(
                 this.mintAccount.toPublicKey(),
             ).publicKey()
             .toPubkey()
+        val cordaAmount = Amount(token.amount.quantity, token.tokenType.fractionDigits)
+        val solanaAmount = cordaAmount.convertTo(mintDecimals)
         return BridgedFungibleTokenProxy(
-            cordaAmount = Amount(token.amount.quantity, token.tokenType.fractionDigits),
-            solanaAmount = Amount(0, mintDecimals), // TODO conversion
-            mintAccount = this.mintAccount,
-            mintAuthority = this.mintAuthority,
-            bridgeTokenAccount = tokenAccount,
-            bridgeAuthority = bridgeAuthority,
+            cordaAmount,
+            solanaAmount,
+            tokenAccount,
+            this.mintAccount,
+            this.mintAuthority,
+            bridgeAuthority,
         )
     }
 }

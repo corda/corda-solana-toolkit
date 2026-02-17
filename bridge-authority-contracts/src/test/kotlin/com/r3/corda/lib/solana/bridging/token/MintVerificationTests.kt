@@ -94,7 +94,7 @@ class MintVerificationTests {
                     output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
                     output(
                         FungibleTokenBridgeContract.CONTRACT_ID,
-                        bridgedFungibleTokenProxy.withNewAmounts(99990, 999900)
+                        bridgedFungibleTokenProxy.copyWithAmount(99990, 999900)
                     )
                     `fails with`("BridgedFungibleTokenProxy must have the same amount as the locked token")
                 }
@@ -103,7 +103,7 @@ class MintVerificationTests {
                     output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
                     output(
                         FungibleTokenBridgeContract.CONTRACT_ID,
-                        bridgedFungibleTokenProxy.withNewAmounts(100010, 1000100)
+                        bridgedFungibleTokenProxy.copyWithAmount(100010, 1000100)
                     )
                     `fails with`("BridgedFungibleTokenProxy must have the same amount as the locked token")
                 }
@@ -331,7 +331,7 @@ class MintVerificationTests {
         }
     }
 
-    private fun BridgedFungibleTokenProxy.withNewAmounts(cordaQuantity: Long, solanaQuantity: Long) =
+    private fun BridgedFungibleTokenProxy.copyWithAmount(cordaQuantity: Long, solanaQuantity: Long) =
         copy(
             cordaAmount = Amount(cordaQuantity, CORDA_DECIMALS),
             solanaAmount = Amount(solanaQuantity, SOLANA_DECIMALS)

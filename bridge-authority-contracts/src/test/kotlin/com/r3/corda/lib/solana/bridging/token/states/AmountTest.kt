@@ -7,74 +7,13 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class AmountTest {
-    // Tests for strict object comparison
-    @Test
-    fun `equals returns true for same amount with same fractional digits`() {
-        val amount1 = Amount(100, 2)
-        val amount2 = Amount(100, 2)
-
-        assertEquals(amount1, amount2)
-    }
-
-    @Test
-    fun `equals returns false for different amounts with same fractional digits`() {
-        val amount1 = Amount(100, 2)
-        val amount2 = Amount(200, 2)
-
-        assertNotEquals(amount1, amount2)
-    }
-
+    // Single tests for strict object comparison to show differences with semantic quals
     @Test
     fun `equals returns false for same quantity but different fractional digits`() {
         val amount1 = Amount(100, 0)
-        val amount2 = Amount(100, 1)
+        val amount2 = Amount(1000, 1)
 
         assertNotEquals(amount1, amount2)
-    }
-
-    @Test
-    fun `equals returns true for same reference`() {
-        val amount = Amount(100, 2)
-
-        assertEquals(amount, amount)
-    }
-
-    @Test
-    fun `equals returns false for null`() {
-        val amount = Amount(100, 2)
-
-        assertNotEquals(amount, null)
-    }
-
-    @Test
-    fun `equals returns false for different type`() {
-        val amount = Amount(100, 2)
-
-        assertNotEquals(amount, "not an amount")
-    }
-
-    @Test
-    fun `hashCode is consistent for identical amounts`() {
-        val amount1 = Amount(100, 2)
-        val amount2 = Amount(100, 2)
-
-        assertEquals(amount1.hashCode(), amount2.hashCode())
-    }
-
-    @Test
-    fun `hashCode differs for different quantities`() {
-        val amount1 = Amount(100, 2)
-        val amount2 = Amount(200, 2)
-
-        assertNotEquals(amount1.hashCode(), amount2.hashCode())
-    }
-
-    @Test
-    fun `hashCode differs for different fractional digits`() {
-        val amount1 = Amount(100, 0)
-        val amount2 = Amount(100, 1)
-
-        assertNotEquals(amount1.hashCode(), amount2.hashCode())
     }
 
     // Tests for semantic value comparison

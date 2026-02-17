@@ -57,7 +57,7 @@ class RedeemVerificationTests {
                 val solanaQuantity = redeemState.solanaAmount.quantity * 2
                 input(
                     FungibleTokenRedemptionContract.CONTRACT_ID,
-                    redeemState.withNewAmounts(cordaQuantity, solanaQuantity)
+                    redeemState.copyWithAmount(cordaQuantity, solanaQuantity)
                 )
                 output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
                 output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
@@ -107,7 +107,7 @@ class RedeemVerificationTests {
                 val solanaQuantity = redeemState.solanaAmount.quantity * 2
                 input(
                     FungibleTokenRedemptionContract.CONTRACT_ID,
-                    redeemState.withNewAmounts(cordaQuantity, solanaQuantity)
+                    redeemState.copyWithAmount(cordaQuantity, solanaQuantity)
                 )
                 command(
                     listOf(bridgeAuthority.owningKey),
@@ -158,7 +158,7 @@ class RedeemVerificationTests {
                 )
                 tweak {
                     output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
-                    input(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState.withNewAmounts(99990, 999900))
+                    input(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState.copyWithAmount(99990, 999900))
                     `fails with`(
                         "The amount in the FungibleTokenBurnReceipt must match the sum FungibleToken amounts"
                     )
@@ -168,7 +168,7 @@ class RedeemVerificationTests {
                         TOKEN_PROGRAM_ID,
                         FungibleToken(cordaTokenAmount, bridgeAuthority)
                     )
-                    input(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState.withNewAmounts(100010, 1000100))
+                    input(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState.copyWithAmount(100010, 1000100))
                     `fails with`(
                         "The amount in the FungibleTokenBurnReceipt must match the sum FungibleToken amounts"
                     )
@@ -388,7 +388,7 @@ class RedeemVerificationTests {
         }
     }
 
-    private fun FungibleTokenBurnReceipt.withNewAmounts(cordaQuantity: Long, solanaQuantity: Long) =
+    private fun FungibleTokenBurnReceipt.copyWithAmount(cordaQuantity: Long, solanaQuantity: Long) =
         copy(
             cordaAmount = Amount(cordaQuantity, CORDA_DECIMALS),
             solanaAmount = Amount(solanaQuantity, SOLANA_DECIMALS)

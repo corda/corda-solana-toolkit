@@ -5,6 +5,11 @@ import kotlin.math.pow
 
 @CordaSerializable
 data class Amount(val quantity: Long, val fractionalDigits: Int) {
+    init {
+        require(quantity >= 0) { "Quantity must be 0 or positive" }
+        require(fractionalDigits >= 0) { "Fractional digits must be 0 or positive" }
+    }
+
     fun convertTo(fractionalDigits: Int): Amount {
         val multiplier = getConversionMultiplier(fractionalDigits)
         return if (this.fractionalDigits < fractionalDigits) {
@@ -25,16 +30,6 @@ data class Amount(val quantity: Long, val fractionalDigits: Int) {
                 10.0.pow(decimalsDifference).toLong()
             }
         }
-    }
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is Amount) return false
-        return this.quantity == other.quantity && this.fractionalDigits == other.fractionalDigits
-    }
-
-    override fun hashCode(): Int {
-        return 31 * quantity.hashCode() + fractionalDigits.hashCode()
     }
 
     /**
