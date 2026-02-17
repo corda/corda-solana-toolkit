@@ -1,9 +1,9 @@
 package com.r3.corda.lib.solana.bridging.token.test.driver
 
 import com.r3.corda.lib.solana.bridging.token.test.EvolvableDescriptor
-import com.r3.corda.lib.solana.bridging.token.test.TokenTypeDescriptor
 import com.r3.corda.lib.solana.bridging.token.test.MockNetworkTest.Companion.APPL_TICKER
 import com.r3.corda.lib.solana.bridging.token.test.MockNetworkTest.Companion.MSFT_TICKER
+import com.r3.corda.lib.solana.bridging.token.test.TokenTypeDescriptor
 import com.r3.corda.lib.solana.bridging.token.testing.IssueEvolvableTokenTypeFlow
 import com.r3.corda.lib.tokens.contracts.types.TokenType
 import net.corda.core.identity.CordaX500Name

@@ -29,7 +29,7 @@ data class BridgeAuthorityInfo(
             tokenDescriptorToMint: Map<TokenTypeDescriptor, PublicKey>,
             mintAuthority: PublicKey,
             testValidator: SolanaTestValidator,
-            redemptionCheckIntervalSeconds: Int
+            redemptionCheckIntervalSeconds: Int,
         ): BridgeAuthorityInfo {
             val bridgingContractsCordapp = TestCordapp.findCordapp("com.r3.corda.lib.solana.bridging.token.contracts")
             val bridgingFlowsCordapp = TestCordapp.findCordapp("com.r3.corda.lib.solana.bridging.token.flows")
