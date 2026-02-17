@@ -36,6 +36,6 @@ data class FungibleTokenBurnReceipt(
     init {
         // extra check when object is deserialized by AMQP on a node that redeemed token and doesn't have this class
         require(bridgeAuthority in participants) { "Bridge Authority is not present in participants list." }
-        require(cordaAmount == solanaAmount) { "Corda amount must be equal to Solana amount in the burn receipt." }
+        require(cordaAmount.hasSameValueAs(solanaAmount)) { "Corda amount must be equal to Solana amount in the burn receipt." }
     }
 }

@@ -102,10 +102,6 @@ class FungibleTokenRedemptionContract : Contract {
             "Exactly one Solana instruction required"
         }
 
-        require(burnReceiptState.cordaAmount == burnReceiptState.solanaAmount) {
-            "Corda token amount equals converted Solana token amount"
-        }
-
         val expectedInstruction = Token2022.burn(
             burnReceiptState.mintAccount,
             burnReceiptState.redemptionTokenAccount,

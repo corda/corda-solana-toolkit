@@ -5,24 +5,7 @@ import org.junit.jupiter.api.Assertions.*
 
 class AmountTest {
 
-    @Test
-    fun `equals returns true for amounts with same value but different fractional digits`() {
-        // 100 with 0 fractional digits = 1000 with 1 fractional digit
-        val amount1 = Amount(100, 0)
-        val amount2 = Amount(1000, 1)
-
-        assertEquals(amount1, amount2)
-        assertEquals(amount2, amount1) // test symmetry
-    }
-
-    @Test
-    fun `equals returns true for amounts with same value and multiple fractional digit differences`() {
-        // 100 with 0 fractional digits = 10000 with 2 fractional digits
-        val amount1 = Amount(100, 0)
-        val amount2 = Amount(10000, 2)
-
-        assertEquals(amount1, amount2)
-    }
+    // Tests for strict object comparison
 
     @Test
     fun `equals returns true for same amount with same fractional digits`() {
@@ -41,24 +24,11 @@ class AmountTest {
     }
 
     @Test
-    fun `equals returns false for different amounts with different fractional digits`() {
-        // 100 with 0 fractional digits != 1001 with 1 fractional digit
+    fun `equals returns false for same quantity but different fractional digits`() {
         val amount1 = Amount(100, 0)
-        val amount2 = Amount(1001, 1)
+        val amount2 = Amount(100, 1)
 
         assertNotEquals(amount1, amount2)
-    }
-
-    @Test
-    fun `equals returns true for complex conversion scenarios`() {
-        // 5 with 0 fractional digits = 50 with 1 fractional digit = 500 with 2 fractional digits
-        val amount1 = Amount(5, 0)
-        val amount2 = Amount(50, 1)
-        val amount3 = Amount(500, 2)
-
-        assertEquals(amount1, amount2)
-        assertEquals(amount2, amount3)
-        assertEquals(amount1, amount3) // test transitivity
     }
 
     @Test
@@ -83,52 +53,105 @@ class AmountTest {
     }
 
     @Test
-    fun `hashCode is consistent with equals for same value different fractional digits`() {
-        // Amounts that are equal should have same hashCode
-        val amount1 = Amount(100, 0)
-        val amount2 = Amount(1000, 1)
+    fun `hashCode is consistent for identical amounts`() {
+        val amount1 = Amount(100, 2)
+        val amount2 = Amount(100, 2)
 
-        assertEquals(amount1, amount2)
         assertEquals(amount1.hashCode(), amount2.hashCode())
     }
 
     @Test
-    fun `hashCode is consistent for multiple equal amounts`() {
+    fun `hashCode differs for different quantities`() {
+        val amount1 = Amount(100, 2)
+        val amount2 = Amount(200, 2)
+
+        assertNotEquals(amount1.hashCode(), amount2.hashCode())
+    }
+
+    @Test
+    fun `hashCode differs for different fractional digits`() {
+        val amount1 = Amount(100, 0)
+        val amount2 = Amount(100, 1)
+
+        assertNotEquals(amount1.hashCode(), amount2.hashCode())
+    }
+
+    // Tests for semantic value comparison
+
+    @Test
+    fun `hasSameValueAs returns true for amounts with same value but different fractional digits`() {
+        // 100 with 0 fractional digits = 1000 with 1 fractional digit
+        val amount1 = Amount(100, 0)
+        val amount2 = Amount(1000, 1)
+
+        assertTrue(amount1.hasSameValueAs(amount2))
+        assertTrue(amount2.hasSameValueAs(amount1)) // test symmetry
+    }
+
+    @Test
+    fun `hasSameValueAs returns true for amounts with same value and multiple fractional digit differences`() {
+        // 100 with 0 fractional digits = 10000 with 2 fractional digits
+        val amount1 = Amount(100, 0)
+        val amount2 = Amount(10000, 2)
+
+        assertTrue(amount1.hasSameValueAs(amount2))
+    }
+
+    @Test
+    fun `hasSameValueAs returns true for same amount with same fractional digits`() {
+        val amount1 = Amount(100, 2)
+        val amount2 = Amount(100, 2)
+
+        assertTrue(amount1.hasSameValueAs(amount2))
+    }
+
+    @Test
+    fun `hasSameValueAs returns false for different amounts with same fractional digits`() {
+        val amount1 = Amount(100, 2)
+        val amount2 = Amount(200, 2)
+
+        assertFalse(amount1.hasSameValueAs(amount2))
+    }
+
+    @Test
+    fun `hasSameValueAs returns false for different amounts with different fractional digits`() {
+        // 100 with 0 fractional digits != 1001 with 1 fractional digit
+        val amount1 = Amount(100, 0)
+        val amount2 = Amount(1001, 1)
+
+        assertFalse(amount1.hasSameValueAs(amount2))
+    }
+
+    @Test
+    fun `hasSameValueAs returns true for complex conversion scenarios`() {
+        // 5 with 0 fractional digits = 50 with 1 fractional digit = 500 with 2 fractional digits
         val amount1 = Amount(5, 0)
         val amount2 = Amount(50, 1)
         val amount3 = Amount(500, 2)
 
-        assertEquals(amount1.hashCode(), amount2.hashCode())
-        assertEquals(amount2.hashCode(), amount3.hashCode())
-        assertEquals(amount1.hashCode(), amount3.hashCode())
+        assertTrue(amount1.hasSameValueAs(amount2))
+        assertTrue(amount2.hasSameValueAs(amount3))
+        assertTrue(amount1.hasSameValueAs(amount3)) // test transitivity
     }
 
     @Test
-    fun `hashCode is same for same amount`() {
-        val amount = Amount(100, 2)
-
-        assertEquals(amount.hashCode(), amount.hashCode())
-    }
-
-    @Test
-    fun `equals works correctly with zero amounts`() {
+    fun `hasSameValueAs works correctly with zero amounts`() {
         val amount1 = Amount(0, 0)
         val amount2 = Amount(0, 1)
         val amount3 = Amount(0, 5)
 
-        assertEquals(amount1, amount2)
-        assertEquals(amount2, amount3)
-        assertEquals(amount1, amount3)
+        assertTrue(amount1.hasSameValueAs(amount2))
+        assertTrue(amount2.hasSameValueAs(amount3))
+        assertTrue(amount1.hasSameValueAs(amount3))
     }
 
     @Test
-    fun `equals works with large quantities and different fractional digits`() {
+    fun `hasSameValueAs works with large quantities and different fractional digits`() {
         // 1000000 with 0 fractional digits = 10000000 with 1 fractional digit
         val amount1 = Amount(1000000, 0)
         val amount2 = Amount(10000000, 1)
 
-        assertEquals(amount1, amount2)
-        assertEquals(amount1.hashCode(), amount2.hashCode())
+        assertTrue(amount1.hasSameValueAs(amount2))
     }
 }
 

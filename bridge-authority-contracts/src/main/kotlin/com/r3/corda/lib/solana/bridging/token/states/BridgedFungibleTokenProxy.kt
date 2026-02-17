@@ -46,6 +46,6 @@ data class BridgedFungibleTokenProxy(
     init {
         // future-proof extra check in case an object is deserialized by AMQP on a node that doesn't have this class
         require(bridgeAuthority in participants) { "Bridge Authority is not present in participants list." }
-        require(cordaAmount == solanaAmount) { "Corda amount must be equal to Solana amount." }
+        require(cordaAmount.hasSameValueAs(solanaAmount)) { "Corda amount must be equal to Solana amount." }
     }
 }

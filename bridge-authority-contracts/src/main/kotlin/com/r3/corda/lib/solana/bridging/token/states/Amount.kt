@@ -31,18 +31,27 @@ data class Amount(val quantity: Long, val fractionalDigits: Int) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is Amount) return false
-
-        // Convert both amounts to the same fractional digits for comparison
-        val maxFractionalDigits = maxOf(this.fractionalDigits, other.fractionalDigits)
-        val thisConverted = this.convertTo(maxFractionalDigits)
-        val otherConverted = other.convertTo(maxFractionalDigits)
-
-        return thisConverted.quantity == otherConverted.quantity
+        return this.quantity == other.quantity && this.fractionalDigits == other.fractionalDigits
     }
 
     override fun hashCode(): Int {
-        // Normalize to a common representation for consistent hashing
-        val normalized = this.convertTo(0)
-        return normalized.quantity.hashCode()
+        return 31 * quantity.hashCode() + fractionalDigits.hashCode()
+    }
+
+    /**
+     * Semantic equivalence: checks if two amounts represent the same value
+     * even if they have different representations.
+     *
+     * Example: Amount(100, 0) and Amount(1000, 1) both represent the same value
+     * and will return true, even though they have different fields.
+     *
+     * Use this when you need to compare the actual monetary value.
+     * Use equals() when you need to compare the exact representation.
+     */
+    fun hasSameValueAs(other: Amount): Boolean {
+        val maxFractionalDigits = maxOf(this.fractionalDigits, other.fractionalDigits)
+        val thisConverted = this.convertTo(maxFractionalDigits)
+        val otherConverted = other.convertTo(maxFractionalDigits)
+        return thisConverted.quantity == otherConverted.quantity
     }
 }
