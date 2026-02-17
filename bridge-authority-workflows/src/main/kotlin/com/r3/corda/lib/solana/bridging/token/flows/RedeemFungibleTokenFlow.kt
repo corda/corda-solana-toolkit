@@ -27,7 +27,7 @@ import com.r3.corda.lib.solana.bridging.token.states.Amount as RedeemAmount
  *
  * @param redemptionCoordinates the Solana redemption coordinates
  * @param redemptionHolder the Corda party to send the redeemed tokens to
- * @param amount the amount of tokens to redeem
+ * @param solanaAmount the amount of tokens to redeem
  * @param solanaNotary notary to perform bridging
  * @param generalNotary notary to use for Corda-side fungible token movement to the redemption holder
  * @param lockingHolder the confidential identity that holds the fungible tokens
@@ -45,7 +45,7 @@ class RedeemFungibleTokenFlow(
     @Suspendable
     override fun call(): SignedTransaction {
         val tokenType = findTokenTypeOfFungibleTokenBy(redemptionCoordinates.tokenId)
-        val conversionMultiplier: Long = solanaAmount.getConversionMultiplier(tokenType.fractionDigits)
+        val conversionMultiplier = solanaAmount.getConversionMultiplier(tokenType.fractionDigits)
 
         val cordaAmount =
             RedeemAmount(solanaAmount.truncateQuantityByFactor(conversionMultiplier), tokenType.fractionDigits)

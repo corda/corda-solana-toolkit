@@ -58,9 +58,8 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         solanaClient.close()
     }
 
-    fun getBridgingCoordinates(token: StateAndRef<FungibleToken>, originalHolder: Party): BridgingCoordinates {
-        return configHandler.getBridgingCoordinates(token, originalHolder)
-    }
+    fun getBridgingCoordinates(token: StateAndRef<FungibleToken>, originalHolder: Party) =
+        configHandler.getBridgingCoordinates(token, originalHolder)
 
     private fun onStartup(event: ServiceLifecycleEvent) {
         if (event != ServiceLifecycleEvent.STATE_MACHINE_STARTED) return
@@ -126,7 +125,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         val redemptionCoordinates = configHandler.getRedemptionCoordinates(
             tokenId,
             walletAccount,
-            tokenAccount.address().toPubkey(),
+            tokenAccount.address().toPubkey()
         )
         logger.debug { "Redemption event: $redemptionCoordinates, amount ${tokenAccount.amount}" }
         val solanaAmount = Amount(
