@@ -20,6 +20,7 @@ import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.builder
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.toNonEmptySet
+import com.r3.corda.lib.solana.bridging.token.states.Amount as RedeemAmount
 
 /**
  * Flows bridges a fungible token redemption to Solana token burn.
@@ -36,7 +37,7 @@ import net.corda.core.utilities.toNonEmptySet
 class RedeemFungibleTokenFlow(
     val redemptionCoordinates: RedemptionCoordinates,
     val redemptionHolder: Party,
-    val amount: Long,
+    val solanaAmount: RedeemAmount,
     val solanaNotary: Party,
     val generalNotary: Party,
     val lockingHolder: Party,
@@ -44,17 +45,17 @@ class RedeemFungibleTokenFlow(
     @Suspendable
     override fun call(): SignedTransaction {
         val tokenType = findTokenTypeOfFungibleTokenBy(redemptionCoordinates.tokenId)
-        val conversionMultiplier: Long = 1 // TODO conversion
+        val conversionMultiplier: Long = solanaAmount.getConversionMultiplier(tokenType.fractionDigits)
 
-        val cordaAmount = truncateByFactor(amount, conversionMultiplier)
-        val newSolanaAmount = zeroOutFractionDigits(amount, conversionMultiplier)
+        val cordaAmount =
+            RedeemAmount(solanaAmount.truncateQuantityByFactor(conversionMultiplier), tokenType.fractionDigits)
+        val newSolanaAmount = solanaAmount.copy(quantity = solanaAmount.zeroOutFractionDigits(conversionMultiplier))
 
         val redeemStateAndRef = subFlow(
             BurnTokensOnSolanaFlow(
                 redemptionCoordinates,
                 solanaNotary,
                 cordaAmount,
-                tokenType.fractionDigits,
                 newSolanaAmount
             )
         ).toLedgerTransaction(serviceHub).outRefsOfType<FungibleTokenBurnReceipt>().single()
@@ -63,7 +64,7 @@ class RedeemFungibleTokenFlow(
         ).single()
 
         // Unlock the fungible tokens from the locking holder
-        val moveAmount = Amount(cordaAmount, tokenType)
+        val moveAmount = Amount(cordaAmount.quantity, tokenType)
         val lockCapture = FungibleTokenLockCapture()
         val unlockLedgerTx = subFlow(
             MoveAndUnlockFungibleTokenFlow(

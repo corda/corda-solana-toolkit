@@ -151,7 +151,6 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
             mintWithAuthority.tokenMint,
             mintWithAuthority.mintAuthority,
             mintWalletAccount,
-            0 // TODO conversion
         )
     }
 
@@ -159,14 +158,12 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
         tokenTypeId: String,
         redemptionWalletAccount: Pubkey,
         redemptionTokenAccount: Pubkey,
-        tokenMintDecimals: Int,
     ): RedemptionCoordinates {
         val mintWithAuthority = checkNotNull(mintsWithAuthorities[tokenTypeId]) {
             "No mint with authority mapping found for token type id $tokenTypeId"
         }
         return RedemptionCoordinates(
             mintWithAuthority.tokenMint,
-            tokenMintDecimals,
             redemptionWalletAccount,
             redemptionTokenAccount,
             tokenTypeId

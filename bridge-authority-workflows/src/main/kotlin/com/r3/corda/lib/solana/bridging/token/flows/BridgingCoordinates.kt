@@ -20,14 +20,17 @@ data class BridgingCoordinates(
     val mintAccount: Pubkey,
     val mintAuthority: Pubkey,
     val mintWalletAccount: Pubkey,
-    val mintDecimals: Int,
 ) {
     /**
      * Creates an unminted [BridgedFungibleTokenProxy] with ATA destination to bridge to.
      * Converts the Fungible Token amount to Solana token amount in 1:1 ration.
      * @param token the source of amount to bridge
      */
-    fun toBridgedFungibleTokenProxy(token: FungibleToken, bridgeAuthority: Party): BridgedFungibleTokenProxy {
+    fun toBridgedFungibleTokenProxy(
+        token: FungibleToken,
+        solanaMintDecimals: Int,
+        bridgeAuthority: Party,
+    ): BridgedFungibleTokenProxy {
         val tokenAccount = AssociatedTokenProgram
             .findATA(
                 SolanaAccounts.MAIN_NET,
@@ -37,7 +40,7 @@ data class BridgingCoordinates(
             ).publicKey()
             .toPubkey()
         val cordaAmount = Amount(token.amount.quantity, token.tokenType.fractionDigits)
-        val solanaAmount = cordaAmount.convertTo(mintDecimals)
+        val solanaAmount = cordaAmount.convertTo(solanaMintDecimals)
         return BridgedFungibleTokenProxy(
             cordaAmount,
             solanaAmount,

@@ -48,4 +48,25 @@ data class Amount(val quantity: Long, val fractionalDigits: Int) {
         val otherConverted = other.convertTo(maxFractionalDigits)
         return thisConverted.quantity == otherConverted.quantity
     }
+
+    fun truncateQuantityByFactor(factor: Long): Long {
+        validateFactor(factor)
+        val newValue = quantity / factor
+        return newValue
+    }
+
+    fun zeroOutFractionDigits(factor: Long): Long {
+        validateFactor(factor)
+        val newValue = (quantity / factor) * factor
+        return newValue
+    }
+
+    private fun validateFactor(factor: Long) {
+        require(factor > 0) { "factor must be > 0" }
+        var f = factor
+        while (f > 1 && f % 10L == 0L) {
+            f /= 10L
+        }
+        require(f == 1L) { "factor must be a power of 10. Got: $factor" }
+    }
 }

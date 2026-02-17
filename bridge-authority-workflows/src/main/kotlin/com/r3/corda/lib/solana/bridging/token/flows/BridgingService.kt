@@ -1,5 +1,6 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
+import com.r3.corda.lib.solana.bridging.token.states.Amount
 import com.r3.corda.lib.solana.core.AccountManagement
 import com.r3.corda.lib.solana.core.SolanaClient
 import com.r3.corda.lib.solana.core.tokens.TokenAccountListener
@@ -58,9 +59,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
     }
 
     fun getBridgingCoordinates(token: StateAndRef<FungibleToken>, originalHolder: Party): BridgingCoordinates {
-        val coordinates = configHandler.getBridgingCoordinates(token, originalHolder)
-        val solanaDecimals = getAccountMintDecimals(coordinates.mintAccount.toPublicKey())
-        return coordinates.copy(mintDecimals = solanaDecimals)
+        return configHandler.getBridgingCoordinates(token, originalHolder)
     }
 
     private fun onStartup(event: ServiceLifecycleEvent) {
@@ -128,15 +127,18 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
             tokenId,
             walletAccount,
             tokenAccount.address().toPubkey(),
-            tokenMintDecimals = getAccountMintDecimals(tokenAccount.mint)
         )
         logger.debug { "Redemption event: $redemptionCoordinates, amount ${tokenAccount.amount}" }
-        val solanaDecimals = getAccountMintDecimals(redemptionCoordinates.mintAccount.toPublicKey())
+        val solanaAmount = Amount(
+            tokenAccount.amount,
+            getAccountMintDecimals(redemptionCoordinates.mintAccount.toPublicKey())
+        )
+
         appServiceHub.startFlow(
             RedeemFungibleTokenFlow(
-                redemptionCoordinates.copy(tokenMintDecimals = solanaDecimals),
+                redemptionCoordinates,
                 cordaOwner,
-                tokenAccount.amount,
+                solanaAmount,
                 configHandler.solanaNotary,
                 configHandler.generalNotaryName,
                 configHandler.lockingIdentity

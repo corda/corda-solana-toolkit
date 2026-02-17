@@ -283,18 +283,18 @@ abstract class DriverTest {
             var redeemQuantity = BigDecimal.ONE
             val leftQuantity = BRIDGE_QUANTITY - BigDecimal.ONE
             var expectedCordaQuantity = ISSUING_QUANTITY - leftQuantity
-            redeemTest(aliceApple, redeemQuantity, expectedCordaQuantity)
+            redeemTest(aliceApple, redeemQuantity, expectCumulativeQuantity = expectedCordaQuantity)
 
             // Alice redeems with fractions
             val notRedeemableFraction = BigDecimal("0.0001")
             redeemQuantity = BigDecimal.ONE + notRedeemableFraction
             expectedCordaQuantity += BigDecimal.ONE
-            redeemTest(aliceApple, redeemQuantity, expectedCordaQuantity)
+            redeemTest(aliceApple, redeemQuantity, expectCumulativeQuantity = expectedCordaQuantity)
             // TODO test redemption account
 
             redeemQuantity = BigDecimal("0.0099")
             expectedCordaQuantity += redeemQuantity + notRedeemableFraction
-            redeemTest(aliceApple, redeemQuantity, expectedCordaQuantity)
+            redeemTest(aliceApple, redeemQuantity, BigDecimal("0.01"), expectCumulativeQuantity = expectedCordaQuantity)
         }
     }
 
@@ -342,7 +342,8 @@ abstract class DriverTest {
 
     private fun redeemTest(
         participantAndStock: ParticipantAndStock,
-        quantity: BigDecimal,
+        intendedQuantity: BigDecimal,
+        effectiveQuantity: BigDecimal = intendedQuantity,
         expectCumulativeQuantity: BigDecimal = ISSUING_QUANTITY,
     ) {
         val participant = participantAndStock.participant
@@ -351,28 +352,27 @@ abstract class DriverTest {
             participant.wallet,
             participantAndStock.tokenAccount,
             participantAndStock.redemptionTokenAccount,
-            quantity.toRawAmount(SOLANA_TOKEN_DECIMALS)
+            intendedQuantity.toRawAmount(SOLANA_TOKEN_DECIMALS)
         )
         // We need to wait for the websocket listener to process the newly received event
         // TODO verify
-//        eventually(duration = 10.seconds) {
-//            val balance = validator.client().getTokenBalance(participantAndStock.redemptionTokenAccount)
-//            assertEquals(
-//                quantity.stripTrailingZeros(),
-//                balance.stripTrailingZeros(),
-//            ) {
-//                "Redemption token account has $balance instead $quantity after transfer - party" +
-//                    " ${participantAndStock.participant.nameAsString}"
-//            }
-//        }
+        eventually(duration = 10.seconds) {
+            val balance = validator.client().getTokenBalance(participantAndStock.redemptionTokenAccount)
+            assertThat(balance)
+                .describedAs(
+                    "Redemption token account has $balance instead $effectiveQuantity after transfer - party" +
+                        " ${participantAndStock.participant.nameAsString}"
+                )
+                .isEqualByComparingTo(effectiveQuantity)
+        }
         eventually(duration = 20.seconds) {
             val sum = participantAndStock.tokenBalance(issuer.identity)
-            assertEquals(
-                expectCumulativeQuantity,
-                sum,
-                "${participantAndStock.participant.nameAsString} received redeemed " +
-                    "${participantAndStock.stockName} shares back",
-            )
+            assertThat(sum)
+                .describedAs(
+                    "${participantAndStock.participant.nameAsString} received redeemed " +
+                        "${participantAndStock.stockName} shares back"
+                )
+                .isEqualByComparingTo(expectCumulativeQuantity)
         }
     }
 

@@ -1,6 +1,5 @@
 package com.r3.corda.lib.solana.bridging.token.states
 
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -17,7 +16,6 @@ class AmountTest {
     }
 
     // Tests for semantic value comparison
-
     @Test
     fun `hasSameValueAs returns true for amounts with same value but different fractional digits`() {
         // 100 with 0 fractional digits = 1000 with 1 fractional digit

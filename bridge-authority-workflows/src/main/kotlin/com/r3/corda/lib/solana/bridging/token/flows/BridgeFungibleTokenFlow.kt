@@ -52,6 +52,7 @@ class BridgeFungibleTokenFlow(
         try {
             val bridgingService = serviceHub.cordaService(BridgingService::class.java)
             val bridgingCoordinates = bridgingService.getBridgingCoordinates(token, originalHolder)
+            val solanaDecimals = bridgingService.getAccountMintDecimals(bridgingCoordinates.mintAccount.toPublicKey())
 
             // Idempotent creation, safe to invoke again if the flow restarts from a checkpoint.
             bridgingService.createAta(
@@ -65,6 +66,7 @@ class BridgeFungibleTokenFlow(
                 MoveAndLockFungibleTokenFlow(
                     token,
                     bridgingCoordinates,
+                    solanaDecimals,
                     lockingHolder,
                     participantSessions = sessionsForParties(listOf(lockingHolder)),
                     observerSessions = sessionsForParties(observers),

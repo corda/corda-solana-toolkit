@@ -16,30 +16,26 @@ import net.corda.core.solana.Pubkey
  */
 data class RedemptionCoordinates(
     val mintAccount: Pubkey,
-    val tokenMintDecimals: Int,
     val redemptionWalletAccount: Pubkey,
     val redemptionTokenAccount: Pubkey,
     val tokenId: String,
 ) {
     /**
      * Creates a [FungibleTokenBurnReceipt].
-     * @param cordaQuantity the amount of tokens to redeem
+     * @param solanaAmount the amount of tokens to redeem
+     * @param cordaAmount the amount of tokens to redeem in Corda representation (for recording in the receipt)
      * @param bridgeAuthority the Corda party operating the bridge
      * */
     fun toRedeemReceiptState(
-        cordaQuantity: Long,
-        coraDecimals: Int,
+        solanaAmount: Amount,
+        cordaAmount: Amount,
         bridgeAuthority: Party,
-    ): FungibleTokenBurnReceipt {
-        val cordaAmount = Amount(cordaQuantity, coraDecimals)
-        val solanaAmount = cordaAmount.convertTo(tokenMintDecimals)
-        return FungibleTokenBurnReceipt(
-            redemptionTokenAccount,
-            redemptionWalletAccount,
-            mintAccount,
-            cordaAmount,
-            solanaAmount,
-            bridgeAuthority,
-        )
-    }
+    ) = FungibleTokenBurnReceipt(
+        redemptionTokenAccount,
+        redemptionWalletAccount,
+        mintAccount,
+        cordaAmount,
+        solanaAmount,
+        bridgeAuthority,
+    )
 }
