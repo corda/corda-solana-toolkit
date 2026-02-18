@@ -77,7 +77,6 @@ class FungibleTokenRedemptionContract : Contract {
                 e
             )
         }
-
         require(
             burnReceiptState.cordaAmount.quantity == redeemedAmount.quantity &&
                 burnReceiptState.cordaAmount.fractionalDigits == redeemedAmount.token.fractionDigits
@@ -105,7 +104,6 @@ class FungibleTokenRedemptionContract : Contract {
         val solanaInstruction = tx.notaryInstructionsOfType<SolanaInstruction>().requireSingle {
             "Exactly one Solana instruction required"
         }
-
         val expectedInstruction = Token2022.burn(
             burnReceiptState.mintAccount,
             burnReceiptState.redemptionTokenAccount,
