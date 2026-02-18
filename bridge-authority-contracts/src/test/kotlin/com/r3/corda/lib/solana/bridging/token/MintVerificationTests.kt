@@ -101,15 +101,13 @@ class MintVerificationTests {
 
                 tweak {
                     output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
-                    output(
-                        FungibleTokenBridgeContract.CONTRACT_ID,
-                        bridgedFungibleTokenProxy.copyWithAmount(10001)
-                    )
+                    output(FungibleTokenBridgeContract.CONTRACT_ID, bridgedFungibleTokenProxy.copyWithAmount(10001))
                     `fails with`("BridgedFungibleTokenProxy must have the same amount as the locked token")
                 }
 
                 tweak {
-                    val overspendCordaIssuedTokenType = (10001 of TokenType("TEST", 1)).issuedBy(tokenIssuer)
+                    val overspendCordaIssuedTokenType =
+                        (10001 of TokenType("TEST", CORDA_DECIMALS)).issuedBy(tokenIssuer)
                     output(
                         TOKEN_PROGRAM_ID,
                         FungibleToken(overspendCordaIssuedTokenType, confidentialIdentity)
