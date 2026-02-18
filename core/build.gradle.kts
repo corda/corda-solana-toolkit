@@ -15,6 +15,8 @@ dependencies {
 
     testImplementation(project(":testing"))
 
+    testRuntimeOnly(libs.slf4j.simple)
+
     detektPlugins(libs.detekt.ktlint.wrapper)
 }
 
