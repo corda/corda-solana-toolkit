@@ -67,7 +67,7 @@ class MintVerificationTests {
                     listOf(bridgeAuthority.owningKey),
                     FungibleTokenBridgeContract.BridgeCommand.MintToSolana
                 )
-                notaryInstruction(Token2022.mintTo(mintAccount, tokenAccount, mintAuthority, 1000000))
+                notaryInstruction(Token2022.mintTo(mintAccount, tokenAccount, mintAuthority, 10000))
 
                 verifies()
             }
@@ -94,7 +94,7 @@ class MintVerificationTests {
                     output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
                     output(
                         FungibleTokenBridgeContract.CONTRACT_ID,
-                        bridgedFungibleTokenProxy.copyWithAmount(99990, 999900)
+                        bridgedFungibleTokenProxy.copyWithAmount(9999, 99990)
                     )
                     `fails with`("BridgedFungibleTokenProxy must have the same amount as the locked token")
                 }
@@ -103,7 +103,7 @@ class MintVerificationTests {
                     output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
                     output(
                         FungibleTokenBridgeContract.CONTRACT_ID,
-                        bridgedFungibleTokenProxy.copyWithAmount(100010, 1000100)
+                        bridgedFungibleTokenProxy.copyWithAmount(10001, 100010)
                     )
                     `fails with`("BridgedFungibleTokenProxy must have the same amount as the locked token")
                 }
@@ -229,15 +229,15 @@ class MintVerificationTests {
                 )
 
                 tweak {
-                    notaryInstruction(Token2022.mintTo(mintAccount, tokenAccount, mintAuthority, 1000100))
+                    notaryInstruction(Token2022.mintTo(mintAccount, tokenAccount, mintAuthority, 10001))
                     `fails with`("Solana instruction in the transaction not the expected mint instruction:")
                 }
                 tweak {
-                    notaryInstruction(Token2022.mintTo(mintAccount, tokenAccount, mintAuthority, 999900))
+                    notaryInstruction(Token2022.mintTo(mintAccount, tokenAccount, mintAuthority, 9999))
                     `fails with`("Solana instruction in the transaction not the expected mint instruction:")
                 }
 
-                notaryInstruction(Token2022.mintTo(mintAccount, tokenAccount, mintAuthority, 1000000))
+                notaryInstruction(Token2022.mintTo(mintAccount, tokenAccount, mintAuthority, 10000))
 
                 verifies()
             }
@@ -250,7 +250,7 @@ class MintVerificationTests {
             transaction {
                 attachment(FungibleTokenBridgeContract.CONTRACT_ID)
                 input(FungibleTokenBridgeContract.CONTRACT_ID, bridgedFungibleTokenProxy)
-                notaryInstruction(Token2022.mintTo(mintAccount, tokenAccount, mintAuthority, 1000000))
+                notaryInstruction(Token2022.mintTo(mintAccount, tokenAccount, mintAuthority, 10000))
 
                 // no commands
                 tweak {
@@ -297,15 +297,15 @@ class MintVerificationTests {
                 )
 
                 tweak {
-                    notaryInstruction(Token2022.mintTo(mintAccount, mintAuthority, mintAuthority, 1000000))
+                    notaryInstruction(Token2022.mintTo(mintAccount, mintAuthority, mintAuthority, 10000))
                     `fails with`("Solana instruction in the transaction not the expected mint instruction:")
                 }
 
                 tweak { `fails with`("Exactly one Solana instruction required") }
 
                 tweak {
-                    notaryInstruction(Token2022.mintTo(mintAccount, tokenAccount, mintAuthority, 1000000))
-                    notaryInstruction(Token2022.mintTo(mintAccount, tokenAccount, mintAuthority, 1000000))
+                    notaryInstruction(Token2022.mintTo(mintAccount, tokenAccount, mintAuthority, 10000))
+                    notaryInstruction(Token2022.mintTo(mintAccount, tokenAccount, mintAuthority, 10000))
                     `fails with`("Exactly one Solana instruction required")
                 }
 
@@ -315,16 +315,16 @@ class MintVerificationTests {
                 }
                 // wrong destination
                 tweak {
-                    notaryInstruction(Token2022.mintTo(mintAccount, tokenAccount, tokenAccount, 1000000))
+                    notaryInstruction(Token2022.mintTo(mintAccount, tokenAccount, tokenAccount, 10000))
                     `fails with`("Solana instruction in the transaction not the expected mint instruction")
                 }
                 // wrong amount
                 tweak {
-                    notaryInstruction(Token2022.mintTo(mintAccount, tokenAccount, mintAuthority, 100000))
+                    notaryInstruction(Token2022.mintTo(mintAccount, tokenAccount, mintAuthority, 1000))
                     `fails with`("Solana instruction in the transaction not the expected mint instruction:")
                 }
 
-                notaryInstruction(Token2022.mintTo(mintAccount, tokenAccount, mintAuthority, 1000000))
+                notaryInstruction(Token2022.mintTo(mintAccount, tokenAccount, mintAuthority, 10000))
 
                 verifies()
             }
