@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test
 class MintVerificationTests {
     val bridgedFungibleTokenProxy = BridgedFungibleTokenProxy(
         Amount(cordaTokenAmount.quantity, cordaTokenAmount.token.fractionDigits),
-        Amount(SOLANA_AMOUNT, SOLANA_DECIMALS),
+        Amount(solanaTokenAmount, SOLANA_DECIMALS),
         tokenAccount,
         mintAccount,
         mintAuthority,
@@ -94,7 +94,7 @@ class MintVerificationTests {
                     output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
                     output(
                         FungibleTokenBridgeContract.CONTRACT_ID,
-                        bridgedFungibleTokenProxy.copyWithAmount(9999, 99990)
+                        bridgedFungibleTokenProxy.copyWithAmount(9999)
                     )
                     `fails with`("BridgedFungibleTokenProxy must have the same amount as the locked token")
                 }
@@ -103,7 +103,7 @@ class MintVerificationTests {
                     output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
                     output(
                         FungibleTokenBridgeContract.CONTRACT_ID,
-                        bridgedFungibleTokenProxy.copyWithAmount(10001, 100010)
+                        bridgedFungibleTokenProxy.copyWithAmount(10001)
                     )
                     `fails with`("BridgedFungibleTokenProxy must have the same amount as the locked token")
                 }
@@ -331,9 +331,9 @@ class MintVerificationTests {
         }
     }
 
-    private fun BridgedFungibleTokenProxy.copyWithAmount(cordaQuantity: Long, solanaQuantity: Long) =
+    private fun BridgedFungibleTokenProxy.copyWithAmount(cordaQuantity: Long) =
         copy(
             cordaAmount = Amount(cordaQuantity, CORDA_DECIMALS),
-            solanaAmount = Amount(solanaQuantity, SOLANA_DECIMALS)
+            solanaAmount = Amount(cordaQuantity * 10, SOLANA_DECIMALS)
         )
 }

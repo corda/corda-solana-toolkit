@@ -38,14 +38,15 @@ val services = MockServices(
     networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
 )
 val TOKEN_PROGRAM_ID: String = FungibleTokenContract.contractId
-val bridgeAuthorityWallet = Pubkey(secureRandomBytes(32))
 const val CORDA_DECIMALS = 1
-const val SOLANA_DECIMALS = 2
 val cordaTokenAmount = (100 of TokenType("TEST", CORDA_DECIMALS)).issuedBy(tokenIssuer)
-const val SOLANA_AMOUNT = 10000L // raw value is 10x greater than Corda amount to reflect the difference in decimals
+const val SOLANA_DECIMALS = 2
+val solanaTokenAmount = cordaTokenAmount.quantity * 10 // the value is 10x of Corda amount to reflect decimal difference
+
 val mintAccount = Pubkey(secureRandomBytes(32))
 val mintAuthority = Pubkey(secureRandomBytes(32))
 val tokenAccount = Pubkey(secureRandomBytes(32))
+val bridgeAuthorityWallet = Pubkey(secureRandomBytes(32))
 
 fun instructionWithWrongOperation(programId: Pubkey): SolanaInstruction {
     val operation = 6

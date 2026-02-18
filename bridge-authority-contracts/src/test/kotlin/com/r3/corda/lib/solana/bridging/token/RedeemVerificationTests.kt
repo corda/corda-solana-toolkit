@@ -19,7 +19,7 @@ class RedeemVerificationTests {
         bridgeAuthorityWallet,
         mintAccount,
         Amount(cordaTokenAmount.quantity, cordaTokenAmount.token.fractionDigits),
-        Amount(SOLANA_AMOUNT, SOLANA_DECIMALS),
+        Amount(solanaTokenAmount, SOLANA_DECIMALS),
         bridgeAuthority
     )
 
@@ -53,11 +53,9 @@ class RedeemVerificationTests {
                 attachment(FungibleTokenRedemptionContract.CONTRACT_ID)
                 input(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
                 input(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
-                val cordaQuantity = redeemState.cordaAmount.quantity * 2
-                val solanaQuantity = redeemState.solanaAmount.quantity * 2
                 input(
                     FungibleTokenRedemptionContract.CONTRACT_ID,
-                    redeemState.copyWithAmount(cordaQuantity, solanaQuantity)
+                    redeemState.copyWithAmount(redeemState.cordaAmount.quantity * 2)
                 )
                 output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
                 output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
@@ -103,11 +101,9 @@ class RedeemVerificationTests {
                 attachment(TOKEN_PROGRAM_ID)
                 attachment(FungibleTokenRedemptionContract.CONTRACT_ID)
                 input(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
-                val cordaQuantity = redeemState.cordaAmount.quantity * 2
-                val solanaQuantity = redeemState.solanaAmount.quantity * 2
                 input(
                     FungibleTokenRedemptionContract.CONTRACT_ID,
-                    redeemState.copyWithAmount(cordaQuantity, solanaQuantity)
+                    redeemState.copyWithAmount(redeemState.cordaAmount.quantity * 2)
                 )
                 command(
                     listOf(bridgeAuthority.owningKey),
@@ -158,7 +154,7 @@ class RedeemVerificationTests {
                 )
                 tweak {
                     output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
-                    input(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState.copyWithAmount(9999, 99990))
+                    input(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState.copyWithAmount(9999))
                     `fails with`(
                         "The amount in the FungibleTokenBurnReceipt must match the sum FungibleToken amounts"
                     )
@@ -168,7 +164,7 @@ class RedeemVerificationTests {
                         TOKEN_PROGRAM_ID,
                         FungibleToken(cordaTokenAmount, bridgeAuthority)
                     )
-                    input(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState.copyWithAmount(10001, 100010))
+                    input(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState.copyWithAmount(10001))
                     `fails with`(
                         "The amount in the FungibleTokenBurnReceipt must match the sum FungibleToken amounts"
                     )
@@ -388,9 +384,9 @@ class RedeemVerificationTests {
         }
     }
 
-    private fun FungibleTokenBurnReceipt.copyWithAmount(cordaQuantity: Long, solanaQuantity: Long) =
+    private fun FungibleTokenBurnReceipt.copyWithAmount(cordaQuantity: Long) =
         copy(
             cordaAmount = Amount(cordaQuantity, CORDA_DECIMALS),
-            solanaAmount = Amount(solanaQuantity, SOLANA_DECIMALS)
+            solanaAmount = Amount(cordaQuantity * 10, SOLANA_DECIMALS)
         )
 }
