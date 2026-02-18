@@ -150,7 +150,7 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
         return BridgingCoordinates(
             mintWithAuthority.tokenMint,
             mintWithAuthority.mintAuthority,
-            mintWalletAccount,
+            mintWalletAccount
         )
     }
 

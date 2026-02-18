@@ -54,7 +54,6 @@ data class BridgeAuthorityInfo(
                         it.key.tokenTypeIdentifier to mapOf(
                             "tokenMint" to it.value.toBase58(),
                             "mintAuthority" to mintAuthority.toBase58(),
-                            "conversionMultiplier" to 1
                         )
                     }.toMap(),
                 "lockingIdentityLabel" to UUID.randomUUID().toString(),
