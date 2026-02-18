@@ -40,7 +40,6 @@ import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.User
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -221,6 +220,7 @@ abstract class DriverTest {
         bobMicrosoft = assembleParticipantWithStock(bob, msftDescriptor, msftTokenMint, redemptionWalletForBob)
     }
 
+    @Suppress("LongMethod")
     @Test
     fun `driver bridge and redemption test`() {
         driver(
@@ -264,115 +264,128 @@ abstract class DriverTest {
             }
 
             // actual test:
-            // Alice bridges Microsoft stock once, and then she redeems once the same amount
-            bridgeTest(aliceMicrosoft, BRIDGE_QUANTITY)
+            aliceMicrosoft.bridgeTest(quantity = BRIDGE_QUANTITY, expectedSolanaBalance = BRIDGE_QUANTITY)
 
-            // Bob bridges Microsoft stock twice and then he will redeem all in one go
-            val firstBridgeQuantity = BigDecimal.ONE
-            val secondBridgeQuantity = BRIDGE_QUANTITY - BigDecimal.ONE
-            bridgeTest(bobMicrosoft, firstBridgeQuantity)
-            bridgeTest(bobMicrosoft, secondBridgeQuantity, BRIDGE_QUANTITY)
+            bobMicrosoft.bridgeTest(quantity = BigDecimal.ONE, expectedSolanaBalance = BigDecimal.ONE)
+            bobMicrosoft.bridgeTest(quantity = BRIDGE_QUANTITY - BigDecimal.ONE, BRIDGE_QUANTITY)
 
-            bridgeTest(aliceApple, BRIDGE_QUANTITY)
+            aliceApple.bridgeTest(BRIDGE_QUANTITY, expectedSolanaBalance = BRIDGE_QUANTITY)
 
-            redeemTest(aliceMicrosoft, BRIDGE_QUANTITY)
+            aliceMicrosoft.redeemTest(
+                quantity = BRIDGE_QUANTITY,
+                expectedCordaBalance = ISSUING_QUANTITY,
+                expectedSolanaRedemptionBalance = BigDecimal.ZERO
+            )
 
-            redeemTest(bobMicrosoft, BRIDGE_QUANTITY)
+            bobMicrosoft.redeemTest(
+                quantity = BRIDGE_QUANTITY,
+                expectedCordaBalance = ISSUING_QUANTITY,
+                expectedSolanaRedemptionBalance = BigDecimal.ZERO
+            )
 
-            // Alice redeems a smaller quantity of Apple stock to leave a change in Bridge Authority (CI)
-            var redeemQuantity = BigDecimal.ONE
-            val leftQuantity = BRIDGE_QUANTITY - BigDecimal.ONE
-            var expectedCordaQuantity = ISSUING_QUANTITY - leftQuantity
-            redeemTest(aliceApple, redeemQuantity, expectCumulativeQuantity = expectedCordaQuantity)
+            var expectedCordaBalance = ISSUING_QUANTITY - BRIDGE_QUANTITY + BigDecimal("1.0000")
+            aliceApple.redeemTest(
+                quantity = BigDecimal("1.0000"),
+                expectedCordaBalance = expectedCordaBalance,
+                expectedSolanaRedemptionBalance = BigDecimal.ZERO
+            )
 
-            // Alice redeems with fractions
-            val notRedeemableFraction = BigDecimal("0.0001")
-            redeemQuantity = BigDecimal.ONE + notRedeemableFraction
-            expectedCordaQuantity += BigDecimal.ONE
-            redeemTest(aliceApple, redeemQuantity, expectCumulativeQuantity = expectedCordaQuantity)
-            // TODO test redemption account
+            expectedCordaBalance += BigDecimal("1.0000")
+            aliceApple.redeemTest(
+                quantity = BigDecimal("1.0001"),
+                expectedCordaBalance = expectedCordaBalance,
+                // fractions below what Corda token has are left on Solana
+                expectedSolanaRedemptionBalance = BigDecimal("0.0001")
+            )
 
-            redeemQuantity = BigDecimal("0.0099")
-            expectedCordaQuantity += redeemQuantity + notRedeemableFraction
-            redeemTest(aliceApple, redeemQuantity, BigDecimal("0.01"), expectCumulativeQuantity = expectedCordaQuantity)
+            expectedCordaBalance += (BigDecimal("0.01"))
+            aliceApple.redeemTest(
+                quantity = BigDecimal("0.0099"),
+                expectedCordaBalance = expectedCordaBalance,
+                // new redeem amount added up to what was left and all will be redeemed
+                expectedSolanaRedemptionBalance = BigDecimal.ZERO
+            )
         }
     }
 
-    private fun bridgeTest(
-        participantAndStock: ParticipantAndStock,
+    private fun ParticipantAndStock.bridgeTest(
         quantity: BigDecimal,
-        expectedCumulativeBridgedQuantity: BigDecimal = quantity,
+        expectedSolanaBalance: BigDecimal = quantity,
     ) {
-        participantAndStock.move(bridgeAuthority.identity, quantity)
+        move(bridgeAuthority.identity, quantity)
         eventually(duration = 10.seconds, waitBetween = 1.seconds) {
             assertEquals(
                 BigDecimal.ZERO,
-                bridgeAuthority.myTokenBalance(issuer.identity, participantAndStock.cordaTokenType),
-                "Bridge Authority has no longer ${participantAndStock.stockName} shares," +
-                    " they are under Locking Identity"
+                bridgeAuthority.myTokenBalance(issuer.identity, cordaTokenType),
+                "Bridge Authority has no longer $stockName shares, they are under Locking Identity"
             )
         }
         val fungibleTokens = bridgeAuthority
-            .getAllFungibleTokens(issuer.identity, participantAndStock.cordaTokenType)
-        assertTrue(
-            fungibleTokens.isNotEmpty(),
-            "There should be at least one ${participantAndStock.stockName}" +
-                " fungible token in Bridge Authority vault"
-        )
+            .getAllFungibleTokens(issuer.identity, cordaTokenType)
+        assertThat(fungibleTokens)
+            .describedAs("There should be at least one $stockName fungible token in Bridge Authority vault")
+            .isNotEmpty
+
         val holder = fungibleTokens.map { it.holder }.toSet().singleOrNull()
         requireNotNull(holder) { "Selected fungible tokens should have the same holder" }
-        assertTrue(
-            holder !in listOf(participantAndStock.participant.identity, bridgeAuthority.identity),
-            "Fungible token holder should be Locking Identity, but was $holder"
-        )
-        val accountInfo = validator.accounts().getAccountInfo(participantAndStock.tokenAccount)
+        assertThat(holder)
+            .describedAs("Fungible token holder should be Locking Identity, but was $holder")
+            .isNotIn(participant.identity, bridgeAuthority.identity)
+
+        val accountInfo = validator.accounts().getAccountInfo(tokenAccount)
         assertAtaAccount(
             accountInfo,
-            participantAndStock.tokenMintAccount,
-            participantAndStock.participant.walletAccount,
+            tokenMintAccount,
+            participant.walletAccount,
         )
         // SPL Token RPC returns decimal strings with trailing zeros trimmed,
         // BigDecimal.equals is scale-sensitive (1.0 != 1.00), so we compare numeric value instead.
         eventually(duration = 10.seconds, waitBetween = 1.seconds) {
-            assertThat(validator.client().getTokenBalance(participantAndStock.tokenAccount))
+            assertThat(validator.client().getTokenBalance(tokenAccount))
                 .describedAs("Solana token amount numerically equals Corda bridged amount")
-                .isEqualByComparingTo(expectedCumulativeBridgedQuantity)
+                .isEqualByComparingTo(expectedSolanaBalance)
         }
     }
 
-    private fun redeemTest(
-        participantAndStock: ParticipantAndStock,
-        intendedQuantity: BigDecimal,
-        effectiveQuantity: BigDecimal = intendedQuantity,
-        expectCumulativeQuantity: BigDecimal = ISSUING_QUANTITY,
+    private fun ParticipantAndStock.redeemTest(
+        quantity: BigDecimal,
+        expectedCordaBalance: BigDecimal,
+        expectedSolanaRedemptionBalance: BigDecimal,
     ) {
-        val participant = participantAndStock.participant
-        // Simulate redemption transfer for participant's account on Solana
+        solanaTransfer(quantity)
+        verifyCordaTokenBalance(expectedCordaBalance)
+        verifySolanaRedemptionTokenAccountBalance(expectedSolanaRedemptionBalance)
+    }
+
+    private fun ParticipantAndStock.solanaTransfer(value: BigDecimal) {
         validator.tokens().transfer(
             participant.wallet,
-            participantAndStock.tokenAccount,
-            participantAndStock.redemptionTokenAccount,
-            intendedQuantity.toRawAmount(SOLANA_TOKEN_DECIMALS)
+            this.tokenAccount,
+            this.redemptionTokenAccount,
+            value.toRawAmount(SOLANA_TOKEN_DECIMALS)
         )
-        // We need to wait for the websocket listener to process the newly received event
-        // TODO verify
-        eventually(duration = 10.seconds) {
-            val balance = validator.client().getTokenBalance(participantAndStock.redemptionTokenAccount)
+    }
+
+    private fun ParticipantAndStock.verifySolanaRedemptionTokenAccountBalance(expectedBalance: BigDecimal) {
+        eventually(duration = 10.seconds, waitBetween = 1.seconds) {
+            val balance = validator.client().getTokenBalance(this.redemptionTokenAccount)
             assertThat(balance)
                 .describedAs(
-                    "Redemption token account has $balance instead $effectiveQuantity after transfer - party" +
-                        " ${participantAndStock.participant.nameAsString}"
+                    "Redemption token account has $balance instead $expectedBalance after transfer - party" +
+                        " ${participant.nameAsString}"
                 )
-                .isEqualByComparingTo(effectiveQuantity)
+                .isEqualByComparingTo(expectedBalance)
         }
-        eventually(duration = 20.seconds) {
-            val sum = participantAndStock.tokenBalance(issuer.identity)
-            assertThat(sum)
+    }
+
+    private fun ParticipantAndStock.verifyCordaTokenBalance(expectedBalance: BigDecimal) {
+        eventually(duration = 20.seconds, waitBetween = 1.seconds) {
+            val balance = this.tokenBalance(issuer.identity)
+            assertThat(balance)
                 .describedAs(
-                    "${participantAndStock.participant.nameAsString} received redeemed " +
-                        "${participantAndStock.stockName} shares back"
+                    "${participant.nameAsString} received redeemed $stockName shares back"
                 )
-                .isEqualByComparingTo(expectCumulativeQuantity)
+                .isEqualByComparingTo(expectedBalance)
         }
     }
 
