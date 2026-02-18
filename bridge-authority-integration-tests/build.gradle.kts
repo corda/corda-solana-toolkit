@@ -22,6 +22,7 @@ dependencies {
     // When using SNAPSHOT node-driver, make sure we are using the same build of the Enterprise Corda node
     testRuntimeOnly(libs.corda.ent.node.api)
     testRuntimeOnly(libs.corda.ent.node)
+    testRuntimeOnly(libs.solana.notary.program)
 
     detektPlugins(libs.detekt.ktlint.wrapper)
 }

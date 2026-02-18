@@ -33,6 +33,7 @@ sava-rpc = { module = "software.sava:sava-rpc", version.ref = "sava-core" }
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
 solana-notary-client = { module = "net.corda.solana.notary:kotlin-client", version.ref = "solana-notary" }
+solana-notary-program = { module = "net.corda.solana.notary:solana-program", version.ref = "solana-notary" }
 tokens-contracts = { module = "com.r3.corda.lib.tokens:tokens-contracts", version.ref = "tokens-sdk" }
 tokens-workflows = { module = "com.r3.corda.lib.tokens:tokens-workflows", version.ref = "tokens-sdk" }
 
