@@ -79,7 +79,7 @@ class FungibleTokenRedemptionContract : Contract {
         }
         require(
             burnReceiptState.cordaAmount.quantity == redeemedAmount.quantity &&
-                burnReceiptState.cordaAmount.fractionalDigits == redeemedAmount.token.fractionDigits
+                burnReceiptState.cordaAmount.fractionDigits == redeemedAmount.token.fractionDigits
         ) {
             "The amount in the FungibleTokenBurnReceipt must match the sum FungibleToken amounts"
         }

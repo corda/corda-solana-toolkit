@@ -45,11 +45,8 @@ class RedeemFungibleTokenFlow(
     @Suspendable
     override fun call(): SignedTransaction {
         val tokenType = findTokenTypeOfFungibleTokenBy(redemptionCoordinates.tokenId)
-        val conversionMultiplier = solanaAmount.getConversionMultiplier(tokenType.fractionDigits)
 
-        val cordaAmount =
-            TokenAmount(solanaAmount.truncateQuantityByFactor(conversionMultiplier), tokenType.fractionDigits)
-        val newSolanaAmount = solanaAmount.copy(quantity = solanaAmount.zeroOutFractionDigits(conversionMultiplier))
+        val (cordaAmount, newSolanaAmount) = solanaAmount.newAmountAndRemainder(tokenType.fractionDigits)
 
         val redeemStateAndRef = subFlow(
             BurnTokensOnSolanaFlow(

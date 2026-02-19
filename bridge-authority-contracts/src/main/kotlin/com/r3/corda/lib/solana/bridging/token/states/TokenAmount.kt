@@ -4,15 +4,15 @@ import net.corda.core.serialization.CordaSerializable
 import kotlin.math.pow
 
 @CordaSerializable
-data class TokenAmount(val quantity: Long, val fractionalDigits: Int) {
+data class TokenAmount(val quantity: Long, val fractionDigits: Int) {
     init {
         require(quantity >= 0) { "Quantity must be 0 or positive" }
-        require(fractionalDigits >= 0) { "Fractional digits must be 0 or positive" }
+        require(fractionDigits >= 0) { "Fraction digits must be 0 or positive" }
     }
 
     fun convertTo(fractionalDigits: Int): TokenAmount {
         val multiplier = getConversionMultiplier(fractionalDigits)
-        return if (this.fractionalDigits < fractionalDigits) {
+        return if (this.fractionDigits < fractionalDigits) {
             TokenAmount(this.quantity * multiplier, fractionalDigits)
         } else {
             TokenAmount(this.quantity / multiplier, fractionalDigits)
@@ -20,13 +20,13 @@ data class TokenAmount(val quantity: Long, val fractionalDigits: Int) {
     }
 
     fun getConversionMultiplier(fractionalDigits: Int): Long {
-        if (this.fractionalDigits == fractionalDigits) return 1L
-        return if (this.fractionalDigits > fractionalDigits) {
-            (this.fractionalDigits - fractionalDigits).let { decimalsDifference ->
+        if (this.fractionDigits == fractionalDigits) return 1L
+        return if (this.fractionDigits > fractionalDigits) {
+            (this.fractionDigits - fractionalDigits).let { decimalsDifference ->
                 10.0.pow(decimalsDifference).toLong()
             }
         } else {
-            (fractionalDigits - this.fractionalDigits).let { decimalsDifference ->
+            (fractionalDigits - this.fractionDigits).let { decimalsDifference ->
                 10.0.pow(decimalsDifference).toLong()
             }
         }
@@ -43,7 +43,7 @@ data class TokenAmount(val quantity: Long, val fractionalDigits: Int) {
      * Use equals() when you need to compare the exact representation.
      */
     fun hasSameValueAs(other: TokenAmount): Boolean {
-        val maxFractionalDigits = maxOf(this.fractionalDigits, other.fractionalDigits)
+        val maxFractionalDigits = maxOf(this.fractionDigits, other.fractionDigits)
         val thisConverted = this.convertTo(maxFractionalDigits)
         val otherConverted = other.convertTo(maxFractionalDigits)
         return thisConverted.quantity == otherConverted.quantity
@@ -68,5 +68,20 @@ data class TokenAmount(val quantity: Long, val fractionalDigits: Int) {
             f /= 10L
         }
         require(f == 1L) { "factor must be a power of 10. Got: $factor" }
+    }
+
+    fun newAmountAndRemainder(newFractionDigits: Int): Pair<TokenAmount, TokenAmount> {
+        val conversionMultiplier = getConversionMultiplier(newFractionDigits)
+        return if (fractionDigits > newFractionDigits) {
+            Pair(
+                TokenAmount(truncateQuantityByFactor(conversionMultiplier), newFractionDigits),
+                copy(quantity = zeroOutFractionDigits(conversionMultiplier))
+            )
+        } else {
+            Pair(
+                TokenAmount(quantity * conversionMultiplier, newFractionDigits),
+                this
+            )
+        }
     }
 }
