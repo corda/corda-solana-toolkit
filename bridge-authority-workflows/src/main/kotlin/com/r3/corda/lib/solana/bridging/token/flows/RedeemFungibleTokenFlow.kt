@@ -2,6 +2,7 @@ package com.r3.corda.lib.solana.bridging.token.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import com.r3.corda.lib.solana.bridging.token.states.FungibleTokenBurnReceipt
+import com.r3.corda.lib.solana.bridging.token.states.TokenAmount
 import com.r3.corda.lib.tokens.contracts.internal.schemas.PersistentFungibleToken
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.contracts.types.TokenType
@@ -20,7 +21,6 @@ import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.builder
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.toNonEmptySet
-import com.r3.corda.lib.solana.bridging.token.states.Amount as RedeemAmount
 
 /**
  * Flows bridges a fungible token redemption to Solana token burn.
@@ -37,7 +37,7 @@ import com.r3.corda.lib.solana.bridging.token.states.Amount as RedeemAmount
 class RedeemFungibleTokenFlow(
     val redemptionCoordinates: RedemptionCoordinates,
     val redemptionHolder: Party,
-    val solanaAmount: RedeemAmount,
+    val solanaAmount: TokenAmount,
     val solanaNotary: Party,
     val generalNotary: Party,
     val lockingHolder: Party,
@@ -48,7 +48,7 @@ class RedeemFungibleTokenFlow(
         val conversionMultiplier = solanaAmount.getConversionMultiplier(tokenType.fractionDigits)
 
         val cordaAmount =
-            RedeemAmount(solanaAmount.truncateQuantityByFactor(conversionMultiplier), tokenType.fractionDigits)
+            TokenAmount(solanaAmount.truncateQuantityByFactor(conversionMultiplier), tokenType.fractionDigits)
         val newSolanaAmount = solanaAmount.copy(quantity = solanaAmount.zeroOutFractionDigits(conversionMultiplier))
 
         val redeemStateAndRef = subFlow(

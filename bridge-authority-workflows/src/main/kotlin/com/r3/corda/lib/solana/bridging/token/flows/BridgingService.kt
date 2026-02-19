@@ -1,6 +1,6 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
-import com.r3.corda.lib.solana.bridging.token.states.Amount
+import com.r3.corda.lib.solana.bridging.token.states.TokenAmount
 import com.r3.corda.lib.solana.core.AccountManagement
 import com.r3.corda.lib.solana.core.SolanaClient
 import com.r3.corda.lib.solana.core.tokens.TokenAccountListener
@@ -128,7 +128,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
             tokenAccount.address().toPubkey()
         )
         logger.debug { "Redemption event: $redemptionCoordinates, amount ${tokenAccount.amount}" }
-        val solanaAmount = Amount(
+        val solanaAmount = TokenAmount(
             tokenAccount.amount,
             getAccountMintDecimals(redemptionCoordinates.mintAccount.toPublicKey())
         )

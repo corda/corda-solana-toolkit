@@ -4,18 +4,18 @@ import net.corda.core.serialization.CordaSerializable
 import kotlin.math.pow
 
 @CordaSerializable
-data class Amount(val quantity: Long, val fractionalDigits: Int) {
+data class TokenAmount(val quantity: Long, val fractionalDigits: Int) {
     init {
         require(quantity >= 0) { "Quantity must be 0 or positive" }
         require(fractionalDigits >= 0) { "Fractional digits must be 0 or positive" }
     }
 
-    fun convertTo(fractionalDigits: Int): Amount {
+    fun convertTo(fractionalDigits: Int): TokenAmount {
         val multiplier = getConversionMultiplier(fractionalDigits)
         return if (this.fractionalDigits < fractionalDigits) {
-            Amount(this.quantity * multiplier, fractionalDigits)
+            TokenAmount(this.quantity * multiplier, fractionalDigits)
         } else {
-            Amount(this.quantity / multiplier, fractionalDigits)
+            TokenAmount(this.quantity / multiplier, fractionalDigits)
         }
     }
 
@@ -36,13 +36,13 @@ data class Amount(val quantity: Long, val fractionalDigits: Int) {
      * Semantic equivalence: checks if two amounts represent the same value
      * even if they have different representations.
      *
-     * Example: Amount(100, 0) and Amount(1000, 1) both represent the same value
+     * Example: TokenAmount(100, 0) and TokenAmount(1000, 1) both represent the same value
      * and will return true, even though they have different fields.
      *
      * Use this when you need to compare the actual monetary value.
      * Use equals() when you need to compare the exact representation.
      */
-    fun hasSameValueAs(other: Amount): Boolean {
+    fun hasSameValueAs(other: TokenAmount): Boolean {
         val maxFractionalDigits = maxOf(this.fractionalDigits, other.fractionalDigits)
         val thisConverted = this.convertTo(maxFractionalDigits)
         val otherConverted = other.convertTo(maxFractionalDigits)

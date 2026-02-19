@@ -1,7 +1,7 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
-import com.r3.corda.lib.solana.bridging.token.states.Amount
 import com.r3.corda.lib.solana.bridging.token.states.BridgedFungibleTokenProxy
+import com.r3.corda.lib.solana.bridging.token.states.TokenAmount
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import net.corda.core.identity.Party
 import net.corda.core.solana.Pubkey
@@ -39,7 +39,7 @@ data class BridgingCoordinates(
                 this.mintAccount.toPublicKey(),
             ).publicKey()
             .toPubkey()
-        val cordaAmount = Amount(token.amount.quantity, token.tokenType.fractionDigits)
+        val cordaAmount = TokenAmount(token.amount.quantity, token.tokenType.fractionDigits)
         val solanaAmount = cordaAmount.convertTo(solanaMintDecimals)
         return BridgedFungibleTokenProxy(
             cordaAmount,

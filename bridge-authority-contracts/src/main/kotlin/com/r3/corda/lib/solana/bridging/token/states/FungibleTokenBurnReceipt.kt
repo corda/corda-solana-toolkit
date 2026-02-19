@@ -29,8 +29,8 @@ data class FungibleTokenBurnReceipt(
     val redemptionTokenAccount: Pubkey,
     val redemptionWalletAccount: Pubkey,
     val mintAccount: Pubkey,
-    val cordaAmount: Amount,
-    val solanaAmount: Amount,
+    val cordaAmount: TokenAmount,
+    val solanaAmount: TokenAmount,
     val bridgeAuthority: Party,
     override val participants: List<AbstractParty> = listOf(bridgeAuthority),
 ) : ContractState {

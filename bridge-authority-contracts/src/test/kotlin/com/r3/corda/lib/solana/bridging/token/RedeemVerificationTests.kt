@@ -1,8 +1,8 @@
 package com.r3.corda.lib.solana.bridging.token
 
 import com.r3.corda.lib.solana.bridging.token.contracts.FungibleTokenRedemptionContract
-import com.r3.corda.lib.solana.bridging.token.states.Amount
 import com.r3.corda.lib.solana.bridging.token.states.FungibleTokenBurnReceipt
+import com.r3.corda.lib.solana.bridging.token.states.TokenAmount
 import com.r3.corda.lib.solana.core.cordautils.Token2022
 import com.r3.corda.lib.tokens.contracts.commands.IssueTokenCommand
 import com.r3.corda.lib.tokens.contracts.commands.MoveTokenCommand
@@ -18,8 +18,8 @@ class RedeemVerificationTests {
         tokenAccount,
         bridgeAuthorityWallet,
         mintAccount,
-        Amount(cordaTokenAmount.quantity, cordaTokenAmount.token.fractionDigits),
-        Amount(solanaTokenAmount, SOLANA_DECIMALS),
+        TokenAmount(cordaTokenAmount.quantity, cordaTokenAmount.token.fractionDigits),
+        TokenAmount(solanaTokenAmount, SOLANA_DECIMALS),
         bridgeAuthority
     )
 
@@ -386,7 +386,7 @@ class RedeemVerificationTests {
 
     private fun FungibleTokenBurnReceipt.copyWithAmount(cordaQuantity: Long) =
         copy(
-            cordaAmount = Amount(cordaQuantity, CORDA_DECIMALS),
-            solanaAmount = Amount(cordaQuantity * 10, SOLANA_DECIMALS)
+            cordaAmount = TokenAmount(cordaQuantity, CORDA_DECIMALS),
+            solanaAmount = TokenAmount(cordaQuantity * 10, SOLANA_DECIMALS)
         )
 }

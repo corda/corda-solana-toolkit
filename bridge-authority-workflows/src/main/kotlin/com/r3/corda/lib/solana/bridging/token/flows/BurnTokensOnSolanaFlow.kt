@@ -2,7 +2,7 @@ package com.r3.corda.lib.solana.bridging.token.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import com.r3.corda.lib.solana.bridging.token.contracts.FungibleTokenRedemptionContract
-import com.r3.corda.lib.solana.bridging.token.states.Amount
+import com.r3.corda.lib.solana.bridging.token.states.TokenAmount
 import com.r3.corda.lib.solana.core.cordautils.Token2022
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
@@ -13,8 +13,8 @@ import net.corda.core.transactions.TransactionBuilder
 class BurnTokensOnSolanaFlow(
     private val redemptionCoordinates: RedemptionCoordinates,
     private val solanaNotary: Party,
-    private val cordaAmount: Amount,
-    private val solanaAmount: Amount,
+    private val cordaAmount: TokenAmount,
+    private val solanaAmount: TokenAmount,
 ) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
