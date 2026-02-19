@@ -1,7 +1,6 @@
 package com.r3.corda.lib.solana.bridging.token.test.driver
 
 import com.r3.corda.lib.solana.bridging.token.flows.tokenProgramId
-import com.r3.corda.lib.solana.bridging.token.test.NotaryEnvironment
 import com.r3.corda.lib.solana.bridging.token.test.TokenTypeDescriptor
 import com.r3.corda.lib.solana.bridging.token.test.assertAtaAccount
 import com.r3.corda.lib.solana.bridging.token.test.getTokenBalance
@@ -10,8 +9,6 @@ import com.r3.corda.lib.solana.bridging.token.testing.QuerySimpleTokensFlow
 import com.r3.corda.lib.solana.core.FileSigner
 import com.r3.corda.lib.solana.core.SolanaUtils
 import com.r3.corda.lib.solana.core.tokens.TokenProgram.TOKEN_2022
-import com.r3.corda.lib.solana.testing.ConfigureValidator
-import com.r3.corda.lib.solana.testing.SolanaTestClass
 import com.r3.corda.lib.solana.testing.SolanaTestValidator
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.contracts.types.TokenType
@@ -26,6 +23,8 @@ import net.corda.core.messaging.vaultQueryBy
 import net.corda.core.node.NetworkParameters
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
+import net.corda.solana.notary.testing.Notary
+import net.corda.solana.notary.testing.SolanaNotaryExtension
 import net.corda.testing.common.internal.eventually
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
@@ -46,6 +45,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNotNull
 import org.junit.jupiter.api.assertNull
+import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.io.TempDir
 import software.sava.core.accounts.PublicKey
 import software.sava.core.accounts.Signer
@@ -57,7 +57,7 @@ import java.time.Duration
 import java.time.Instant
 import java.util.UUID
 
-@SolanaTestClass
+@ExtendWith(SolanaNotaryExtension::class)
 abstract class DriverTest {
     companion object {
         const val CORDA_TOKEN_DECIMALS = 3
@@ -87,35 +87,21 @@ abstract class DriverTest {
         lateinit var custodiedKeysDir: Path
 
         private lateinit var validator: SolanaTestValidator
-        private lateinit var solanaNotaryKey: FileSigner
         private lateinit var bridgeAuthorityWallet: FileSigner
         private lateinit var redemptionWalletForAlice: FileSigner
         private lateinit var redemptionWalletForBob: FileSigner
         private lateinit var mintAuthoritySigner: FileSigner
 
-        @ConfigureValidator
-        @JvmStatic
-        fun configureTestValidator(builder: SolanaTestValidator.Builder) {
-            NotaryEnvironment.addNotaryProgram(builder)
-        }
-
         @JvmStatic
         @BeforeAll
-        fun startTestValidator(validator: SolanaTestValidator, @TempDir tempDir: Path) {
+        fun init(validator: SolanaTestValidator) {
             this.validator = validator
-            solanaNotaryKey = FileSigner.random(tempDir)
             mintAuthoritySigner = FileSigner.random(custodiedKeysDir)
             bridgeAuthorityWallet = FileSigner.random(custodiedKeysDir)
             redemptionWalletForAlice = FileSigner.random(custodiedKeysDir)
             redemptionWalletForBob = FileSigner.random(custodiedKeysDir)
 
-            with(NotaryEnvironment(validator.client())) {
-                initializeProgram()
-                addCordaNotary(solanaNotaryKey.publicKey())
-            }
-
             setOf(
-                solanaNotaryKey,
                 mintAuthoritySigner,
                 bridgeAuthorityWallet,
                 alice.wallet,
@@ -178,15 +164,15 @@ abstract class DriverTest {
         )
     }
 
-    val solanaNotaryConfig: Map<String, Any> by lazy {
-        mapOf<String, Any>(
+    private fun solanaNotaryConfig(notaryKey: FileSigner): Map<String, Any> {
+        return mapOf(
             "notary" to mapOf(
                 "validating" to false,
                 // "serviceLegalName" doesn't work with Driver, because it needs a distributed key that is not created
                 "solana" to mapOf(
                     "rpcUrl" to "${validator.rpcUrl()}",
                     "websocketUrl" to "${validator.websocketUrl()}",
-                    "notaryKeypairFile" to "${solanaNotaryKey.file}",
+                    "notaryKeypairFile" to "${notaryKey.file}",
                     "custodiedKeysDir" to "$custodiedKeysDir",
                 )
             )
@@ -207,12 +193,7 @@ abstract class DriverTest {
         ): ParticipantAndStock {
             val redemptionTokenAccount = validator.tokens().createTokenAccount(redemptionWallet, tokenMintAccount)
             validator.accounts().airdropSol(redemptionTokenAccount, 10)
-            return ParticipantAndStock(
-                tokenDescriptor.ticker,
-                participant,
-                tokenMintAccount,
-                redemptionTokenAccount,
-            )
+            return ParticipantAndStock(tokenDescriptor.ticker, participant, tokenMintAccount, redemptionTokenAccount)
         }
         aliceMicrosoft = assembleParticipantWithStock(alice, msftDescriptor, msftTokenMint, redemptionWalletForAlice)
         aliceApple = assembleParticipantWithStock(alice, appleDescriptor, appleTokenMint, redemptionWalletForAlice)
@@ -221,7 +202,7 @@ abstract class DriverTest {
 
     @Suppress("LongMethod")
     @Test
-    fun `driver bridge and redemption test`() {
+    fun `driver bridge and redemption test`(@Notary notaryKey: FileSigner) {
         driver(
             DriverParameters(
                 inMemoryDB = false,
@@ -229,7 +210,7 @@ abstract class DriverTest {
                 cordappsForAllNodes = cordappsForAllNodes,
                 notarySpecs = listOf(
                     NotarySpec(generalNotaryName, validating = false, startInProcess = false),
-                    NotarySpec(solanaNotaryName, solanaNotaryConfig, startInProcess = false),
+                    NotarySpec(solanaNotaryName, solanaNotaryConfig(notaryKey), startInProcess = false),
                 ),
                 networkParameters = networkParameters,
             )

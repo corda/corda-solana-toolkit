@@ -72,8 +72,9 @@ pipeline {
         stage('Build') {
             steps {
                 authenticateGradleWrapper()
+                sh './gradlew -q currentVersion'
                 sh 'pkill -9 solana-test-validator || true'
-                sh script: ['./gradlew', COMMON_GRADLE_PARAMS, 'build'].join(' ')
+                sh script: ['./gradlew', COMMON_GRADLE_PARAMS, 'clean', 'build'].join(' ')
             }
         }
         stage('Snyk Delta') {
@@ -104,7 +105,8 @@ pipeline {
 
     post {
         always {
-            junit '**/build/test-results/**/*.xml'
+            archiveArtifacts artifacts: '**/*.log', excludes: '**/ledger/**', allowEmptyArchive: true, fingerprint: false
+            junit testResults: '**/build/test-results/**/*.xml', allowEmptyResults: true
         }
         cleanup {
             deleteDir() /* clean up our workspace */

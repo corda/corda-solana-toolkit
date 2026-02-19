@@ -6,7 +6,7 @@ The Gradle modules in this repo are split into two main groups:
 * Corda to Solana Bridge Authority
 
 All the modules have the same Maven group of `com.r3.corda.lib.solana` and are available from
-`https://download.corda.net/maven/corda-lib`.
+`https://download.corda.net/maven/corda-dependencies`.
 
 ## Java Solana Library
 

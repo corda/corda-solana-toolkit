@@ -185,7 +185,7 @@ constructor(
 
     fun start() {
         check(started.compareAndSet(false, true))
-        websocket.connect().getOrThrow()
+        websocket.connect().get()
         // Kickoff the background update of the latest blockhash
         asyncBlockhashInfoCacheUpdate(Duration.ZERO)
     }
@@ -723,6 +723,9 @@ constructor(
 
         return returnFuture
     }
+
+    val isStarted: Boolean
+        get() = started.get()
 
     override fun close() {
         if (!started.compareAndSet(true, false)) {
