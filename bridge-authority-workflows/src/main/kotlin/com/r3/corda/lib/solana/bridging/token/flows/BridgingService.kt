@@ -37,16 +37,6 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         URI(configHandler.solanaWsUrl),
         globalCommitmentLevel
     )
-
-    init {
-        println("TokenAccountListener ctors:")
-        TokenAccountListener::class.java.declaredConstructors.forEach(::println)
-        println()
-        println(
-            "TokenAccountListener location: ${TokenAccountListener::class.java.protectionDomain.codeSource?.location}"
-        )
-    }
-
     private val tokenAccountListener = TokenAccountListener(
         solanaClient,
         tokenProgramId,

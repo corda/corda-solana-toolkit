@@ -4,7 +4,7 @@ plugins {
 }
 
 dependencies {
-    implementation(libs.corda.core)
+    compileOnly(libs.corda.core)
 
     detektPlugins(libs.detekt.ktlint.wrapper)
 }
