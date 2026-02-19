@@ -11,7 +11,6 @@ import software.sava.rpc.json.http.response.AccountInfo
 import software.sava.rpc.json.http.ws.SolanaRpcWebsocket
 import java.net.http.HttpClient
 import java.time.Duration
-import java.util.concurrent.CompletableFuture.delayedExecutor
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.ForkJoinPool.commonPool
@@ -43,6 +42,8 @@ constructor(
         .commitment(solanaClient.commitment)
     private val subscriptions = ConcurrentHashMap<PublicKey, Subscription>()
 
+    private val scheduler = Executors.newSingleThreadScheduledExecutor()
+
     fun listenToOwner(owner: PublicKey, onTokenAccount: (TokenAccount) -> Unit) {
         logger.info("Attaching websocket for account owned by: $owner")
         val subscription = Subscription(owner)
@@ -61,6 +62,7 @@ constructor(
     }
 
     override fun close() {
+        scheduler.shutdown()
         subscriptions.values.forEach { it.websocket.close() }
         subscriptions.clear()
         httpExecutor.shutdown()
@@ -88,23 +90,23 @@ constructor(
                 }
             }
             // Perform polling as a backup in case websocket missed events due to disconnect or any other reason.
-            schedulePoll(onTokenAccount)
-        }
-
-        private fun schedulePoll(onTokenAccount: (TokenAccount) -> Unit) {
-            delayedExecutor(pollingInterval.toMillis(), MILLISECONDS).execute {
-                try {
-                    for (account in getAllTokenAccounts()) {
-                        val previous = tokenAccounts.put(account.pubKey, account.data)
-                        if (previous != account.data) {
-                            onTokenAccount(account.data)
+            scheduler.scheduleWithFixedDelay(
+                {
+                    try {
+                        for (account in getAllTokenAccounts()) {
+                            val previous = tokenAccounts.put(account.pubKey, account.data)
+                            if (previous != account.data) {
+                                onTokenAccount(account.data)
+                            }
                         }
+                    } catch (e: Exception) {
+                        logger.warn("Error processing polling update for $owner", e)
                     }
-                } catch (e: Exception) {
-                    logger.warn("Error processing polling update for $owner", e)
-                }
-                schedulePoll(onTokenAccount)
-            }
+                },
+                pollingInterval.toMillis(),
+                pollingInterval.toMillis(),
+                MILLISECONDS
+            )
         }
 
         private fun getAllTokenAccounts(): List<AccountInfo<TokenAccount>> {
