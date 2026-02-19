@@ -34,7 +34,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
     private val configHandler = ConfigHandler(appServiceHub)
     private val solanaClient = SolanaClient(
         URI(configHandler.solanaRpcUrl),
-        URI(configHandler.solanaWsUrl),
+        URI(configHandler.solanaWebsocketUrl),
         globalCommitmentLevel
     )
     private val tokenAccountListener = TokenAccountListener(
