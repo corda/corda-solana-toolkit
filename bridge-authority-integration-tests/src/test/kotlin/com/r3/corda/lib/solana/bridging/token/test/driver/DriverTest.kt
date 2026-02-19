@@ -55,7 +55,6 @@ import java.math.BigDecimal
 import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
-import java.util.UUID
 
 @ExtendWith(SolanaNotaryExtension::class)
 abstract class DriverTest {
@@ -153,11 +152,10 @@ abstract class DriverTest {
                             "mintAuthority" to mintAuthoritySigner.publicKey().toBase58()
                         )
                 ),
-                "lockingIdentityLabel" to UUID.randomUUID().toString(),
                 "solanaNotaryName" to solanaNotaryName.toString(),
                 "generalNotaryName" to generalNotaryName.toString(),
                 "solanaRpcUrl" to "${validator.rpcUrl()}",
-                "solanaWsUrl" to "${validator.websocketUrl()}",
+                "solanaWebsocketUrl" to "${validator.websocketUrl()}",
                 "bridgeAuthorityWalletFile" to bridgeAuthorityWallet.file.toString(),
             )
         )
