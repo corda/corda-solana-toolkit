@@ -5,7 +5,7 @@ plugins {
 }
 
 dependencies {
-    implementation(project(":corda-utils"))
+    cordapp(project(":corda-utils"))
 
     cordaProvided(libs.corda.core)
 
