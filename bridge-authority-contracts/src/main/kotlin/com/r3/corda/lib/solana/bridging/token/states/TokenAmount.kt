@@ -42,7 +42,7 @@ data class TokenAmount(val quantity: Long, val fractionDigits: Int) {
      * Use this when you need to compare the actual monetary value.
      * Use equals() when you need to compare the exact representation.
      */
-    fun hasSameValueAs(other: TokenAmount): Boolean {
+    fun isNumericallyEqual(other: TokenAmount): Boolean {
         val maxFractionalDigits = maxOf(this.fractionDigits, other.fractionDigits)
         val thisConverted = this.convertTo(maxFractionalDigits)
         val otherConverted = other.convertTo(maxFractionalDigits)

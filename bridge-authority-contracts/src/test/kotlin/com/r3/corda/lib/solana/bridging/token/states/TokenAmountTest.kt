@@ -18,79 +18,79 @@ class TokenAmountTest {
 
     // Tests for semantic value comparison
     @Test
-    fun `hasSameValueAs returns true for amounts with same value but different fractional digits`() {
+    fun `isNumericallyEqual returns true for amounts with same value but different fractional digits`() {
         // 100 with 0 fractional digits = 1000 with 1 fractional digit
         val amount1 = TokenAmount(100, 0)
         val amount2 = TokenAmount(1000, 1)
 
-        assertTrue(amount1.hasSameValueAs(amount2))
-        assertTrue(amount2.hasSameValueAs(amount1)) // test symmetry
+        assertTrue(amount1.isNumericallyEqual(amount2))
+        assertTrue(amount2.isNumericallyEqual(amount1)) // test symmetry
     }
 
     @Test
-    fun `hasSameValueAs returns true for amounts with same value and multiple fractional digit differences`() {
+    fun `isNumericallyEqual returns true for amounts with same value and multiple fractional digit differences`() {
         // 100 with 0 fractional digits = 10000 with 2 fractional digits
         val amount1 = TokenAmount(100, 0)
         val amount2 = TokenAmount(10000, 2)
 
-        assertTrue(amount1.hasSameValueAs(amount2))
+        assertTrue(amount1.isNumericallyEqual(amount2))
     }
 
     @Test
-    fun `hasSameValueAs returns true for same amount with same fractional digits`() {
+    fun `isNumericallyEqual returns true for same amount with same fractional digits`() {
         val amount1 = TokenAmount(100, 2)
         val amount2 = TokenAmount(100, 2)
 
-        assertTrue(amount1.hasSameValueAs(amount2))
+        assertTrue(amount1.isNumericallyEqual(amount2))
     }
 
     @Test
-    fun `hasSameValueAs returns false for different amounts with same fractional digits`() {
+    fun `isNumericallyEqual returns false for different amounts with same fractional digits`() {
         val amount1 = TokenAmount(100, 2)
         val amount2 = TokenAmount(200, 2)
 
-        assertFalse(amount1.hasSameValueAs(amount2))
+        assertFalse(amount1.isNumericallyEqual(amount2))
     }
 
     @Test
-    fun `hasSameValueAs returns false for different amounts with different fractional digits`() {
+    fun `isNumericallyEqual returns false for different amounts with different fractional digits`() {
         // 100 with 0 fractional digits != 1001 with 1 fractional digit
         val amount1 = TokenAmount(100, 0)
         val amount2 = TokenAmount(1001, 1)
 
-        assertFalse(amount1.hasSameValueAs(amount2))
+        assertFalse(amount1.isNumericallyEqual(amount2))
     }
 
     @Test
-    fun `hasSameValueAs returns true for complex conversion scenarios`() {
+    fun `isNumericallyEqual returns true for complex conversion scenarios`() {
         // 5 with 0 fractional digits = 50 with 1 fractional digit = 500 with 2 fractional digits
         val amount1 = TokenAmount(5, 0)
         val amount2 = TokenAmount(50, 1)
         val amount3 = TokenAmount(500, 2)
 
-        assertTrue(amount1.hasSameValueAs(amount2))
-        assertTrue(amount2.hasSameValueAs(amount3))
-        assertTrue(amount1.hasSameValueAs(amount3)) // test transitivity
+        assertTrue(amount1.isNumericallyEqual(amount2))
+        assertTrue(amount2.isNumericallyEqual(amount3))
+        assertTrue(amount1.isNumericallyEqual(amount3)) // test transitivity
     }
 
     @Test
-    fun `hasSameValueAs works correctly with zero amounts`() {
+    fun `isNumericallyEqual works correctly with zero amounts`() {
         val amount1 = TokenAmount(0, 0)
         val amount2 = TokenAmount(0, 1)
         val amount3 = TokenAmount(0, 5)
 
-        assertTrue(amount1.hasSameValueAs(amount2))
-        assertTrue(amount2.hasSameValueAs(amount3))
-        assertTrue(amount1.hasSameValueAs(amount3))
+        assertTrue(amount1.isNumericallyEqual(amount2))
+        assertTrue(amount2.isNumericallyEqual(amount3))
+        assertTrue(amount1.isNumericallyEqual(amount3))
     }
 
     @Test
-    fun `hasSameValueAs works with large quantities and different fractional digits`() {
+    fun `isNumericallyEqual./ works with large quantities and different fractional digits`() {
         // 1000000 with 0 fractional digits = 10000000 with 1 fractional digit
         val amount1 = TokenAmount(1000000, 0)
         val amount2 = TokenAmount(10000000, 1)
 
-        assertTrue(amount1.hasSameValueAs(amount2))
+        assertTrue(amount1.isNumericallyEqual(amount2))
     }
 
     // Tests for convertToAndKeepOriginal method - converting to lower resolution

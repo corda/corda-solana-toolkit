@@ -54,10 +54,7 @@ class FungibleTokenBridgeContract : Contract {
             "The token holder must change when locking the token"
         }
 
-        require(
-            outputToken.amount.quantity == tokenProxy.cordaAmount.quantity &&
-                outputToken.amount.token.fractionDigits == tokenProxy.cordaAmount.fractionDigits
-        ) {
+        require(outputToken.amount.toTokenAmount() == tokenProxy.cordaAmount) {
             "BridgedFungibleTokenProxy must have the same amount as the locked token"
         }
 
