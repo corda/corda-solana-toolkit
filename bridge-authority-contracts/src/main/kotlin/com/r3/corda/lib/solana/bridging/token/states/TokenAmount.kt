@@ -1,7 +1,8 @@
 package com.r3.corda.lib.solana.bridging.token.states
 
 import net.corda.core.serialization.CordaSerializable
-import kotlin.math.pow
+import java.math.BigDecimal
+import kotlin.math.absoluteValue
 
 @CordaSerializable
 data class TokenAmount(val quantity: Long, val fractionDigits: Int) {
@@ -10,108 +11,68 @@ data class TokenAmount(val quantity: Long, val fractionDigits: Int) {
         require(fractionDigits >= 0) { "Fraction digits must be 0 or positive" }
     }
 
-    fun convertTo(fractionalDigits: Int): TokenAmount {
-        val multiplier = getConversionMultiplier(fractionalDigits)
-        return if (this.fractionDigits < fractionalDigits) {
-            TokenAmount(this.quantity * multiplier, fractionalDigits)
-        } else {
-            TokenAmount(this.quantity / multiplier, fractionalDigits)
-        }
-    }
-
-    fun getConversionMultiplier(fractionalDigits: Int): Long {
-        if (this.fractionDigits == fractionalDigits) return 1L
-        return if (this.fractionDigits > fractionalDigits) {
-            (this.fractionDigits - fractionalDigits).let { decimalsDifference ->
-                10.0.pow(decimalsDifference).toLong()
-            }
-        } else {
-            (fractionalDigits - this.fractionDigits).let { decimalsDifference ->
-                10.0.pow(decimalsDifference).toLong()
-            }
-        }
-    }
-
     /**
-     * Semantic equivalence: checks if two amounts represent the same value
-     * even if they have different representations.
+     * Checks if two amounts represent the same value even if they have different representations.
      *
      * Example: TokenAmount(100, 0) and TokenAmount(1000, 1) both represent the same value
      * and will return true, even though they have different fields.
-     *
-     * Use this when you need to compare the actual monetary value.
-     * Use equals() when you need to compare the exact representation.
      */
     fun isNumericallyEqual(other: TokenAmount): Boolean {
         val maxFractionalDigits = maxOf(this.fractionDigits, other.fractionDigits)
-        val thisConverted = this.convertTo(maxFractionalDigits)
-        val otherConverted = other.convertTo(maxFractionalDigits)
+        val thisConverted = this.rescale(maxFractionalDigits)
+        val otherConverted = other.rescale(maxFractionalDigits)
         return thisConverted.quantity == otherConverted.quantity
     }
 
-    fun truncateQuantityByFactor(factor: Long): Long {
-        validateFactor(factor)
-        val newValue = quantity / factor
-        return newValue
-    }
-
-    fun zeroOutFractionDigits(factor: Long): Long {
-        validateFactor(factor)
-        val newValue = (quantity / factor) * factor
-        return newValue
-    }
-
-    private fun validateFactor(factor: Long) {
-        require(factor > 0) { "factor must be > 0" }
-        var f = factor
-        while (f > 1 && f % 10L == 0L) {
-            f /= 10L
+    /**
+     * Rescales this token amount to a different fractional digit resolution.
+     * This function converts the amount to a new precision level by adjusting both the quantity
+     * and the fractional digits to maintain the same value.
+     *
+     * Example: TokenAmount(100, 0) rescaled to 1 fractional digit gives TokenAmount(1000, 1).
+     *
+     * @param fractionDigits The target number of fractional digits
+     * @return A new TokenAmount with the specified fractional digits and adjusted quantity
+     * @throws IllegalArgumentException if downscaling would result in precision loss (non-zero remainder)
+     */
+    fun rescale(fractionDigits: Int): TokenAmount {
+        val multiplier = getAbsoluteMultiplier(fractionDigits)
+        val value = if (this.fractionDigits <= fractionDigits) {
+            this.quantity * multiplier
+        } else {
+            val remainder = this.quantity % multiplier
+            require(remainder == 0L) {
+                "Cannot rescale from ${this.fractionDigits} to $fractionDigits fractional digits, " +
+                    "precision loss detected (quantity=$quantity would have remainder=$remainder). "
+            }
+            this.quantity / multiplier
         }
-        require(f == 1L) { "factor must be a power of 10. Got: $factor" }
+        return TokenAmount(value, fractionDigits)
     }
 
     /**
-     * Converts this amount to a new fractional digit resolution while preserving the original resolution
-     * with a truncated value.
+     * Truncates the quantity to match a lower fractional digit resolution while keeping the original resolution.
+     * When the target resolution has fewer fractional digits (lower precision), truncates the quantity.
+     * When the target resolution has more fractional digits (higher precision), returns the amount unchanged.
      *
-     * This function is useful when bridging between different token systems with different precision levels.
-     * For example, when converting from Solana (8 fractional digits) to Corda (1 fractional digit), you get:
-     * - The converted amount in the target resolution (with lower precision if reducing digits)
-     * - The original amount in the original resolution, but with the quantity truncated/zeroed to match
-     *   what was actually converted (no extra precision loss)
+     * Example: TokenAmount(11, 2) [0.11] truncated to 1 fractional digit gives TokenAmount(10, 2) [0.10],
+     * quantity 11 is truncated to 10 to match 1 fractional digit precision, but stays in original 2-digit resolution.
      *
-     * "keepOriginal" means keeping the original resolution (fractional digits) with a truncated quantity,
-     * not keeping the exact original quantity value. This ensures that:
-     * - First value: amount in new resolution
-     * - Second value: amount in original resolution representing the same VALUE as the first (just in original units)
-     *
-     * Examples:
-     * - Input: TokenAmount(11, 2) [0.11] → convert to 1 fractional digit
-     *   Returns: Pair(TokenAmount(1, 1) [0.1], TokenAmount(10, 2) [0.10])
-     *   The second value is in original resolution (2 digits) with truncated quantity (10 instead of 11)
-     *
-     * - Input: TokenAmount(11, 2) [0.11] → convert to 3 fractional digits
-     *   Returns: Pair(TokenAmount(110, 3) [0.110], TokenAmount(11, 2) [0.11])
-     *   When resolution increases, the original quantity is kept as-is (no truncation needed)
-     *
-     * @param newFractionDigits The target number of fractional digits
-     * @return A Pair containing:
-     *         - First: The amount converted to the new fractional digit resolution
-     *         - Second: The original amount in its original resolution with truncated quantity
-     *                  (representing the same value as the converted amount, just expressed in original units)
+     * @param fractionDigits The target number of fractional digits to truncate to
+     * @return A new TokenAmount with truncated quantity in the original fractional digit resolution
      */
-    fun convertToAndKeepOriginal(newFractionDigits: Int): Pair<TokenAmount, TokenAmount> {
-        val conversionMultiplier = getConversionMultiplier(newFractionDigits)
-        return if (fractionDigits > newFractionDigits) {
-            Pair(
-                TokenAmount(truncateQuantityByFactor(conversionMultiplier), newFractionDigits),
-                copy(quantity = zeroOutFractionDigits(conversionMultiplier))
-            )
+    fun truncate(fractionDigits: Int): TokenAmount {
+        val conversionMultiplier = getAbsoluteMultiplier(fractionDigits)
+        return if (this.fractionDigits > fractionDigits) {
+            copy(quantity = (quantity / conversionMultiplier) * conversionMultiplier)
         } else {
-            Pair(
-                TokenAmount(quantity * conversionMultiplier, newFractionDigits),
-                this
-            )
+            this
         }
+    }
+
+    private fun getAbsoluteMultiplier(fractionDigits: Int): Long {
+        if (this.fractionDigits == fractionDigits) return 1L
+        val absoluteDifference = (this.fractionDigits - fractionDigits).absoluteValue
+        return BigDecimal.TEN.pow(absoluteDifference).longValueExact()
     }
 }
