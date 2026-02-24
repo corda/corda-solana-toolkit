@@ -11,7 +11,6 @@ import net.corda.testing.node.TestCordapp
 import software.sava.core.accounts.PublicKey
 import software.sava.core.accounts.Signer
 import java.nio.file.Path
-import java.util.UUID
 
 data class BridgeAuthorityInfo(
     val node: StartedMockNode,
@@ -56,11 +55,10 @@ data class BridgeAuthorityInfo(
                             "mintAuthority" to mintAuthority.toBase58(),
                         )
                     }.toMap(),
-                "lockingIdentityLabel" to UUID.randomUUID().toString(),
                 "solanaNotaryName" to solanaNotaryName.toString(),
                 "generalNotaryName" to generalNotaryName.toString(),
                 "solanaRpcUrl" to "${testValidator.rpcUrl()}",
-                "solanaWsUrl" to "${testValidator.websocketUrl()}",
+                "solanaWebsocketUrl" to "${testValidator.websocketUrl()}",
                 "bridgeAuthorityWalletFile" to mintWallet.file.toString(),
                 "redemptionCheckIntervalSeconds" to redemptionCheckIntervalSeconds,
             )

@@ -2,16 +2,17 @@ package com.r3.corda.lib.solana.bridging.token.flows
 
 import com.r3.corda.lib.solana.core.FileSigner
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
-import com.r3.corda.lib.tokens.contracts.types.TokenPointer
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.cordapp.CordappConfig
 import net.corda.core.cordapp.CordappConfigException
+import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.AppServiceHub
 import net.corda.core.solana.Pubkey
 import software.sava.core.accounts.Signer
+import java.nio.ByteBuffer
 import java.time.Duration
 import java.util.UUID
 import kotlin.io.path.Path
@@ -28,7 +29,7 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
     val solanaNotary: Party
     val generalNotaryName: Party
     val bridgeAuthority: PartyAndCertificate
-    val solanaWsUrl: String
+    val solanaWebsocketUrl: String
     val solanaRpcUrl: String
     val redemptionWalletAccountToHolder: Map<Pubkey, CordaX500Name>
     val bridgeAuthoritySigner: Signer
@@ -49,10 +50,10 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
             CordaX500Name::parse,
         )
         bridgeAuthority = appServiceHub.myInfo.legalIdentitiesAndCerts.first()
-        lockingIdentity = getLockingIdentity(config, appServiceHub)
+        lockingIdentity = getLockingIdentity(appServiceHub)
         solanaNotary = getNotary("solanaNotaryName", config, appServiceHub)
         generalNotaryName = getNotary("generalNotaryName", config, appServiceHub)
-        solanaWsUrl = config.getString("solanaWsUrl")
+        solanaWebsocketUrl = config.getString("solanaWebsocketUrl")
         solanaRpcUrl = config.getString("solanaRpcUrl")
         bridgeAuthoritySigner = FileSigner.read(Path(config.getString("bridgeAuthorityWalletFile")))
         redemptionCheckInterval = if (config.exists("redemptionCheckIntervalSeconds")) {
@@ -62,17 +63,17 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
         }
     }
 
-    private fun getLockingIdentity(config: CordappConfig, appServiceHub: AppServiceHub): Party {
-        val lockingIdentityLabel = UUID.fromString(config.getString("lockingIdentityLabel"))
+    private fun getLockingIdentity(appServiceHub: AppServiceHub): Party {
+        val lockingIdentityId = getGlobalLockingIdentityId()
         val lockingIdentityPublicKey = appServiceHub
             .identityService
-            .publicKeysForExternalId(lockingIdentityLabel)
+            .publicKeysForExternalId(lockingIdentityId)
             .singleOrNull()
         val identity = if (lockingIdentityPublicKey == null) {
             // Generate a new key pair and self-signed certificate for the locking identity
             appServiceHub
                 .keyManagementService
-                .freshKeyAndCert(bridgeAuthority, revocationEnabled = false, externalId = lockingIdentityLabel)
+                .freshKeyAndCert(bridgeAuthority, revocationEnabled = false, externalId = lockingIdentityId)
         } else {
             // Reuse the existing key pair and certificate for the locking identity
             checkNotNull(appServiceHub.identityService.certificateFromKey(lockingIdentityPublicKey)) {
@@ -80,6 +81,14 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
             }
         }
         return identity.party
+    }
+
+    // Returns the unique, deterministic ID for the bridge authority's locking identity.
+    private fun getGlobalLockingIdentityId(): UUID {
+        // Halving the 256-bit hash to fit into a UUID is not an issue, since the probability of a collision
+        // against a random UUID in the database is still effectively zero.
+        val buffer = ByteBuffer.wrap(SecureHash.sha256("BRIDGE_AUTHORITY_LOCKING_IDENTITY").bytes)
+        return UUID(buffer.getLong(), buffer.getLong())
     }
 
     private fun getNotary(notaryNameConfig: String, config: CordappConfig, appServiceHub: AppServiceHub): Party {
@@ -135,12 +144,7 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
         token: StateAndRef<FungibleToken>,
         originalHolder: Party,
     ): BridgingCoordinates {
-        val tokenTypeId = when (val tokenType = token.state.data.amount.token.tokenType) {
-            // TODO ENT-14343 while testing StockCordapp
-            //  check if tokenType.tokenIdentifier can replace TokenPointer<*>
-            is TokenPointer<*> -> tokenType.pointer.pointer.id.toString()
-            else -> tokenType.tokenIdentifier
-        }
+        val tokenTypeId = token.state.data.amount.token.tokenType.tokenIdentifier
         val mintWithAuthority = checkNotNull(mintsWithAuthorities[tokenTypeId]) {
             "No mint with authority mapping found for token type id $tokenTypeId"
         }
