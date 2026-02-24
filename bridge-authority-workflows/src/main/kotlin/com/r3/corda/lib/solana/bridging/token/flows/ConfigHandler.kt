@@ -2,7 +2,6 @@ package com.r3.corda.lib.solana.bridging.token.flows
 
 import com.r3.corda.lib.solana.core.FileSigner
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
-import com.r3.corda.lib.tokens.contracts.types.TokenPointer
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.cordapp.CordappConfig
 import net.corda.core.cordapp.CordappConfigException
@@ -145,12 +144,7 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
         token: StateAndRef<FungibleToken>,
         originalHolder: Party,
     ): BridgingCoordinates {
-        val tokenTypeId = when (val tokenType = token.state.data.amount.token.tokenType) {
-            // TODO ENT-14343 while testing StockCordapp
-            //  check if tokenType.tokenIdentifier can replace TokenPointer<*>
-            is TokenPointer<*> -> tokenType.pointer.pointer.id.toString()
-            else -> tokenType.tokenIdentifier
-        }
+        val tokenTypeId = token.state.data.amount.token.tokenType.tokenIdentifier
         val mintWithAuthority = checkNotNull(mintsWithAuthorities[tokenTypeId]) {
             "No mint with authority mapping found for token type id $tokenTypeId"
         }
