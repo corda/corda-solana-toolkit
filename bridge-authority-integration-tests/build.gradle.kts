@@ -13,8 +13,8 @@ dependencies {
     cordapp(project(":bridge-authority-contracts"))
     cordapp(project(":bridge-authority-workflows"))
 
-    testImplementation(project(":core"))
-    testImplementation(project(":testing"))
+    testImplementation(project(":corda-solana-core"))
+    testImplementation(project(":corda-solana-testing"))
     testImplementation(libs.solana.notary.testing)
     testImplementation(libs.corda.ent.core.test.utils)
     testImplementation(libs.corda.ent.node.driver)

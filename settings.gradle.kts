@@ -4,9 +4,9 @@ include(
     "bridge-authority-contracts",
     "bridge-authority-workflows",
     "bridge-authority-integration-tests",
-    "core",
-    "corda-utils",
-    "testing",
+    "corda-solana-core",
+    "corda-solana-cordapp-utils",
+    "corda-solana-testing",
 )
 
 pluginManagement {
