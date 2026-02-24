@@ -13,7 +13,7 @@ dependencies {
     implementation(libs.slf4j.api)
     implementation(libs.kotlin.reflect)
 
-    testImplementation(project(":testing"))
+    testImplementation(project(":corda-solana-testing"))
 
     testRuntimeOnly(libs.slf4j.simple)
 
@@ -24,15 +24,10 @@ java {
     withSourcesJar()
 }
 
-tasks.withType<Jar> {
-    archiveBaseName.set("corda-solana-core")
-}
-
 publishing {
     publications {
         create<MavenPublication>("mainPublication") {
             from(components["java"])
-            artifactId = "corda-solana-core"
         }
     }
 }

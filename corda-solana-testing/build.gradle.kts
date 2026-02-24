@@ -5,7 +5,7 @@ plugins {
 
 // Don't add any Corda dependencies as this module is meant to be a general-purpose library.
 dependencies {
-    implementation(project(":core"))
+    implementation(project(":corda-solana-core"))
     implementation(libs.junit.api)
     implementation(libs.slf4j.api)
 
@@ -18,15 +18,10 @@ java {
     withSourcesJar()
 }
 
-tasks.withType<Jar> {
-    archiveBaseName.set("corda-solana-testing")
-}
-
 publishing {
     publications {
         create<MavenPublication>("mainPublication") {
             from(components["java"])
-            artifactId = "corda-solana-testing"
         }
     }
 }
