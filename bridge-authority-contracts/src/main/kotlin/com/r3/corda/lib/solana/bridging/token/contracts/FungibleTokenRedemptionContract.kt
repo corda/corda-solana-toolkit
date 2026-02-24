@@ -84,7 +84,7 @@ class FungibleTokenRedemptionContract : Contract {
         require(tx.commands.size == 2) { "UnlockToken transaction must only contain two commands" }
 
         // Only process Solana instructions if the class is available on the classpath
-        if (solanaInstructionClass != null) {
+        if (isSolanaInstructionOnClasspath) {
             val noSolanaInstructions = tx.notaryInstructions.none { it is SolanaInstruction }
             require(noSolanaInstructions) { "No Solana instructions allowed" }
         }
@@ -102,7 +102,7 @@ class FungibleTokenRedemptionContract : Contract {
             "BurnOnSolana transaction must not have any FungibleTokenBurnReceipt inputs"
         }
         // Only process Solana instructions if the class is available on the classpath
-        if (solanaInstructionClass != null) {
+        if (isSolanaInstructionOnClasspath) {
             val solanaInstruction = tx.notaryInstructionsOfType<SolanaInstruction>().requireSingle {
                 "Exactly one Solana instruction required"
             }

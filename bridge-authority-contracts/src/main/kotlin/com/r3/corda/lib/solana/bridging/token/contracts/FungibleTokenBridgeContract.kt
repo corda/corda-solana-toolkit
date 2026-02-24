@@ -63,7 +63,7 @@ class FungibleTokenBridgeContract : Contract {
             "Lock transaction must only contain commands LockToken and token command (Move Token)"
         }
         // Only process Solana instructions if the class is available on the classpath
-        if (solanaInstructionClass != null) {
+        if (isSolanaInstructionOnClasspath) {
             val noSolanaInstructions = tx.notaryInstructions.none { it is SolanaInstruction }
             require(noSolanaInstructions) { "No Solana instructions allowed" }
         }
@@ -79,7 +79,7 @@ class FungibleTokenBridgeContract : Contract {
             "Bridge to Solana transaction must not have any BridgedFungibleTokenProxy outputs"
         }
         // Only process Solana instructions if the class is available on the classpath
-        if (solanaInstructionClass != null) {
+        if (isSolanaInstructionOnClasspath) {
             val solanaInstruction = tx.notaryInstructionsOfType<SolanaInstruction>().requireSingle {
                 "Exactly one Solana instruction required"
             }
