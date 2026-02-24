@@ -19,3 +19,25 @@ configure<ArtifactoryPluginConvention> {
         }
     }
 }
+
+publishing {
+    publications {
+        create<MavenPublication>("mainPublication") {
+            pom {
+                organization {
+                    name.set("R3 Ltd")
+                    url.set("r3.com")
+                }
+                scm {
+                    url.set("https://github.com/corda/corda-solana-toolkit")
+                }
+                licenses {
+                    license {
+                        name.set("Apache License 2.0")
+                        url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
+                    }
+                }
+            }
+        }
+    }
+}

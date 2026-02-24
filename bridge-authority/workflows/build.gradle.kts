@@ -40,7 +40,7 @@ tasks.jar {
 
 publishing {
     publications {
-        create<MavenPublication>(project.name) {
+        getByName<MavenPublication>("mainPublication") {
             artifactId = "bridge-authority-workflows"
             from(components["cordapp"])
         }

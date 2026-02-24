@@ -15,7 +15,7 @@ java {
 
 publishing {
     publications {
-        create<MavenPublication>("mainPublication") {
+        getByName<MavenPublication>("mainPublication") {
             from(components["java"])
         }
     }

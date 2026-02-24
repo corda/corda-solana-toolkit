@@ -1,5 +1,6 @@
 # Corda Solana Toolkit
-[![Maven](https://img.shields.io/maven-metadata/v?metadataUrl=https://download.corda.net/maven/corda-dependencies/com/r3/corda/lib/solana/corda-solana-core/maven-metadata.xml&label=Maven)]()
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+![Maven](https://img.shields.io/maven-metadata/v?metadataUrl=https://download.corda.net/maven/corda-dependencies/com/r3/corda/lib/solana/corda-solana-core/maven-metadata.xml&label=Maven)
 
 The Gradle modules in this repo are split into two main groups:
 
@@ -47,6 +48,7 @@ authority" node which can be introduced into a Corda network that already uses t
 found [here](bridge-authority/README.md).
 
 ## Project maintenance
+
 The project dependencies are listed in [libs.versions.toml](gradle/libs.versions.toml).
 Update them as needed and perform a release when the changes are ready to be published.
 To create a release perform:
@@ -67,3 +69,7 @@ git push origin v0.1.9
 In a build system navigate to a page for the project and use ``Build With paramaters`` providing a name of a tag (for example `v0.1.9`).
 
 The next SNAPSHOT version will be created automatically, when the main branch advances past the tagged commit.
+
+## License
+
+[Apache 2.0](LICENSE)
