@@ -18,10 +18,15 @@ java {
     withSourcesJar()
 }
 
+tasks.withType<Jar> {
+    archiveBaseName.set("corda-solana-testing")
+}
+
 publishing {
     publications {
         create<MavenPublication>("mainPublication") {
             from(components["java"])
+            artifactId = "corda-solana-testing"
         }
     }
 }

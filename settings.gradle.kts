@@ -5,7 +5,7 @@ include(
     "bridge-authority-workflows",
     "bridge-authority-integration-tests",
     "core",
-    "corda-utils",
+    "utils",
     "testing",
 )
 
