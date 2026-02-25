@@ -25,6 +25,7 @@ import software.sava.core.accounts.token.TokenAccount
 import software.sava.rpc.json.http.client.SolanaRpcClient
 import java.net.URI
 import java.util.concurrent.CompletionException
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ForkJoinPool.commonPool
 
 @CordaService
@@ -46,6 +47,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
     )
     private val tokenManagement = TokenManagement(solanaClient)
     private val accountManagement = AccountManagement(solanaClient)
+    private val mintDecimalsCache = ConcurrentHashMap<PublicKey, Int>()
 
     init {
         appServiceHub.registerUnloadHandler { onStop() }
@@ -203,9 +205,11 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         return holders.single()
     }
 
-    fun getAccountMintDecimals(account: PublicKey): Int {
-        val accountInfo = solanaClient.call(SolanaRpcClient::getAccountInfo, account)
-        val mint = Mint.read(accountInfo.pubKey(), accountInfo.data)
-        return mint.decimals
+    fun getAccountMintDecimals(mintAccount: PublicKey): Int {
+        return mintDecimalsCache.computeIfAbsent(mintAccount) {
+            val accountInfo = solanaClient.call(SolanaRpcClient::getAccountInfo, it)
+            val mint = Mint.read(accountInfo.pubKey(), accountInfo.data)
+            mint.decimals
+        }
     }
 }

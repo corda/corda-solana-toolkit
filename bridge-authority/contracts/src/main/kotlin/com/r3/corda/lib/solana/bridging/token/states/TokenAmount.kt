@@ -33,27 +33,27 @@ data class TokenAmount(val quantity: Long, val fractionDigits: Int) {
     /**
      * Rescales this token amount to a different fractional digit resolution.
      * This function converts the amount to a new precision level by adjusting both the quantity
-     * and the fractional digits to maintain the same value.
+     * and the fractional digits to maintain the same numerical value.
      *
      * Example: TokenAmount(100, 0) rescaled to 1 fractional digit gives TokenAmount(1000, 1).
      *
-     * @param fractionDigits The target number of fractional digits
+     * @param newFractionDigits The target number of fractional digits
      * @return A new TokenAmount with the specified fractional digits and adjusted quantity
      * @throws IllegalArgumentException if downscaling would result in precision loss (non-zero remainder)
      */
-    fun rescale(fractionDigits: Int): TokenAmount {
-        val multiplier = getAbsoluteMultiplier(fractionDigits)
-        val value = if (this.fractionDigits <= fractionDigits) {
+    fun rescale(newFractionDigits: Int): TokenAmount {
+        val multiplier = getAbsoluteMultiplier(newFractionDigits)
+        val value = if (this.fractionDigits <= newFractionDigits) {
             this.quantity * multiplier
         } else {
             val remainder = this.quantity % multiplier
             require(remainder == 0L) {
-                "Cannot rescale from ${this.fractionDigits} to $fractionDigits fractional digits, " +
+                "Cannot rescale from ${this.fractionDigits} to $newFractionDigits fractional digits, " +
                     "precision loss detected (quantity=$quantity would have remainder=$remainder). "
             }
             this.quantity / multiplier
         }
-        return TokenAmount(value, fractionDigits)
+        return TokenAmount(value, newFractionDigits)
     }
 
     /**
@@ -64,12 +64,12 @@ data class TokenAmount(val quantity: Long, val fractionDigits: Int) {
      * Example: TokenAmount(11, 2) [0.11] truncated to 1 fractional digit gives TokenAmount(10, 2) [0.10],
      * quantity 11 is truncated to 10 to match 1 fractional digit precision, but stays in original 2-digit resolution.
      *
-     * @param fractionDigits The target number of fractional digits to truncate to
+     * @param newFractionDigits The target number of fractional digits to truncate to
      * @return A new TokenAmount with truncated quantity in the original fractional digit resolution
      */
-    fun truncate(fractionDigits: Int): TokenAmount {
-        val conversionMultiplier = getAbsoluteMultiplier(fractionDigits)
-        return if (this.fractionDigits > fractionDigits) {
+    fun truncate(newFractionDigits: Int): TokenAmount {
+        val conversionMultiplier = getAbsoluteMultiplier(newFractionDigits)
+        return if (this.fractionDigits > newFractionDigits) {
             copy(quantity = (quantity / conversionMultiplier) * conversionMultiplier)
         } else {
             this

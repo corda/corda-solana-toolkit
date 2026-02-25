@@ -98,8 +98,8 @@ class TokenAmountTest {
         // Expected: 0.1 (quantity=1, fractionDigits=1) + original at 0.10 (quantity=10, fractionDigits=2)
         // The second value keeps the original resolution with fraction digits zeroed out
         val solanaAmount = TokenAmount(quantity = 11, fractionDigits = 2)
-        val originalResolution = solanaAmount.truncate(fractionDigits = 1)
-        val newAmount = originalResolution.rescale(fractionDigits = 1)
+        val originalResolution = solanaAmount.truncate(newFractionDigits = 1)
+        val newAmount = originalResolution.rescale(newFractionDigits = 1)
 
         // New amount should have 1 fractional digit with quantity 1 (representing 0.1)
         Assertions.assertEquals(1, newAmount.fractionDigits)
@@ -117,8 +117,8 @@ class TokenAmountTest {
         // Convert to 1 fractional digit
         // Expected: 12 with 1 fractional digit (1.2) + original 120 with 2 fractional digits (1.20)
         val amount = TokenAmount(quantity = 123, fractionDigits = 2)
-        val original = amount.truncate(fractionDigits = 1)
-        val newAmount = original.rescale(fractionDigits = 1)
+        val original = amount.truncate(newFractionDigits = 1)
+        val newAmount = original.rescale(newFractionDigits = 1)
 
         Assertions.assertEquals(1, newAmount.fractionDigits)
         Assertions.assertEquals(12L, newAmount.quantity)
@@ -133,8 +133,8 @@ class TokenAmountTest {
         // Convert to 1 fractional digit
         // Expected: 12 with 1 fractional digit (1.2) + original 120 with 2 fractional digits (1.20)
         val amount = TokenAmount(quantity = 120, fractionDigits = 2)
-        val original = amount.truncate(fractionDigits = 1)
-        val newAmount = original.rescale(fractionDigits = 1)
+        val original = amount.truncate(newFractionDigits = 1)
+        val newAmount = original.rescale(newFractionDigits = 1)
 
         Assertions.assertEquals(1, newAmount.fractionDigits)
         Assertions.assertEquals(12L, newAmount.quantity)
@@ -149,8 +149,8 @@ class TokenAmountTest {
         // Convert to 2 fractional digits
         // Expected: 123 with 2 fractional digits (1.23) + original 123000 with 5 fractional digits (1.23000)
         val amount = TokenAmount(quantity = 123456, fractionDigits = 5)
-        val original = amount.truncate(fractionDigits = 2)
-        val newAmount = original.rescale(fractionDigits = 2)
+        val original = amount.truncate(newFractionDigits = 2)
+        val newAmount = original.rescale(newFractionDigits = 2)
 
         Assertions.assertEquals(2, newAmount.fractionDigits)
         Assertions.assertEquals(123L, newAmount.quantity)
@@ -166,8 +166,8 @@ class TokenAmountTest {
         // Convert to Corda with 3 fractional digits
         // Expected: 0.110 (quantity=110, fractionDigits=3) + original 0.11 (quantity=11, fractionDigits=2)
         val solanaAmount = TokenAmount(quantity = 11, fractionDigits = 2)
-        val original = solanaAmount.truncate(fractionDigits = 3)
-        val newAmount = original.rescale(fractionDigits = 3)
+        val original = solanaAmount.truncate(newFractionDigits = 3)
+        val newAmount = original.rescale(newFractionDigits = 3)
 
         // New amount should have 3 fractional digits with quantity 110 (representing 0.110)
         Assertions.assertEquals(3, newAmount.fractionDigits)
@@ -184,8 +184,8 @@ class TokenAmountTest {
         // Convert to 3 fractional digits
         // Expected: 1200 with 3 fractional digits (1.200) + original 12 with 1 fractional digit (1.2)
         val amount = TokenAmount(quantity = 12, fractionDigits = 1)
-        val original = amount.truncate(fractionDigits = 3)
-        val newAmount = original.rescale(fractionDigits = 3)
+        val original = amount.truncate(newFractionDigits = 3)
+        val newAmount = original.rescale(newFractionDigits = 3)
 
         Assertions.assertEquals(3, newAmount.fractionDigits)
         Assertions.assertEquals(1200L, newAmount.quantity)
@@ -200,8 +200,8 @@ class TokenAmountTest {
         // Convert to 3 fractional digits
         // Expected: 5000 with 3 fractional digits (5.000) + original 5 with 0 fractional digits (5)
         val amount = TokenAmount(quantity = 5, fractionDigits = 0)
-        val original = amount.truncate(fractionDigits = 3)
-        val newAmount = original.rescale(fractionDigits = 3)
+        val original = amount.truncate(newFractionDigits = 3)
+        val newAmount = original.rescale(newFractionDigits = 3)
 
         Assertions.assertEquals(3, newAmount.fractionDigits)
         Assertions.assertEquals(5000L, newAmount.quantity)
@@ -217,8 +217,8 @@ class TokenAmountTest {
         // Convert to 2 fractional digits (same)
         // Expected: 100 with 2 fractional digits + remainder 100 with 2 fractional digits
         val amount = TokenAmount(quantity = 100, fractionDigits = 2)
-        val remainder = amount.truncate(fractionDigits = 2)
-        val newAmount = remainder.rescale(fractionDigits = 2)
+        val remainder = amount.truncate(newFractionDigits = 2)
+        val newAmount = remainder.rescale(newFractionDigits = 2)
 
         Assertions.assertEquals(2, newAmount.fractionDigits)
         Assertions.assertEquals(100L, newAmount.quantity)
@@ -232,8 +232,8 @@ class TokenAmountTest {
         // Start with: 11 with 2 fractional digits (0.11)
         // Convert to 1 fractional digit -> (1 with 1 fractional digit + 10 with 2 fractional digits)
         val originalAmount = TokenAmount(quantity = 11, fractionDigits = 2)
-        val original = originalAmount.truncate(fractionDigits = 1)
-        val mainAmount = original.rescale(fractionDigits = 1)
+        val original = originalAmount.truncate(newFractionDigits = 1)
+        val mainAmount = original.rescale(newFractionDigits = 1)
 
         // The main amount converted back + original should equal the original
         // Main: 1 with 1 digit = 10 with 2 digits
@@ -252,8 +252,8 @@ class TokenAmountTest {
         // Convert to 1 fractional digit
         // Expected: 0 with 1 fractional digit + original 0 with 2 fractional digits
         val amount = TokenAmount(quantity = 0, fractionDigits = 2)
-        val original = amount.truncate(fractionDigits = 1)
-        val newAmount = original.rescale(fractionDigits = 1)
+        val original = amount.truncate(newFractionDigits = 1)
+        val newAmount = original.rescale(newFractionDigits = 1)
 
         Assertions.assertEquals(1, newAmount.fractionDigits)
         Assertions.assertEquals(0L, newAmount.quantity)
@@ -268,8 +268,8 @@ class TokenAmountTest {
         // Convert to 2 fractional digits
         // Expected: 99999 with 2 fractional digits (999.99) + original 999990 with 3 fractional digits (999.990)
         val amount = TokenAmount(quantity = 999999, fractionDigits = 3)
-        val original = amount.truncate(fractionDigits = 2)
-        val newAmount = original.rescale(fractionDigits = 2)
+        val original = amount.truncate(newFractionDigits = 2)
+        val newAmount = original.rescale(newFractionDigits = 2)
 
         Assertions.assertEquals(2, newAmount.fractionDigits)
         Assertions.assertEquals(99999L, newAmount.quantity)
