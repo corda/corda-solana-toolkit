@@ -1,9 +1,9 @@
 rootProject.name = "corda-solana-toolkit"
 
 include(
-    "bridge-authority-contracts",
-    "bridge-authority-workflows",
-    "bridge-authority-integration-tests",
+    "bridge-authority:contracts",
+    "bridge-authority:workflows",
+    "bridge-authority:integration-tests",
     "corda-solana-core",
     "corda-solana-cordapp-utils",
     "corda-solana-testing",
