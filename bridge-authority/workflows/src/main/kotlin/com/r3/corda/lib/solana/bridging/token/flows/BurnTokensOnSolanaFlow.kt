@@ -7,7 +7,6 @@ import com.r3.corda.lib.solana.core.cordautils.Token2022
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
-import net.corda.core.solana.Pubkey
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 
@@ -22,9 +21,9 @@ class BurnTokensOnSolanaFlow(
         val transactionBuilder = TransactionBuilder(solanaNotary)
         val instruction = with(redemptionCoordinates) {
             Token2022.burn(
-                mint = Pubkey.fromBase58(mintAccount),
-                owner = Pubkey.fromBase58(redemptionWalletAccount),
-                source = Pubkey.fromBase58(redemptionTokenAccount),
+                mint = mintAccount,
+                owner = redemptionWalletAccount,
+                source = redemptionTokenAccount,
                 amount = solanaAmount.quantity,
             )
         }

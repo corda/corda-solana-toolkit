@@ -3,21 +3,22 @@ package com.r3.corda.lib.solana.bridging.token.flows
 import com.r3.corda.lib.solana.bridging.token.states.FungibleTokenBurnReceipt
 import com.r3.corda.lib.solana.bridging.token.states.TokenAmount
 import net.corda.core.identity.Party
+import net.corda.core.solana.Pubkey
+import net.corda.core.utilities.toBase58
 
 /**
  * Holds the necessary metadata to redeem a Corda token to Solana Token.
  *
- * @property mintAccount Token **mint** public key (base58 string) on Solana (the asset definition).
- * @property redemptionWalletAccount Public key (base58 string) that will own the redemption wallet on Solana
- * @property redemptionTokenAccount Token **token account** public key (base58 string) on Solana
- * on which the tokens will be burnt
+ * @property mintAccount Token **mint** public key on Solana (the asset definition).
+ * @property redemptionWalletAccount Public key that will own the redemption wallet on Solana
+ * @property redemptionTokenAccount Token **token account** public key on Solana on which the tokens will be burnt
  * @property tokenId The identifier of the Corda token that is being redeemed
  * and will be able to burn them during the redemption.
  */
 data class RedemptionCoordinates(
-    val mintAccount: String,
-    val redemptionWalletAccount: String,
-    val redemptionTokenAccount: String,
+    val mintAccount: Pubkey,
+    val redemptionWalletAccount: Pubkey,
+    val redemptionTokenAccount: Pubkey,
     val tokenId: String,
 ) {
     /**
@@ -31,9 +32,9 @@ data class RedemptionCoordinates(
         cordaAmount: TokenAmount,
         bridgeAuthority: Party,
     ) = FungibleTokenBurnReceipt(
-        redemptionTokenAccount,
-        redemptionWalletAccount,
-        mintAccount,
+        redemptionTokenAccount.bytes.toBase58(),
+        redemptionWalletAccount.bytes.toBase58(),
+        mintAccount.bytes.toBase58(),
         cordaAmount,
         solanaAmount,
         bridgeAuthority,

@@ -167,9 +167,9 @@ class ConfigHandler(appServiceHub: AppServiceHub) {
             "No mint with authority mapping found for token type id $tokenTypeId"
         }
         return RedemptionCoordinates(
-            mintWithAuthority.tokenMint.toString(),
-            redemptionWalletAccount.toString(),
-            redemptionTokenAccount.toString(),
+            mintWithAuthority.tokenMint,
+            redemptionWalletAccount,
+            redemptionTokenAccount,
             tokenTypeId
         )
     }
