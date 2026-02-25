@@ -41,6 +41,13 @@ data class BridgingCoordinates(
             .toPubkey()
         require(token.amount.token.fractionDigits == token.tokenType.fractionDigits)
         val cordaAmount = TokenAmount.fromAmount(token.amount)
+        // TODO if the solana decimals is less and corda amount has value with higher precision than Solana allows
+        //  then any bridging request will silently fail
+        //  We have two options:
+        //  - Either check that the solana decimals >= corda decimals on bridge authority startup to prevent
+        //    the possibility of this happening.
+        //  - Update the bridge authority that it can lock/escrow multiple FungibleTokens at a time with the ability
+        //    to give back change to the bridge authority identity for the remainder
         val solanaAmount = cordaAmount.rescale(solanaMintDecimals)
         return BridgedFungibleTokenProxy(
             cordaAmount,

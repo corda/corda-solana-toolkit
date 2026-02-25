@@ -1,6 +1,9 @@
 package com.r3.corda.lib.solana.bridging.token.states
 
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class TokenAmountTest {
@@ -10,7 +13,7 @@ class TokenAmountTest {
         val amount1 = TokenAmount(100, 0)
         val amount2 = TokenAmount(1000, 1)
 
-        Assertions.assertNotEquals(amount1, amount2)
+        assertNotEquals(amount1, amount2)
     }
 
     // Tests for semantic value comparison
@@ -20,8 +23,8 @@ class TokenAmountTest {
         val amount1 = TokenAmount(100, 0)
         val amount2 = TokenAmount(1000, 1)
 
-        Assertions.assertTrue(amount1.isNumericallyEqual(amount2))
-        Assertions.assertTrue(amount2.isNumericallyEqual(amount1)) // test symmetry
+        assertTrue(amount1.isNumericallyEqual(amount2))
+        assertTrue(amount2.isNumericallyEqual(amount1)) // test symmetry
     }
 
     @Test
@@ -30,7 +33,7 @@ class TokenAmountTest {
         val amount1 = TokenAmount(100, 0)
         val amount2 = TokenAmount(10000, 2)
 
-        Assertions.assertTrue(amount1.isNumericallyEqual(amount2))
+        assertTrue(amount1.isNumericallyEqual(amount2))
     }
 
     @Test
@@ -38,7 +41,7 @@ class TokenAmountTest {
         val amount1 = TokenAmount(100, 2)
         val amount2 = TokenAmount(100, 2)
 
-        Assertions.assertTrue(amount1.isNumericallyEqual(amount2))
+        assertTrue(amount1.isNumericallyEqual(amount2))
     }
 
     @Test
@@ -46,7 +49,7 @@ class TokenAmountTest {
         val amount1 = TokenAmount(100, 2)
         val amount2 = TokenAmount(200, 2)
 
-        Assertions.assertFalse(amount1.isNumericallyEqual(amount2))
+        assertFalse(amount1.isNumericallyEqual(amount2))
     }
 
     @Test
@@ -55,7 +58,7 @@ class TokenAmountTest {
         val amount1 = TokenAmount(100, 0)
         val amount2 = TokenAmount(1001, 1)
 
-        Assertions.assertFalse(amount1.isNumericallyEqual(amount2))
+        assertFalse(amount1.isNumericallyEqual(amount2))
     }
 
     @Test
@@ -65,9 +68,9 @@ class TokenAmountTest {
         val amount2 = TokenAmount(50, 1)
         val amount3 = TokenAmount(500, 2)
 
-        Assertions.assertTrue(amount1.isNumericallyEqual(amount2))
-        Assertions.assertTrue(amount2.isNumericallyEqual(amount3))
-        Assertions.assertTrue(amount1.isNumericallyEqual(amount3)) // test transitivity
+        assertTrue(amount1.isNumericallyEqual(amount2))
+        assertTrue(amount2.isNumericallyEqual(amount3))
+        assertTrue(amount1.isNumericallyEqual(amount3)) // test transitivity
     }
 
     @Test
@@ -76,9 +79,9 @@ class TokenAmountTest {
         val amount2 = TokenAmount(0, 1)
         val amount3 = TokenAmount(0, 5)
 
-        Assertions.assertTrue(amount1.isNumericallyEqual(amount2))
-        Assertions.assertTrue(amount2.isNumericallyEqual(amount3))
-        Assertions.assertTrue(amount1.isNumericallyEqual(amount3))
+        assertTrue(amount1.isNumericallyEqual(amount2))
+        assertTrue(amount2.isNumericallyEqual(amount3))
+        assertTrue(amount1.isNumericallyEqual(amount3))
     }
 
     @Test
@@ -87,7 +90,7 @@ class TokenAmountTest {
         val amount1 = TokenAmount(1000000, 0)
         val amount2 = TokenAmount(10000000, 1)
 
-        Assertions.assertTrue(amount1.isNumericallyEqual(amount2))
+        assertTrue(amount1.isNumericallyEqual(amount2))
     }
 
     // Tests for truncate + rescale pattern - converting to lower resolution
@@ -102,13 +105,13 @@ class TokenAmountTest {
         val newAmount = originalResolution.rescale(newFractionDigits = 1)
 
         // New amount should have 1 fractional digit with quantity 1 (representing 0.1)
-        Assertions.assertEquals(1, newAmount.fractionDigits)
-        Assertions.assertEquals(1L, newAmount.quantity)
+        assertEquals(1, newAmount.fractionDigits)
+        assertEquals(1L, newAmount.quantity)
 
         // Original resolution should be in original resolution (2 fractional digits)
         // with quantity 10 (representing 0.10)
-        Assertions.assertEquals(2, originalResolution.fractionDigits)
-        Assertions.assertEquals(10L, originalResolution.quantity)
+        assertEquals(2, originalResolution.fractionDigits)
+        assertEquals(10L, originalResolution.quantity)
     }
 
     @Test
@@ -120,11 +123,11 @@ class TokenAmountTest {
         val original = amount.truncate(newFractionDigits = 1)
         val newAmount = original.rescale(newFractionDigits = 1)
 
-        Assertions.assertEquals(1, newAmount.fractionDigits)
-        Assertions.assertEquals(12L, newAmount.quantity)
+        assertEquals(1, newAmount.fractionDigits)
+        assertEquals(12L, newAmount.quantity)
 
-        Assertions.assertEquals(2, original.fractionDigits)
-        Assertions.assertEquals(120L, original.quantity)
+        assertEquals(2, original.fractionDigits)
+        assertEquals(120L, original.quantity)
     }
 
     @Test
@@ -136,11 +139,11 @@ class TokenAmountTest {
         val original = amount.truncate(newFractionDigits = 1)
         val newAmount = original.rescale(newFractionDigits = 1)
 
-        Assertions.assertEquals(1, newAmount.fractionDigits)
-        Assertions.assertEquals(12L, newAmount.quantity)
+        assertEquals(1, newAmount.fractionDigits)
+        assertEquals(12L, newAmount.quantity)
 
-        Assertions.assertEquals(2, original.fractionDigits)
-        Assertions.assertEquals(120L, original.quantity)
+        assertEquals(2, original.fractionDigits)
+        assertEquals(120L, original.quantity)
     }
 
     @Test
@@ -152,11 +155,11 @@ class TokenAmountTest {
         val original = amount.truncate(newFractionDigits = 2)
         val newAmount = original.rescale(newFractionDigits = 2)
 
-        Assertions.assertEquals(2, newAmount.fractionDigits)
-        Assertions.assertEquals(123L, newAmount.quantity)
+        assertEquals(2, newAmount.fractionDigits)
+        assertEquals(123L, newAmount.quantity)
 
-        Assertions.assertEquals(5, original.fractionDigits)
-        Assertions.assertEquals(123000L, original.quantity)
+        assertEquals(5, original.fractionDigits)
+        assertEquals(123000L, original.quantity)
     }
 
     // Tests for truncate + rescale pattern - converting to higher resolution
@@ -170,12 +173,12 @@ class TokenAmountTest {
         val newAmount = original.rescale(newFractionDigits = 3)
 
         // New amount should have 3 fractional digits with quantity 110 (representing 0.110)
-        Assertions.assertEquals(3, newAmount.fractionDigits)
-        Assertions.assertEquals(110L, newAmount.quantity)
+        assertEquals(3, newAmount.fractionDigits)
+        assertEquals(110L, newAmount.quantity)
 
         // Original should be the original amount unchanged (in original resolution)
-        Assertions.assertEquals(2, original.fractionDigits)
-        Assertions.assertEquals(11L, original.quantity)
+        assertEquals(2, original.fractionDigits)
+        assertEquals(11L, original.quantity)
     }
 
     @Test
@@ -187,11 +190,11 @@ class TokenAmountTest {
         val original = amount.truncate(newFractionDigits = 3)
         val newAmount = original.rescale(newFractionDigits = 3)
 
-        Assertions.assertEquals(3, newAmount.fractionDigits)
-        Assertions.assertEquals(1200L, newAmount.quantity)
+        assertEquals(3, newAmount.fractionDigits)
+        assertEquals(1200L, newAmount.quantity)
 
-        Assertions.assertEquals(1, original.fractionDigits)
-        Assertions.assertEquals(12L, original.quantity)
+        assertEquals(1, original.fractionDigits)
+        assertEquals(12L, original.quantity)
     }
 
     @Test
@@ -203,11 +206,11 @@ class TokenAmountTest {
         val original = amount.truncate(newFractionDigits = 3)
         val newAmount = original.rescale(newFractionDigits = 3)
 
-        Assertions.assertEquals(3, newAmount.fractionDigits)
-        Assertions.assertEquals(5000L, newAmount.quantity)
+        assertEquals(3, newAmount.fractionDigits)
+        assertEquals(5000L, newAmount.quantity)
 
-        Assertions.assertEquals(0, original.fractionDigits)
-        Assertions.assertEquals(5L, original.quantity)
+        assertEquals(0, original.fractionDigits)
+        assertEquals(5L, original.quantity)
     }
 
     // Tests for truncate + rescale pattern with same resolution
@@ -220,11 +223,11 @@ class TokenAmountTest {
         val remainder = amount.truncate(newFractionDigits = 2)
         val newAmount = remainder.rescale(newFractionDigits = 2)
 
-        Assertions.assertEquals(2, newAmount.fractionDigits)
-        Assertions.assertEquals(100L, newAmount.quantity)
+        assertEquals(2, newAmount.fractionDigits)
+        assertEquals(100L, newAmount.quantity)
 
-        Assertions.assertEquals(2, remainder.fractionDigits)
-        Assertions.assertEquals(100L, remainder.quantity)
+        assertEquals(2, remainder.fractionDigits)
+        assertEquals(100L, remainder.quantity)
     }
 
     @Test
@@ -243,7 +246,7 @@ class TokenAmountTest {
         val totalQuantity = mainConverted.quantity + original.quantity
         // The original represents the rounded-down kept amount, not the lost amount
         // So total should be = (original / multiplier) * multiplier, which is the rounded-down original
-        Assertions.assertEquals(20L, totalQuantity)
+        assertEquals(20L, totalQuantity)
     }
 
     @Test
@@ -255,11 +258,11 @@ class TokenAmountTest {
         val original = amount.truncate(newFractionDigits = 1)
         val newAmount = original.rescale(newFractionDigits = 1)
 
-        Assertions.assertEquals(1, newAmount.fractionDigits)
-        Assertions.assertEquals(0L, newAmount.quantity)
+        assertEquals(1, newAmount.fractionDigits)
+        assertEquals(0L, newAmount.quantity)
 
-        Assertions.assertEquals(2, original.fractionDigits)
-        Assertions.assertEquals(0L, original.quantity)
+        assertEquals(2, original.fractionDigits)
+        assertEquals(0L, original.quantity)
     }
 
     @Test
@@ -271,35 +274,35 @@ class TokenAmountTest {
         val original = amount.truncate(newFractionDigits = 2)
         val newAmount = original.rescale(newFractionDigits = 2)
 
-        Assertions.assertEquals(2, newAmount.fractionDigits)
-        Assertions.assertEquals(99999L, newAmount.quantity)
+        assertEquals(2, newAmount.fractionDigits)
+        assertEquals(99999L, newAmount.quantity)
 
-        Assertions.assertEquals(3, original.fractionDigits)
-        Assertions.assertEquals(999990L, original.quantity)
+        assertEquals(3, original.fractionDigits)
+        assertEquals(999990L, original.quantity)
     }
 
     // Tests for toString() method
     @Test
     fun `toString returns decimal string representation with fractional digits`() {
         val amount1 = TokenAmount(150, 2)
-        Assertions.assertEquals("1.50", amount1.toString())
+        assertEquals("1.50", amount1.toString())
 
         val amount2 = TokenAmount(11, 2)
-        Assertions.assertEquals("0.11", amount2.toString())
+        assertEquals("0.11", amount2.toString())
 
         val amount3 = TokenAmount(1000000, 5)
-        Assertions.assertEquals("10.00000", amount3.toString())
+        assertEquals("10.00000", amount3.toString())
     }
 
     @Test
     fun `toString returns quantity as string when fraction digits is zero`() {
         val amount1 = TokenAmount(100, 0)
-        Assertions.assertEquals("100", amount1.toString())
+        assertEquals("100", amount1.toString())
 
         val amount2 = TokenAmount(0, 0)
-        Assertions.assertEquals("0", amount2.toString())
+        assertEquals("0", amount2.toString())
 
         val amount3 = TokenAmount(1, 0)
-        Assertions.assertEquals("1", amount3.toString())
+        assertEquals("1", amount3.toString())
     }
 }
