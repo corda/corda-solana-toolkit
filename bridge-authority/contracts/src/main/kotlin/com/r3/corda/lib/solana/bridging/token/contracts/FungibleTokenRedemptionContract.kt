@@ -10,6 +10,7 @@ import com.r3.corda.lib.tokens.contracts.utilities.sumTokenStatesOrThrow
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract
 import net.corda.core.identity.AbstractParty
+import net.corda.core.solana.Pubkey
 import net.corda.core.solana.SolanaInstruction
 import net.corda.core.transactions.LedgerTransaction
 
@@ -84,8 +85,11 @@ class FungibleTokenRedemptionContract : Contract {
         // Presence of individual commands had been verified till this point
         require(tx.commands.size == 2) { "UnlockToken transaction must only contain two commands" }
 
-        val noSolanaInstructions = tx.notaryInstructions.none { it is SolanaInstruction }
-        require(noSolanaInstructions) { "No Solana instructions allowed" }
+        // Only process Solana instructions if the class is available on the classpath
+        if (isSolanaInstructionOnClasspath) {
+            val noSolanaInstructions = tx.notaryInstructions.none { it is SolanaInstruction }
+            require(noSolanaInstructions) { "No Solana instructions allowed" }
+        }
     }
 
     private fun verifyBurnOnSolana(tx: LedgerTransaction) {
@@ -99,19 +103,22 @@ class FungibleTokenRedemptionContract : Contract {
         require(tx.inputsOfType<FungibleTokenBurnReceipt>().isEmpty()) {
             "BurnOnSolana transaction must not have any FungibleTokenBurnReceipt inputs"
         }
-        val solanaInstruction = tx.notaryInstructionsOfType<SolanaInstruction>().requireSingle {
-            "Exactly one Solana instruction required"
-        }
-        val expectedInstruction = Token2022.burn(
-            burnReceiptState.mintAccount,
-            burnReceiptState.redemptionTokenAccount,
-            burnReceiptState.redemptionWalletAccount,
-            burnReceiptState.solanaAmount.quantity
-        )
-        require(solanaInstruction == expectedInstruction) {
-            "The Solana instruction in the transaction not the expected burn instruction:\n" +
-                "transaction: $solanaInstruction\n" +
-                "expected:    $expectedInstruction"
+        // Only process Solana instructions if the class is available on the classpath
+        if (isSolanaInstructionOnClasspath) {
+            val solanaInstruction = tx.notaryInstructionsOfType<SolanaInstruction>().requireSingle {
+                "Exactly one Solana instruction required"
+            }
+            val expectedInstruction = Token2022.burn(
+                Pubkey.fromBase58(burnReceiptState.mintAccount),
+                Pubkey.fromBase58(burnReceiptState.redemptionTokenAccount),
+                Pubkey.fromBase58(burnReceiptState.redemptionWalletAccount),
+                burnReceiptState.solanaAmount.quantity
+            )
+            require(solanaInstruction == expectedInstruction) {
+                "The Solana instruction in the transaction not the expected burn instruction:\n" +
+                    "transaction: $solanaInstruction\n" +
+                    "expected:    $expectedInstruction"
+            }
         }
     }
 

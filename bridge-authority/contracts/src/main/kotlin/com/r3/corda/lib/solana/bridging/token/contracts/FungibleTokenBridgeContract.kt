@@ -8,6 +8,7 @@ import com.r3.corda.lib.tokens.contracts.commands.TokenCommand
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract
+import net.corda.core.solana.Pubkey
 import net.corda.core.solana.SolanaInstruction
 import net.corda.core.transactions.LedgerTransaction
 
@@ -63,10 +64,11 @@ class FungibleTokenBridgeContract : Contract {
             // Presence of individual commands had been verified till this point
             "Lock transaction must only contain commands LockToken and token command (Move Token)"
         }
-
-        val noSolanaInstructions = tx.notaryInstructions.none { it is SolanaInstruction }
-        require(noSolanaInstructions) { "No Solana instructions allowed" }
-
+        // Only process Solana instructions if the class is available on the classpath
+        if (isSolanaInstructionOnClasspath) {
+            val noSolanaInstructions = tx.notaryInstructions.none { it is SolanaInstruction }
+            require(noSolanaInstructions) { "No Solana instructions allowed" }
+        }
         // TODO verify the locked token data matches as well, such as the tokenId and original owner
         //  this will come with redemption code
     }
@@ -78,19 +80,22 @@ class FungibleTokenBridgeContract : Contract {
         require(tx.outputsOfType<BridgedFungibleTokenProxy>().isEmpty()) {
             "Bridge to Solana transaction must not have any BridgedFungibleTokenProxy outputs"
         }
-        val solanaInstruction = tx.notaryInstructionsOfType<SolanaInstruction>().requireSingle {
-            "Exactly one Solana instruction required"
-        }
-        val expectedMintInstruction = Token2022.mintTo(
-            bridgedFungibleTokenProxy.mintAccount,
-            bridgedFungibleTokenProxy.bridgeTokenAccount,
-            bridgedFungibleTokenProxy.mintAuthority,
-            bridgedFungibleTokenProxy.solanaAmount.quantity,
-        )
-        require(solanaInstruction == expectedMintInstruction) {
-            "Solana instruction in the transaction not the expected mint instruction:\n" +
-                "transaction: $solanaInstruction\n" +
-                "expected:    $expectedMintInstruction"
+        // Only process Solana instructions if the class is available on the classpath
+        if (isSolanaInstructionOnClasspath) {
+            val solanaInstruction = tx.notaryInstructionsOfType<SolanaInstruction>().requireSingle {
+                "Exactly one Solana instruction required"
+            }
+            val expectedMintInstruction = Token2022.mintTo(
+                Pubkey.fromBase58(bridgedFungibleTokenProxy.mintAccount),
+                Pubkey.fromBase58(bridgedFungibleTokenProxy.bridgeTokenAccount),
+                Pubkey.fromBase58(bridgedFungibleTokenProxy.mintAuthority),
+                bridgedFungibleTokenProxy.solanaAmount.quantity,
+            )
+            require(solanaInstruction == expectedMintInstruction) {
+                "Solana instruction in the transaction not the expected mint instruction:\n" +
+                    "transaction: $solanaInstruction\n" +
+                    "expected:    $expectedMintInstruction"
+            }
         }
 
         require(tx.commands.size == 1) {
