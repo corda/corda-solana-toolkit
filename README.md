@@ -33,13 +33,8 @@ Collection of Solana utilities for CorDapps.
 
 ## Bridge Authority
 
-This consists of the CorDapp bundle `bridge-authority-contracts` and `bridge-authority-workflows` which form the
-backbone of a proposed solution for the bridging (and redemption) of Corda assets onto Solana. This design centers
-around a "bridge authority" node which can be introduced into a Corda network that already uses the
-[Corda Tokens SDK](https://github.com/corda/token-sdk). The network CorDapp does not need to modified and
-instead Corda participants simply "send" their asset to be bridged to the bridge authority which takes care of
-minting the relevant SPL token on Solana. It also listens for redemption requests and automatically burns the tokens
-before returning the Corda asset back to the original owner.
-
-See this [sample](https://github.com/corda/samples-kotlin/tree/release/ent/4.14/Solana/bridge-token) which uses
-this against an existing CorDapp.
+This consists of the CorDapp bundle `bridge-authority:contracts` and `bridge-authority:workflows` which is a proposed
+solution for the bridging (and redemption) of Corda assets into Solana tokens. It centers around a "bridge
+authority" node which can be introduced into a Corda network that already uses the
+[Corda Tokens SDK](https://github.com/corda/token-sdk). More information about how it works and how to use it can be
+found [here](bridge-authority/README.md).
