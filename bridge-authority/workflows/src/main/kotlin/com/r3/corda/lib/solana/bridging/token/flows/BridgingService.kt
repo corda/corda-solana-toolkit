@@ -1,5 +1,6 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
+import com.r3.corda.lib.solana.bridging.token.states.TokenAmount
 import com.r3.corda.lib.solana.core.AccountManagement
 import com.r3.corda.lib.solana.core.SolanaClient
 import com.r3.corda.lib.solana.core.tokens.TokenAccountListener
@@ -19,10 +20,12 @@ import net.corda.core.solana.Pubkey
 import net.corda.core.utilities.debug
 import org.slf4j.LoggerFactory
 import software.sava.core.accounts.PublicKey
+import software.sava.core.accounts.token.Mint
 import software.sava.core.accounts.token.TokenAccount
 import software.sava.rpc.json.http.client.SolanaRpcClient
 import java.net.URI
 import java.util.concurrent.CompletionException
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ForkJoinPool.commonPool
 
 @CordaService
@@ -44,6 +47,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
     )
     private val tokenManagement = TokenManagement(solanaClient)
     private val accountManagement = AccountManagement(solanaClient)
+    private val mintDecimalsCache = ConcurrentHashMap<PublicKey, Int>()
 
     init {
         appServiceHub.registerUnloadHandler { onStop() }
@@ -126,11 +130,16 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
             tokenAccount.address().toPubkey()
         )
         logger.debug { "Redemption event: $redemptionCoordinates, amount ${tokenAccount.amount}" }
+        val solanaAmount = TokenAmount(
+            tokenAccount.amount,
+            getAccountMintDecimals(tokenAccount.mint)
+        )
+
         appServiceHub.startFlow(
             RedeemFungibleTokenFlow(
                 redemptionCoordinates,
                 cordaOwner,
-                tokenAccount.amount,
+                solanaAmount,
                 configHandler.solanaNotary,
                 configHandler.generalNotaryName,
                 configHandler.lockingIdentity
@@ -194,5 +203,13 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         require(holders.size == 1) { "Transaction contains tokens of multiple holders" } // This should not happen
 
         return holders.single()
+    }
+
+    fun getAccountMintDecimals(mintAccount: PublicKey): Int {
+        return mintDecimalsCache.computeIfAbsent(mintAccount) {
+            val accountInfo = solanaClient.call(SolanaRpcClient::getAccountInfo, it)
+            val mint = Mint.read(accountInfo.pubKey(), accountInfo.data)
+            mint.decimals
+        }
     }
 }

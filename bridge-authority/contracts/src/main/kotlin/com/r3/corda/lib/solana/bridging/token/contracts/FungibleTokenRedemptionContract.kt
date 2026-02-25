@@ -1,6 +1,7 @@
 package com.r3.corda.lib.solana.bridging.token.contracts
 
 import com.r3.corda.lib.solana.bridging.token.states.FungibleTokenBurnReceipt
+import com.r3.corda.lib.solana.bridging.token.states.TokenAmount
 import com.r3.corda.lib.solana.core.cordautils.Token2022
 import com.r3.corda.lib.tokens.contracts.commands.MoveTokenCommand
 import com.r3.corda.lib.tokens.contracts.commands.TokenCommand
@@ -77,7 +78,7 @@ class FungibleTokenRedemptionContract : Contract {
                 e
             )
         }
-        require(burnReceiptState.amount == redeemedAmount.quantity) {
+        require(burnReceiptState.cordaAmount == TokenAmount.fromAmount(redeemedAmount)) {
             "The amount in the FungibleTokenBurnReceipt must match the sum FungibleToken amounts"
         }
         // Presence of individual commands had been verified till this point
@@ -105,7 +106,7 @@ class FungibleTokenRedemptionContract : Contract {
             burnReceiptState.mintAccount,
             burnReceiptState.redemptionTokenAccount,
             burnReceiptState.redemptionWalletAccount,
-            burnReceiptState.amount
+            burnReceiptState.solanaAmount.quantity
         )
         require(solanaInstruction == expectedInstruction) {
             "The Solana instruction in the transaction not the expected burn instruction:\n" +

@@ -38,7 +38,10 @@ val services = MockServices(
     networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
 )
 val TOKEN_PROGRAM_ID: String = FungibleTokenContract.contractId
-val cordaTokenAmount = (10000 of TokenType("TEST", 0)).issuedBy(tokenIssuer)
+const val CORDA_DECIMALS = 1
+val cordaTokenAmount = (100 of TokenType("TEST", CORDA_DECIMALS)).issuedBy(tokenIssuer)
+const val SOLANA_DECIMALS = 2
+val solanaTokenAmount = cordaTokenAmount.quantity * 10 // the value is 10x of Corda amount to reflect decimal difference
 
 val mintAccount = Pubkey(secureRandomBytes(32))
 val mintAuthority = Pubkey(secureRandomBytes(32))

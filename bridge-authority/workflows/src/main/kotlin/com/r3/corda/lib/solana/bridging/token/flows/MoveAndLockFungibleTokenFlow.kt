@@ -22,6 +22,7 @@ class MoveAndLockFungibleTokenFlow
 constructor(
     val token: StateAndRef<FungibleToken>,
     val bridgingCoordinates: BridgingCoordinates,
+    val solanaMintDecimals: Int,
     val lockingHolder: AbstractParty,
     override val participantSessions: List<FlowSession>,
     override val observerSessions: List<FlowSession> = emptyList(),
@@ -52,7 +53,8 @@ constructor(
             "When bridging a fungible token, only one token type can be moved at a time."
         }
 
-        val bridgeState: ContractState = bridgingCoordinates.toBridgedFungibleTokenProxy(token.state.data, ourIdentity)
+        val bridgeState: ContractState =
+            bridgingCoordinates.toBridgedFungibleTokenProxy(token.state.data, solanaMintDecimals, ourIdentity)
 
         transactionBuilder.addOutputState(bridgeState)
 

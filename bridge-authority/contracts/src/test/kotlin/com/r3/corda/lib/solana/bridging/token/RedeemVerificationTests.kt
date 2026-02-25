@@ -2,6 +2,7 @@ package com.r3.corda.lib.solana.bridging.token
 
 import com.r3.corda.lib.solana.bridging.token.contracts.FungibleTokenRedemptionContract
 import com.r3.corda.lib.solana.bridging.token.states.FungibleTokenBurnReceipt
+import com.r3.corda.lib.solana.bridging.token.states.TokenAmount
 import com.r3.corda.lib.solana.core.cordautils.Token2022
 import com.r3.corda.lib.tokens.contracts.commands.IssueTokenCommand
 import com.r3.corda.lib.tokens.contracts.commands.MoveTokenCommand
@@ -17,7 +18,8 @@ class RedeemVerificationTests {
         tokenAccount,
         bridgeAuthorityWallet,
         mintAccount,
-        10000,
+        TokenAmount(cordaTokenAmount.quantity, cordaTokenAmount.token.fractionDigits),
+        TokenAmount(solanaTokenAmount, SOLANA_DECIMALS),
         bridgeAuthority
     )
 
@@ -51,7 +53,10 @@ class RedeemVerificationTests {
                 attachment(FungibleTokenRedemptionContract.CONTRACT_ID)
                 input(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
                 input(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
-                input(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState.copy(amount = redeemState.amount * 2))
+                input(
+                    FungibleTokenRedemptionContract.CONTRACT_ID,
+                    redeemState.copyWithAmount(redeemState.cordaAmount.quantity * 2)
+                )
                 output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
                 output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
                 command(
@@ -96,7 +101,10 @@ class RedeemVerificationTests {
                 attachment(TOKEN_PROGRAM_ID)
                 attachment(FungibleTokenRedemptionContract.CONTRACT_ID)
                 input(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, confidentialIdentity))
-                input(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState.copy(amount = redeemState.amount * 2))
+                input(
+                    FungibleTokenRedemptionContract.CONTRACT_ID,
+                    redeemState.copyWithAmount(redeemState.cordaAmount.quantity * 2)
+                )
                 command(
                     listOf(bridgeAuthority.owningKey),
                     FungibleTokenRedemptionContract.RedeemCommand.UnlockToken(confidentialIdentity)
@@ -146,7 +154,7 @@ class RedeemVerificationTests {
                 )
                 tweak {
                     output(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
-                    input(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState.copy(amount = 9999))
+                    input(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState.copyWithAmount(9999))
                     `fails with`(
                         "The amount in the FungibleTokenBurnReceipt must match the sum FungibleToken amounts"
                     )
@@ -156,13 +164,14 @@ class RedeemVerificationTests {
                         TOKEN_PROGRAM_ID,
                         FungibleToken(cordaTokenAmount, bridgeAuthority)
                     )
-                    input(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState.copy(amount = 10001))
+                    input(FungibleTokenRedemptionContract.CONTRACT_ID, redeemState.copyWithAmount(10001))
                     `fails with`(
                         "The amount in the FungibleTokenBurnReceipt must match the sum FungibleToken amounts"
                     )
                 }
                 tweak {
-                    val overspendCordaIssuedTokenType = (10001 of TokenType("TEST", 0)).issuedBy(tokenIssuer)
+                    val overspendCordaIssuedTokenType =
+                        (10001 of TokenType("TEST", CORDA_DECIMALS)).issuedBy(tokenIssuer)
                     output(
                         TOKEN_PROGRAM_ID,
                         FungibleToken(overspendCordaIssuedTokenType, bridgeAuthority)
@@ -171,7 +180,8 @@ class RedeemVerificationTests {
                     `fails with`("In move groups the amount of input tokens MUST EQUAL the amount of output tokens")
                 }
                 tweak {
-                    val underspendCordaIssuedTokenType = (9999 of TokenType("TEST", 0)).issuedBy(tokenIssuer)
+                    val underspendCordaIssuedTokenType =
+                        (9999 of TokenType("TEST", CORDA_DECIMALS)).issuedBy(tokenIssuer)
                     output(
                         TOKEN_PROGRAM_ID,
                         FungibleToken(underspendCordaIssuedTokenType, bridgeAuthority)
@@ -274,11 +284,11 @@ class RedeemVerificationTests {
                 )
 
                 tweak {
-                    notaryInstruction(Token2022.burn(mintAccount, tokenAccount, bridgeAuthorityWallet, 10001))
+                    notaryInstruction(Token2022.burn(mintAccount, tokenAccount, bridgeAuthorityWallet, 100010))
                     `fails with`("The Solana instruction in the transaction not the expected burn instruction:")
                 }
                 tweak {
-                    notaryInstruction(Token2022.burn(mintAccount, tokenAccount, bridgeAuthorityWallet, 9999))
+                    notaryInstruction(Token2022.burn(mintAccount, tokenAccount, bridgeAuthorityWallet, 99990))
                     `fails with`("The Solana instruction in the transaction not the expected burn instruction:")
                 }
 
@@ -363,7 +373,7 @@ class RedeemVerificationTests {
                 }
                 // wrong amount
                 tweak {
-                    notaryInstruction(Token2022.burn(mintAccount, tokenAccount, bridgeAuthorityWallet, 9999))
+                    notaryInstruction(Token2022.burn(mintAccount, tokenAccount, bridgeAuthorityWallet, 99990))
                     `fails with`("The Solana instruction in the transaction not the expected burn instruction:")
                 }
 
@@ -373,4 +383,10 @@ class RedeemVerificationTests {
             }
         }
     }
+
+    private fun FungibleTokenBurnReceipt.copyWithAmount(cordaQuantity: Long) =
+        copy(
+            cordaAmount = TokenAmount(cordaQuantity, CORDA_DECIMALS),
+            solanaAmount = TokenAmount(cordaQuantity * 10, SOLANA_DECIMALS)
+        )
 }

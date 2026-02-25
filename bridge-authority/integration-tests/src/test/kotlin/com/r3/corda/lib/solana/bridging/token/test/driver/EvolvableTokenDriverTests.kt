@@ -13,8 +13,8 @@ import java.math.BigDecimal
 import java.util.UUID
 
 class EvolvableTokenDriverTests : DriverTest() {
-    override val msftDescriptor: TokenTypeDescriptor = EvolvableDescriptor(MSFT_TICKER)
-    override val appleDescriptor: TokenTypeDescriptor = EvolvableDescriptor(APPL_TICKER)
+    override val msftDescriptor: TokenTypeDescriptor = EvolvableDescriptor(MSFT_TICKER, CORDA_TOKEN_DECIMALS)
+    override val appleDescriptor: TokenTypeDescriptor = EvolvableDescriptor(APPL_TICKER, CORDA_TOKEN_DECIMALS)
 
     override fun CordaParticipant.issue(
         tokenTypeDescriptor: TokenTypeDescriptor,

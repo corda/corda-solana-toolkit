@@ -20,7 +20,8 @@ import net.corda.core.solana.Pubkey
  * @property redemptionTokenAccount Token account public key on Solana from which the tokens were burnt.
  * @property redemptionWalletAccount Token wallet public key on Solana that owns the [redemptionTokenAccount].
  * @property mintAccount Token **mint** public key on Solana (the asset definition).
- * @property amount Quantity of fungible tokens that were burnt on Solana.
+ * @property cordaAmount Quantity of fungible tokens that were burnt on Solana.
+ * @property solanaAmount Quantity of tokens that were burnt on Solana.
  * @property bridgeAuthority The party performing the redemption from Solana.
  */
 @BelongsToContract(FungibleTokenRedemptionContract::class)
@@ -28,12 +29,16 @@ data class FungibleTokenBurnReceipt(
     val redemptionTokenAccount: Pubkey,
     val redemptionWalletAccount: Pubkey,
     val mintAccount: Pubkey,
-    val amount: Long,
+    val cordaAmount: TokenAmount,
+    val solanaAmount: TokenAmount,
     val bridgeAuthority: Party,
     override val participants: List<AbstractParty> = listOf(bridgeAuthority),
 ) : ContractState {
     init {
         // extra check when object is deserialized by AMQP on a node that redeemed token and doesn't have this class
         require(bridgeAuthority in participants) { "Bridge Authority is not present in participants list." }
+        require(cordaAmount.isNumericallyEqual(solanaAmount)) {
+            "Corda amount must be equal to Solana amount in the burn receipt."
+        }
     }
 }

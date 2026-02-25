@@ -2,6 +2,7 @@ package com.r3.corda.lib.solana.bridging.token.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import com.r3.corda.lib.solana.bridging.token.contracts.FungibleTokenRedemptionContract
+import com.r3.corda.lib.solana.bridging.token.states.TokenAmount
 import com.r3.corda.lib.solana.core.cordautils.Token2022
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
@@ -12,7 +13,8 @@ import net.corda.core.transactions.TransactionBuilder
 class BurnTokensOnSolanaFlow(
     private val redemptionCoordinates: RedemptionCoordinates,
     private val solanaNotary: Party,
-    private val amount: Long,
+    private val cordaAmount: TokenAmount,
+    private val solanaAmount: TokenAmount,
 ) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
@@ -22,7 +24,7 @@ class BurnTokensOnSolanaFlow(
                 mint = mintAccount,
                 owner = redemptionWalletAccount,
                 source = redemptionTokenAccount,
-                amount = amount,
+                amount = solanaAmount.quantity,
             )
         }
         transactionBuilder.addNotaryInstruction(instruction)
@@ -32,7 +34,8 @@ class BurnTokensOnSolanaFlow(
         )
         // We issue FungibleTokenBurnReceipt state to record burning of tokens on Solana
         val redeemReceiptState = redemptionCoordinates.toRedeemReceiptState(
-            amount = amount,
+            solanaAmount,
+            cordaAmount,
             bridgeAuthority = ourIdentity
         )
         transactionBuilder.addOutputState(redeemReceiptState)

@@ -1,6 +1,7 @@
 package com.r3.corda.lib.solana.bridging.token.contracts
 
 import com.r3.corda.lib.solana.bridging.token.states.BridgedFungibleTokenProxy
+import com.r3.corda.lib.solana.bridging.token.states.TokenAmount
 import com.r3.corda.lib.solana.core.cordautils.Token2022
 import com.r3.corda.lib.tokens.contracts.commands.MoveTokenCommand
 import com.r3.corda.lib.tokens.contracts.commands.TokenCommand
@@ -54,7 +55,7 @@ class FungibleTokenBridgeContract : Contract {
             "The token holder must change when locking the token"
         }
 
-        require(outputToken.amount.quantity == tokenProxy.amount) {
+        require(TokenAmount.fromAmount(outputToken.amount) == tokenProxy.cordaAmount) {
             "BridgedFungibleTokenProxy must have the same amount as the locked token"
         }
 
@@ -84,7 +85,7 @@ class FungibleTokenBridgeContract : Contract {
             bridgedFungibleTokenProxy.mintAccount,
             bridgedFungibleTokenProxy.bridgeTokenAccount,
             bridgedFungibleTokenProxy.mintAuthority,
-            bridgedFungibleTokenProxy.amount,
+            bridgedFungibleTokenProxy.solanaAmount.quantity,
         )
         require(solanaInstruction == expectedMintInstruction) {
             "Solana instruction in the transaction not the expected mint instruction:\n" +

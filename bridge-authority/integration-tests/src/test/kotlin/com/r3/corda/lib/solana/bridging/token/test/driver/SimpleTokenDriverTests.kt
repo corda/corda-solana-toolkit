@@ -12,8 +12,8 @@ import net.corda.core.utilities.getOrThrow
 import java.math.BigDecimal
 
 class SimpleTokenDriverTests : DriverTest() {
-    override val msftDescriptor: TokenTypeDescriptor = SimpleDescriptor(MSFT_TICKER)
-    override val appleDescriptor: TokenTypeDescriptor = SimpleDescriptor(APPL_TICKER)
+    override val msftDescriptor: TokenTypeDescriptor = SimpleDescriptor(MSFT_TICKER, CORDA_TOKEN_DECIMALS)
+    override val appleDescriptor: TokenTypeDescriptor = SimpleDescriptor(APPL_TICKER, CORDA_TOKEN_DECIMALS)
 
     override fun CordaParticipant.issue(
         tokenTypeDescriptor: TokenTypeDescriptor,

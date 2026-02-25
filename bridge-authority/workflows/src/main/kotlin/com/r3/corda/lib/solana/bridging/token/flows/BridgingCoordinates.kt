@@ -1,6 +1,7 @@
 package com.r3.corda.lib.solana.bridging.token.flows
 
 import com.r3.corda.lib.solana.bridging.token.states.BridgedFungibleTokenProxy
+import com.r3.corda.lib.solana.bridging.token.states.TokenAmount
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import net.corda.core.identity.Party
 import net.corda.core.solana.Pubkey
@@ -25,7 +26,11 @@ data class BridgingCoordinates(
      * Converts the Fungible Token amount to Solana token amount in 1:1 ration.
      * @param token the source of amount to bridge
      */
-    fun toBridgedFungibleTokenProxy(token: FungibleToken, bridgeAuthority: Party): BridgedFungibleTokenProxy {
+    fun toBridgedFungibleTokenProxy(
+        token: FungibleToken,
+        solanaMintDecimals: Int,
+        bridgeAuthority: Party,
+    ): BridgedFungibleTokenProxy {
         val tokenAccount = AssociatedTokenProgram
             .findATA(
                 SolanaAccounts.MAIN_NET,
@@ -34,12 +39,22 @@ data class BridgingCoordinates(
                 this.mintAccount.toPublicKey(),
             ).publicKey()
             .toPubkey()
+        require(token.amount.token.fractionDigits == token.tokenType.fractionDigits)
+        val cordaAmount = TokenAmount.fromAmount(token.amount)
+        // TODO if the solana decimals is less and corda amount has value with higher precision than Solana allows
+        //  then any bridging request will silently fail
+        //  To improve this we have two options:
+        //  - Update the bridge authority that it can lock/escrow multiple FungibleTokens
+        //    at a time with the ability to give back change to the bridge authority identity for the remainder
+        //  - Update the bridge authority that it returns FungibleToken to its owner when it cannot be bridged to Solana
+        val solanaAmount = cordaAmount.rescale(solanaMintDecimals)
         return BridgedFungibleTokenProxy(
-            amount = token.amount.quantity,
-            mintAccount = this.mintAccount,
-            mintAuthority = this.mintAuthority,
-            bridgeTokenAccount = tokenAccount,
-            bridgeAuthority = bridgeAuthority,
+            cordaAmount,
+            solanaAmount,
+            tokenAccount,
+            this.mintAccount,
+            this.mintAuthority,
+            bridgeAuthority,
         )
     }
 }
