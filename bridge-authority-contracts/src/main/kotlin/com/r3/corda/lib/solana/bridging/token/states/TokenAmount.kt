@@ -1,5 +1,7 @@
 package com.r3.corda.lib.solana.bridging.token.states
 
+import com.r3.corda.lib.tokens.contracts.types.IssuedTokenType
+import net.corda.core.contracts.Amount
 import net.corda.core.serialization.CordaSerializable
 import java.math.BigDecimal
 import kotlin.math.absoluteValue
@@ -9,6 +11,10 @@ data class TokenAmount(val quantity: Long, val fractionDigits: Int) {
     init {
         require(quantity >= 0) { "Quantity must be 0 or positive" }
         require(fractionDigits >= 0) { "Fraction digits must be 0 or positive" }
+    }
+
+    companion object {
+        fun fromAmount(amount: Amount<IssuedTokenType>) = TokenAmount(amount.quantity, amount.token.fractionDigits)
     }
 
     /**

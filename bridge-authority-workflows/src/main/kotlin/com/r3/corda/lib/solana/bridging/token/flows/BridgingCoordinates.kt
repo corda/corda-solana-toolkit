@@ -39,7 +39,8 @@ data class BridgingCoordinates(
                 this.mintAccount.toPublicKey(),
             ).publicKey()
             .toPubkey()
-        val cordaAmount = TokenAmount(token.amount.quantity, token.tokenType.fractionDigits)
+        require(token.amount.token.fractionDigits == token.tokenType.fractionDigits)
+        val cordaAmount = TokenAmount.fromAmount(token.amount)
         val solanaAmount = cordaAmount.rescale(solanaMintDecimals)
         return BridgedFungibleTokenProxy(
             cordaAmount,

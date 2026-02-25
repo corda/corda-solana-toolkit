@@ -20,7 +20,6 @@ data class BridgeAuthorityInfo(
     private val redemptionTokenAccounts: Map<Party, List<AssociatedTokenAccountInfo>>,
 ) {
     companion object {
-        @Suppress("LongMethod")
         fun createAndInitialise(
             network: MockNetwork,
             identity: TestIdentity,
