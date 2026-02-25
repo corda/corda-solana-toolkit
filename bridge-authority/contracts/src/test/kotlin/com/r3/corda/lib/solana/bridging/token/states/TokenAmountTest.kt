@@ -277,4 +277,29 @@ class TokenAmountTest {
         Assertions.assertEquals(3, original.fractionDigits)
         Assertions.assertEquals(999990L, original.quantity)
     }
+
+    // Tests for toString() method
+    @Test
+    fun `toString returns decimal string representation with fractional digits`() {
+        val amount1 = TokenAmount(150, 2)
+        Assertions.assertEquals("1.50", amount1.toString())
+
+        val amount2 = TokenAmount(11, 2)
+        Assertions.assertEquals("0.11", amount2.toString())
+
+        val amount3 = TokenAmount(1000000, 5)
+        Assertions.assertEquals("10.00000", amount3.toString())
+    }
+
+    @Test
+    fun `toString returns quantity as string when fraction digits is zero`() {
+        val amount1 = TokenAmount(100, 0)
+        Assertions.assertEquals("100", amount1.toString())
+
+        val amount2 = TokenAmount(0, 0)
+        Assertions.assertEquals("0", amount2.toString())
+
+        val amount3 = TokenAmount(1, 0)
+        Assertions.assertEquals("1", amount3.toString())
+    }
 }

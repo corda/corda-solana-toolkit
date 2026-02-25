@@ -61,7 +61,7 @@ data class TokenAmount(val quantity: Long, val fractionDigits: Int) {
      * When the target resolution has fewer fractional digits (lower precision), truncates the quantity.
      * When the target resolution has more fractional digits (higher precision), returns the amount unchanged.
      *
-     * Example: TokenAmount(11, 2) [0.11] truncated to 1 fractional digit gives TokenAmount(10, 2) [0.10],
+     * Example: TokenAmount(11, 2) "0.11" truncated to 1 fractional digit gives TokenAmount(10, 2) "0.10",
      * quantity 11 is truncated to 10 to match 1 fractional digit precision, but stays in original 2-digit resolution.
      *
      * @param newFractionDigits The target number of fractional digits to truncate to
@@ -74,6 +74,18 @@ data class TokenAmount(val quantity: Long, val fractionDigits: Int) {
         } else {
             this
         }
+    }
+
+    /**
+     * Returns the token amount as a decimal string representation.
+     * For example, TokenAmount(150, 2) returns "1.50".
+     */
+    override fun toString(): String {
+        if (fractionDigits == 0) {
+            return quantity.toString()
+        }
+        val value = BigDecimal(quantity).scaleByPowerOfTen(-fractionDigits)
+        return value.toPlainString()
     }
 
     private fun getAbsoluteMultiplier(fractionDigits: Int): Long {
