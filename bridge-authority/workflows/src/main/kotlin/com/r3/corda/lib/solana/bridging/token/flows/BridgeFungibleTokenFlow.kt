@@ -16,6 +16,7 @@ import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
 import net.corda.core.flows.StartableByService
 import net.corda.core.identity.Party
+import net.corda.core.solana.Pubkey
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 
@@ -101,9 +102,9 @@ class BridgeFungibleTokenFlow(
         val bridgedFungibleTokenProxy = tokenProxyRef.state.data
         val transactionBuilder = TransactionBuilder(solanaNotary)
         val instruction = Token2022.mintTo(
-            bridgedFungibleTokenProxy.mintAccount,
-            bridgedFungibleTokenProxy.bridgeTokenAccount,
-            bridgedFungibleTokenProxy.mintAuthority,
+            Pubkey.fromBase58(bridgedFungibleTokenProxy.mintAccount),
+            Pubkey.fromBase58(bridgedFungibleTokenProxy.bridgeTokenAccount),
+            Pubkey.fromBase58(bridgedFungibleTokenProxy.mintAuthority),
             bridgedFungibleTokenProxy.solanaAmount.quantity,
         )
         transactionBuilder.addNotaryInstruction(instruction)

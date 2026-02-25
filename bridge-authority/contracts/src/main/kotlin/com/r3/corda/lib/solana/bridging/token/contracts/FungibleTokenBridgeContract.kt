@@ -8,6 +8,7 @@ import com.r3.corda.lib.tokens.contracts.commands.TokenCommand
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract
+import net.corda.core.solana.Pubkey
 import net.corda.core.solana.SolanaInstruction
 import net.corda.core.transactions.LedgerTransaction
 
@@ -85,9 +86,9 @@ class FungibleTokenBridgeContract : Contract {
                 "Exactly one Solana instruction required"
             }
             val expectedMintInstruction = Token2022.mintTo(
-                bridgedFungibleTokenProxy.mintAccount,
-                bridgedFungibleTokenProxy.bridgeTokenAccount,
-                bridgedFungibleTokenProxy.mintAuthority,
+                Pubkey.fromBase58(bridgedFungibleTokenProxy.mintAccount),
+                Pubkey.fromBase58(bridgedFungibleTokenProxy.bridgeTokenAccount),
+                Pubkey.fromBase58(bridgedFungibleTokenProxy.mintAuthority),
                 bridgedFungibleTokenProxy.solanaAmount.quantity,
             )
             require(solanaInstruction == expectedMintInstruction) {

@@ -51,9 +51,9 @@ data class BridgingCoordinates(
         return BridgedFungibleTokenProxy(
             cordaAmount,
             solanaAmount,
-            tokenAccount,
-            this.mintAccount,
-            this.mintAuthority,
+            tokenAccount.toPublicKey().toBase58(),
+            this.mintAccount.toPublicKey().toBase58(),
+            this.mintAuthority.toPublicKey().toBase58(),
             bridgeAuthority,
         )
     }

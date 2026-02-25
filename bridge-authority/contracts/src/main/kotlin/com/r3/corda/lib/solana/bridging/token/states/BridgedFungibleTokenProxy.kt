@@ -5,7 +5,6 @@ import net.corda.core.contracts.BelongsToContract
 import net.corda.core.contracts.ContractState
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.solana.Pubkey
 
 /**
  * A proxy state that mirrors a Corda `FungibleToken` while carrying
@@ -25,19 +24,20 @@ import net.corda.core.solana.Pubkey
  * been minted on Solana for [bridgeTokenAccount].
  * @property solanaAmount Quantity of tokens represented by this proxy
  * been minted on Solana for [bridgeTokenAccount].
- * @property bridgeTokenAccount Token account public key that should receive the minted tokens on Solana.
- * @property mintAccount Token **mint** public key on Solana (the asset definition).
- * @property mintAuthority Public key that is authorized to mint for [mintAccount] on Solana
- * (address controlled by the bridge).
+ * @property bridgeTokenAccount Token account public key (base58 string) that should receive
+ * the minted tokens on Solana.
+ * @property mintAccount Token **mint** public key (base58 string) on Solana (the asset definition).
+ * @property mintAuthority Public key (base58 string) that is authorized to mint for [mintAccount]
+ * on Solana (address controlled by the bridge).
  * @property bridgeAuthority The party performing the bridge onto Solana.
  */
 @BelongsToContract(FungibleTokenBridgeContract::class)
 data class BridgedFungibleTokenProxy(
     val cordaAmount: TokenAmount,
     val solanaAmount: TokenAmount,
-    val bridgeTokenAccount: Pubkey,
-    val mintAccount: Pubkey,
-    val mintAuthority: Pubkey,
+    val bridgeTokenAccount: String,
+    val mintAccount: String,
+    val mintAuthority: String,
     val bridgeAuthority: Party,
     override val participants: List<AbstractParty> = listOf(bridgeAuthority),
 ) : ContractState {

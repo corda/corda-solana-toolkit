@@ -10,6 +10,7 @@ import com.r3.corda.lib.tokens.contracts.utilities.sumTokenStatesOrThrow
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract
 import net.corda.core.identity.AbstractParty
+import net.corda.core.solana.Pubkey
 import net.corda.core.solana.SolanaInstruction
 import net.corda.core.transactions.LedgerTransaction
 
@@ -108,9 +109,9 @@ class FungibleTokenRedemptionContract : Contract {
                 "Exactly one Solana instruction required"
             }
             val expectedInstruction = Token2022.burn(
-                burnReceiptState.mintAccount,
-                burnReceiptState.redemptionTokenAccount,
-                burnReceiptState.redemptionWalletAccount,
+                Pubkey.fromBase58(burnReceiptState.mintAccount),
+                Pubkey.fromBase58(burnReceiptState.redemptionTokenAccount),
+                Pubkey.fromBase58(burnReceiptState.redemptionWalletAccount),
                 burnReceiptState.solanaAmount.quantity
             )
             require(solanaInstruction == expectedInstruction) {
