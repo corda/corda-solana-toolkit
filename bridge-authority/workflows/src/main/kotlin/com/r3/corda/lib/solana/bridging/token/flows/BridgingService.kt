@@ -183,7 +183,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
                         previousHolder.toParty(appServiceHub),
                         token,
                         configHandler.solanaNotary,
-                        emptyList(), // TODO ENT-14346 an observer is not a generic concept in tokens
+                        emptyList(), // Passing no observers, as an observer is not a generic concept in Tokens SDK
                     )
                 ).logErrorIfException()
             } catch (e: Exception) {
