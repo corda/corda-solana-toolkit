@@ -108,9 +108,9 @@ class FungibleTokenRedemptionContract : Contract {
                 "Exactly one Solana instruction required"
             }
             val expectedInstruction = Token2022.burn(
-                burnReceiptState.mintAccount,
-                burnReceiptState.redemptionTokenAccount,
-                burnReceiptState.redemptionWalletAccount,
+                burnReceiptState.mintAccount(),
+                burnReceiptState.redemptionTokenAccount(),
+                burnReceiptState.redemptionWalletAccount(),
                 burnReceiptState.solanaAmount.quantity
             )
             require(solanaInstruction == expectedInstruction) {

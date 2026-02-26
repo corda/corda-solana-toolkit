@@ -101,9 +101,9 @@ class BridgeFungibleTokenFlow(
         val bridgedFungibleTokenProxy = tokenProxyRef.state.data
         val transactionBuilder = TransactionBuilder(solanaNotary)
         val instruction = Token2022.mintTo(
-            bridgedFungibleTokenProxy.mintAccount,
-            bridgedFungibleTokenProxy.bridgeTokenAccount,
-            bridgedFungibleTokenProxy.mintAuthority,
+            bridgedFungibleTokenProxy.mintAccount(),
+            bridgedFungibleTokenProxy.bridgeTokenAccount(),
+            bridgedFungibleTokenProxy.mintAuthority(),
             bridgedFungibleTokenProxy.solanaAmount.quantity,
         )
         transactionBuilder.addNotaryInstruction(instruction)

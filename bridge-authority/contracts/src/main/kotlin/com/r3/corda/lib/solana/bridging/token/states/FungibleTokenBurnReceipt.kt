@@ -48,20 +48,17 @@ data class FungibleTokenBurnReceipt(
      * Transforms [redemptionTokenAccountBase58] to a [Pubkey].
      * @return The redemption token account as a [Pubkey]
      */
-    val redemptionTokenAccount: Pubkey
-        get() = Pubkey.fromBase58(redemptionTokenAccountBase58)
+    fun redemptionTokenAccount(): Pubkey = Pubkey.fromBase58(redemptionTokenAccountBase58)
 
     /**
      * Transforms [redemptionWalletAccountBase58] to a [Pubkey].
      * @return The redemption wallet account as a [Pubkey]
      */
-    val redemptionWalletAccount: Pubkey
-        get() = Pubkey.fromBase58(redemptionWalletAccountBase58)
+    fun redemptionWalletAccount(): Pubkey = Pubkey.fromBase58(redemptionWalletAccountBase58)
 
     /**
      * Transforms [mintAccountBase58] to a [Pubkey].
      * @return The mint account as a [Pubkey]
      */
-    val mintAccount: Pubkey
-        get() = Pubkey.fromBase58(mintAccountBase58)
+    fun mintAccount(): Pubkey = Pubkey.fromBase58(mintAccountBase58)
 }

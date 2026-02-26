@@ -52,20 +52,17 @@ data class BridgedFungibleTokenProxy(
      * Transforms [bridgeTokenAccountBase58] to a [Pubkey].
      * @return The bridge token account as a [Pubkey]
      */
-    val bridgeTokenAccount: Pubkey
-        get() = Pubkey.fromBase58(bridgeTokenAccountBase58)
+    fun bridgeTokenAccount(): Pubkey = Pubkey.fromBase58(bridgeTokenAccountBase58)
 
     /**
      * Transforms [mintAccountBase58] to a [Pubkey].
      * @return The mint account as a [Pubkey]
      */
-    val mintAccount: Pubkey
-        get() = Pubkey.fromBase58(mintAccountBase58)
+    fun mintAccount(): Pubkey = Pubkey.fromBase58(mintAccountBase58)
 
     /**
      * Transforms [mintAuthorityBase58] to a [Pubkey].
      * @return The mint authority as a [Pubkey]
      */
-    val mintAuthority: Pubkey
-        get() = Pubkey.fromBase58(mintAuthorityBase58)
+    fun mintAuthority(): Pubkey = Pubkey.fromBase58(mintAuthorityBase58)
 }
