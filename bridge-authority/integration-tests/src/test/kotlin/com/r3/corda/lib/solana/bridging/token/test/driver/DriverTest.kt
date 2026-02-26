@@ -353,23 +353,21 @@ abstract class DriverTest {
         )
         // We need to wait for the websocket listener to process the newly received event
         eventually(duration = 10.seconds) {
-            val sum = participantAndStock.tokenBalance(issuer.identity)
-            assertEquals(
-                expectedCordaBalance.stripTrailingZeros(),
-                sum.stripTrailingZeros(),
-                "${participantAndStock.participant.nameAsString} received redeemed " +
-                    "${participantAndStock.stockName} shares back",
-            )
+            val balance = participantAndStock.tokenBalance(issuer.identity)
+            assertThat(expectedCordaBalance)
+                .describedAs(
+                    "${participantAndStock.participant.nameAsString} received redeemed " +
+                        "${participantAndStock.stockName} shares back"
+                ).isEqualByComparingTo(balance)
         }
         eventually(duration = 10.seconds) {
             val balance = validator.client().getTokenBalance(participantAndStock.redemptionTokenAccount)
-            assertEquals(
-                expectedSolanaRedemptionBalance.stripTrailingZeros(),
-                balance.stripTrailingZeros(),
-            ) {
+            assertThat(
+                expectedSolanaRedemptionBalance
+            ).describedAs(
                 "Redemption token account has $expectedSolanaRedemptionBalance instead $quantity after transfer" +
                     " - party ${participantAndStock.participant.nameAsString}"
-            }
+            ).isEqualByComparingTo(balance)
         }
     }
 
