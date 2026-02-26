@@ -8,7 +8,6 @@ import com.r3.corda.lib.tokens.contracts.commands.TokenCommand
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract
-import net.corda.core.solana.Pubkey
 import net.corda.core.solana.SolanaInstruction
 import net.corda.core.transactions.LedgerTransaction
 
@@ -65,7 +64,7 @@ class FungibleTokenBridgeContract : Contract {
             "Lock transaction must only contain commands LockToken and token command (Move Token)"
         }
         // Only process Solana instructions if the class is available on the classpath
-        if (isSolanaInstructionOnClasspath) {
+        if (isSolanaSupported) {
             val noSolanaInstructions = tx.notaryInstructions.none { it is SolanaInstruction }
             require(noSolanaInstructions) { "No Solana instructions allowed" }
         }
@@ -79,14 +78,14 @@ class FungibleTokenBridgeContract : Contract {
             "Bridge to Solana transaction must not have any BridgedFungibleTokenProxy outputs"
         }
         // Only process Solana instructions if the class is available on the classpath
-        if (isSolanaInstructionOnClasspath) {
+        if (isSolanaSupported) {
             val solanaInstruction = tx.notaryInstructionsOfType<SolanaInstruction>().requireSingle {
                 "Exactly one Solana instruction required"
             }
             val expectedMintInstruction = Token2022.mintTo(
-                Pubkey.fromBase58(bridgedFungibleTokenProxy.mintAccount),
-                Pubkey.fromBase58(bridgedFungibleTokenProxy.bridgeTokenAccount),
-                Pubkey.fromBase58(bridgedFungibleTokenProxy.mintAuthority),
+                bridgedFungibleTokenProxy.mintAccount,
+                bridgedFungibleTokenProxy.bridgeTokenAccount,
+                bridgedFungibleTokenProxy.mintAuthority,
                 bridgedFungibleTokenProxy.solanaAmount.quantity,
             )
             require(solanaInstruction == expectedMintInstruction) {

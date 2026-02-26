@@ -4,10 +4,9 @@ inline fun <T> List<T>.requireSingle(errorMessage: () -> Any): T {
     return requireNotNull(singleOrNull(), errorMessage)
 }
 
-private val solanaInstructionClass: Class<*>? = try {
+val isSolanaSupported: Boolean = try {
     Class.forName("net.corda.core.solana.SolanaInstruction")
+    true
 } catch (_: ClassNotFoundException) {
-    null
+    false
 }
-
-val isSolanaInstructionOnClasspath: Boolean = solanaInstructionClass != null

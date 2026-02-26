@@ -5,7 +5,6 @@ import com.r3.corda.lib.solana.bridging.token.states.TokenAmount
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import net.corda.core.identity.Party
 import net.corda.core.solana.Pubkey
-import net.corda.core.utilities.toBase58
 import software.sava.core.accounts.SolanaAccounts
 import software.sava.solana.programs.token.AssociatedTokenProgram
 
@@ -52,9 +51,9 @@ data class BridgingCoordinates(
         return BridgedFungibleTokenProxy(
             cordaAmount,
             solanaAmount,
-            tokenAccount.bytes.toBase58(),
-            this.mintAccount.bytes.toBase58(),
-            this.mintAuthority.bytes.toBase58(),
+            tokenAccount.toString(),
+            this.mintAccount.toString(),
+            this.mintAuthority.toString(),
             bridgeAuthority,
         )
     }
