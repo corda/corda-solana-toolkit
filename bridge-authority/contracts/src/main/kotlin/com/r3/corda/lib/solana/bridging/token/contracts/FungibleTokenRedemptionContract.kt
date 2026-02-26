@@ -2,6 +2,9 @@ package com.r3.corda.lib.solana.bridging.token.contracts
 
 import com.r3.corda.lib.solana.bridging.token.states.FungibleTokenBurnReceipt
 import com.r3.corda.lib.solana.bridging.token.states.TokenAmount
+import com.r3.corda.lib.solana.bridging.token.states.mintAccount
+import com.r3.corda.lib.solana.bridging.token.states.redemptionTokenAccount
+import com.r3.corda.lib.solana.bridging.token.states.redemptionWalletAccount
 import com.r3.corda.lib.solana.core.cordautils.Token2022
 import com.r3.corda.lib.tokens.contracts.commands.MoveTokenCommand
 import com.r3.corda.lib.tokens.contracts.commands.TokenCommand
