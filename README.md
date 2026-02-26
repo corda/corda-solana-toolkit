@@ -44,12 +44,19 @@ The project dependencies are listed in [libs.versions.toml](gradle/libs.versions
 Update them as needed and perform a release when the changes are ready to be published.
 To create a release perform:
 ```
-git fetch --tags
-git tag
+./gradlew currentVersion
 ```
-Create a tag with the next respective version (for example `v0.1.9`):
+This will print the current snapshot version, for example:
+```
+Task :currentVersion
+
+Project version: 0.1.9-SNAPSHOT
+```
+Remove add ``v`` prefix and remove the `-SNAPSHOT` suffix to create new tag, for example:
 ```
 git tag v0.1.9
 git push origin v0.1.9
 ```
 In a build system navigate to a page for the project and use ``Build With paramaters`` providing a name of a tag (for example `v0.1.9`).
+
+The next SNAPSHOT version will be created automatically.
