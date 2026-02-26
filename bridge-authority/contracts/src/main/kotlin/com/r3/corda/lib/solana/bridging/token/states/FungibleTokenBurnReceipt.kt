@@ -20,7 +20,7 @@ import net.corda.core.solana.Pubkey
  * @property redemptionTokenAccountBase58 Token account public key (base58 string) on Solana from which
  * the tokens were burnt.
  * @property redemptionWalletAccountBase58 Token wallet public key (base58 string) on Solana that owns
- * the [redemptionTokenAccountBase58].
+ * the [redemptionTokenAccount].
  * @property mintAccountBase58 Token **mint** public key (base58 string) on Solana (the asset definition).
  * @property cordaAmount Quantity of fungible tokens that were burnt on Solana.
  * @property solanaAmount Quantity of tokens that were burnt on Solana.
@@ -44,9 +44,24 @@ data class FungibleTokenBurnReceipt(
         }
     }
 
-    fun getRedemptionTokenAccount(): Pubkey = Pubkey.fromBase58(redemptionTokenAccountBase58)
+    /**
+     * Transforms [redemptionTokenAccountBase58] to a [Pubkey].
+     * @return The redemption token account as a [Pubkey]
+     */
+    val redemptionTokenAccount: Pubkey
+        get() = Pubkey.fromBase58(redemptionTokenAccountBase58)
 
-    fun getRedemptionWalletAccount(): Pubkey = Pubkey.fromBase58(redemptionWalletAccountBase58)
+    /**
+     * Transforms [redemptionWalletAccountBase58] to a [Pubkey].
+     * @return The redemption wallet account as a [Pubkey]
+     */
+    val redemptionWalletAccount: Pubkey
+        get() = Pubkey.fromBase58(redemptionWalletAccountBase58)
 
-    fun getMintAccount(): Pubkey = Pubkey.fromBase58(mintAccountBase58)
+    /**
+     * Transforms [mintAccountBase58] to a [Pubkey].
+     * @return The mint account as a [Pubkey]
+     */
+    val mintAccount: Pubkey
+        get() = Pubkey.fromBase58(mintAccountBase58)
 }

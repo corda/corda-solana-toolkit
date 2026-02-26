@@ -85,9 +85,9 @@ class FungibleTokenBridgeContract : Contract {
                 "Exactly one Solana instruction required"
             }
             val expectedMintInstruction = Token2022.mintTo(
-                bridgedFungibleTokenProxy.getMintAccount(),
-                bridgedFungibleTokenProxy.getBridgeTokenAccount(),
-                bridgedFungibleTokenProxy.getMintAuthority(),
+                bridgedFungibleTokenProxy.mintAccount,
+                bridgedFungibleTokenProxy.bridgeTokenAccount,
+                bridgedFungibleTokenProxy.mintAuthority,
                 bridgedFungibleTokenProxy.solanaAmount.quantity,
             )
             require(solanaInstruction == expectedMintInstruction) {
