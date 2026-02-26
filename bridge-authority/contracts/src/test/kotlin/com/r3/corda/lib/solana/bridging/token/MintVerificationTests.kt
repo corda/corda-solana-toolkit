@@ -10,7 +10,6 @@ import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.contracts.types.TokenType
 import com.r3.corda.lib.tokens.contracts.utilities.issuedBy
 import com.r3.corda.lib.tokens.contracts.utilities.of
-import net.corda.core.utilities.toBase58
 import net.corda.testing.node.ledger
 import org.junit.jupiter.api.Test
 
@@ -18,9 +17,9 @@ class MintVerificationTests {
     val bridgedFungibleTokenProxy = BridgedFungibleTokenProxy(
         TokenAmount(cordaTokenAmount.quantity, cordaTokenAmount.token.fractionDigits),
         TokenAmount(solanaTokenAmount, SOLANA_DECIMALS),
-        tokenAccount.bytes.toBase58(),
-        mintAccount.bytes.toBase58(),
-        mintAuthority.bytes.toBase58(),
+        tokenAccount.toString(),
+        mintAccount.toString(),
+        mintAuthority.toString(),
         bridgeAuthority
     )
 

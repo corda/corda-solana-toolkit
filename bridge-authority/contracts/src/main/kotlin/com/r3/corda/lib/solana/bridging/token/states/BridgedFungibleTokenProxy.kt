@@ -5,6 +5,7 @@ import net.corda.core.contracts.BelongsToContract
 import net.corda.core.contracts.ContractState
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.solana.Pubkey
 
 /**
  * A proxy state that mirrors a Corda `FungibleToken` while carrying
@@ -21,13 +22,13 @@ import net.corda.core.identity.Party
  * [bridge|redeem]TokenAccount
  *
  * @property cordaAmount Quantity of Corda fungible tokens represented by this
- * been minted on Solana for [bridgeTokenAccount].
+ * been minted on Solana for [bridgeTokenAccountBase58].
  * @property solanaAmount Quantity of tokens represented by this proxy
- * been minted on Solana for [bridgeTokenAccount].
- * @property bridgeTokenAccount Token account public key (base58 string) that should receive
+ * been minted on Solana for [bridgeTokenAccountBase58].
+ * @property bridgeTokenAccountBase58 Token account public key (base58 string) that should receive
  * the minted tokens on Solana.
- * @property mintAccount Token **mint** public key (base58 string) on Solana (the asset definition).
- * @property mintAuthority Public key (base58 string) that is authorized to mint for [mintAccount]
+ * @property mintAccountBase58 Token **mint** public key (base58 string) on Solana (the asset definition).
+ * @property mintAuthorityBase58 Public key (base58 string) that is authorized to mint for [mintAccountBase58]
  * on Solana (address controlled by the bridge).
  * @property bridgeAuthority The party performing the bridge onto Solana.
  */
@@ -35,9 +36,9 @@ import net.corda.core.identity.Party
 data class BridgedFungibleTokenProxy(
     val cordaAmount: TokenAmount,
     val solanaAmount: TokenAmount,
-    val bridgeTokenAccount: String,
-    val mintAccount: String,
-    val mintAuthority: String,
+    val bridgeTokenAccountBase58: String,
+    val mintAccountBase58: String,
+    val mintAuthorityBase58: String,
     val bridgeAuthority: Party,
     override val participants: List<AbstractParty> = listOf(bridgeAuthority),
 ) : ContractState {
@@ -46,4 +47,10 @@ data class BridgedFungibleTokenProxy(
         require(bridgeAuthority in participants) { "Bridge Authority is not present in participants list." }
         require(cordaAmount.isNumericallyEqual(solanaAmount)) { "Corda amount must be equal to Solana amount." }
     }
+
+    fun getBridgeTokenAccount(): Pubkey = Pubkey.fromBase58(bridgeTokenAccountBase58)
+
+    fun getMintAccount(): Pubkey = Pubkey.fromBase58(mintAccountBase58)
+
+    fun getMintAuthority(): Pubkey = Pubkey.fromBase58(mintAuthorityBase58)
 }
