@@ -49,7 +49,7 @@ git tag
 ```
 Create a tag with the next respective version (for example `v0.1.9`):
 ```
-git tag v0.2.5
-git push origin v0.2.5
+git tag v0.1.9
+git push origin v0.1.9
 ```
 In a build system navigate to a page for the project and use ``Build With paramaters`` providing a name of a tag (for example `v0.1.9`).
