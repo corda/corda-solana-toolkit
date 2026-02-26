@@ -68,8 +68,6 @@ class FungibleTokenBridgeContract : Contract {
             val noSolanaInstructions = tx.notaryInstructions.none { it is SolanaInstruction }
             require(noSolanaInstructions) { "No Solana instructions allowed" }
         }
-        // TODO verify the locked token data matches as well, such as the tokenId and original owner
-        //  this will come with redemption code
     }
 
     private fun verifyMintToSolana(tx: LedgerTransaction) {
