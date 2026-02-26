@@ -4,7 +4,6 @@ import com.r3.corda.lib.solana.bridging.token.states.FungibleTokenBurnReceipt
 import com.r3.corda.lib.solana.bridging.token.states.TokenAmount
 import net.corda.core.identity.Party
 import net.corda.core.solana.Pubkey
-import net.corda.core.utilities.toBase58
 
 /**
  * Holds the necessary metadata to redeem a Corda token to Solana Token.
@@ -32,9 +31,9 @@ data class RedemptionCoordinates(
         cordaAmount: TokenAmount,
         bridgeAuthority: Party,
     ) = FungibleTokenBurnReceipt(
-        redemptionTokenAccount.bytes.toBase58(),
-        redemptionWalletAccount.bytes.toBase58(),
-        mintAccount.bytes.toBase58(),
+        redemptionTokenAccount.toString(),
+        redemptionWalletAccount.toString(),
+        mintAccount.toString(),
         cordaAmount,
         solanaAmount,
         bridgeAuthority,
