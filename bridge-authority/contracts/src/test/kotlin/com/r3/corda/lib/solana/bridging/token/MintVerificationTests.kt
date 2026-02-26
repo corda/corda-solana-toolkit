@@ -10,6 +10,12 @@ import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.contracts.types.TokenType
 import com.r3.corda.lib.tokens.contracts.utilities.issuedBy
 import com.r3.corda.lib.tokens.contracts.utilities.of
+import net.corda.core.contracts.BelongsToContract
+import net.corda.core.contracts.CommandData
+import net.corda.core.contracts.Contract
+import net.corda.core.contracts.ContractState
+import net.corda.core.identity.AbstractParty
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.toBase58
 import net.corda.testing.node.ledger
 import org.junit.jupiter.api.Test
@@ -76,7 +82,7 @@ class MintVerificationTests {
     }
 
     @Test
-    fun `locking tokens fails with amount releated errors`() {
+    fun `locking tokens fails with amount related errors`() {
         services.ledger {
             transaction {
                 attachment(TOKEN_PROGRAM_ID)
@@ -186,7 +192,39 @@ class MintVerificationTests {
         }
     }
 
-    // TODO test with a surplus dummy unrelated state and contracts
+    @Test
+    fun `locking tokens fails when transaction contains unrelated states or contracts`() {
+        services.ledger {
+            transaction {
+                attachment(TOKEN_PROGRAM_ID)
+                attachment(FungibleTokenBridgeContract.CONTRACT_ID)
+                attachment(DummyContract.CONTRACT_ID)
+                input(TOKEN_PROGRAM_ID, FungibleToken(cordaTokenAmount, bridgeAuthority))
+                output(
+                    TOKEN_PROGRAM_ID,
+                    FungibleToken(cordaTokenAmount, confidentialIdentity)
+                )
+                output(FungibleTokenBridgeContract.CONTRACT_ID, bridgedFungibleTokenProxy)
+                command(
+                    listOf(bridgeAuthority.owningKey, confidentialIdentity.owningKey),
+                    MoveTokenCommand(cordaTokenAmount.token, listOf(0), listOf(0))
+                )
+                command(
+                    listOf(bridgeAuthority.owningKey),
+                    FungibleTokenBridgeContract.BridgeCommand.LockToken
+                )
+
+                // Add an unrelated state - this should cause the transaction to fail
+                tweak {
+                    output(DummyContract.CONTRACT_ID, DummyState(bridgeAuthority))
+                    command(listOf(bridgeAuthority.owningKey), DummyContract.Commands.Create)
+                    `fails with`("Lock transaction must only contain commands LockToken and token command (Move Token)")
+                }
+
+                verifies()
+            }
+        }
+    }
 
     @Test
     fun `locking tokens fails with instruction related errors`() {
@@ -335,4 +373,23 @@ class MintVerificationTests {
             cordaAmount = TokenAmount(cordaQuantity, CORDA_DECIMALS),
             solanaAmount = TokenAmount(cordaQuantity * 10, SOLANA_DECIMALS)
         )
+}
+
+class DummyContract : Contract {
+    companion object {
+        const val CONTRACT_ID = "com.r3.corda.lib.solana.bridging.token.DummyContract"
+    }
+
+    override fun verify(tx: LedgerTransaction) {
+        // No verification for testing
+    }
+
+    interface Commands : CommandData {
+        object Create : Commands
+    }
+}
+
+@BelongsToContract(DummyContract::class)
+data class DummyState(val party: AbstractParty) : ContractState {
+    override val participants: List<AbstractParty> = listOf(party)
 }
