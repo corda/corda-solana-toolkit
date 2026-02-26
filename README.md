@@ -38,3 +38,25 @@ solution for the bridging (and redemption) of Corda assets into Solana tokens. I
 authority" node which can be introduced into a Corda network that already uses the
 [Corda Tokens SDK](https://github.com/corda/token-sdk). More information about how it works and how to use it can be
 found [here](bridge-authority/README.md).
+
+## Project maintenance
+The project dependencies are listed in [libs.versions.toml](gradle/libs.versions.toml).
+Update them as needed and perform a release when the changes are ready to be published.
+To create a release perform:
+```
+./gradlew currentVersion
+```
+This will print the current snapshot version, for example:
+```
+Task :currentVersion
+
+Project version: 0.1.9-SNAPSHOT
+```
+Add ``v`` prefix and remove the `-SNAPSHOT` suffix to create new tag, for example:
+```
+git tag v0.1.9
+git push origin v0.1.9
+```
+In a build system navigate to a page for the project and use ``Build With paramaters`` providing a name of a tag (for example `v0.1.9`).
+
+The next SNAPSHOT version will be created automatically, when the main branch advances past the tagged commit.
