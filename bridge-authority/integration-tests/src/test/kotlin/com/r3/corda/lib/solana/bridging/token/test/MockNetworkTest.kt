@@ -270,9 +270,11 @@ abstract class MockNetworkTest {
             )
         }
         val fungibleTokens = bridgeAuthority.node.getAllFungibleTokens(issuingBankParty, tokenType)
-        assertThat(fungibleTokens).describedAs(
-            "There should be at least one ${tokenType.tokenIdentifier} fungible token in Bridge Authority vault"
-        ).isNotEmpty
+        assertThat(fungibleTokens)
+            .describedAs(
+                "There should be at least one ${tokenType.tokenIdentifier} fungible token in Bridge Authority vault"
+            )
+            .isNotEmpty
         val holder = fungibleTokens.map { it.holder }.toSet().singleOrNull()
         requireNotNull(holder) { "Selected fungible tokens should have the same holder" }
         assertThat(holder).describedAs("Fungible token holder should be Locking Identity, but was $holder")
