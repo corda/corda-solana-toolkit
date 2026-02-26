@@ -5,7 +5,6 @@ import net.corda.core.contracts.BelongsToContract
 import net.corda.core.contracts.ContractState
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.solana.Pubkey
 
 /**
  * A proxy state that mirrors a Corda `FungibleToken` while carrying
@@ -47,25 +46,4 @@ data class BridgedFungibleTokenProxy(
         require(bridgeAuthority in participants) { "Bridge Authority is not present in participants list." }
         require(cordaAmount.isNumericallyEqual(solanaAmount)) { "Corda amount must be equal to Solana amount." }
     }
-
-    /**
-     * Transforms [bridgeTokenAccountBase58] to a [Pubkey].
-     * @return The bridge token account as a [Pubkey]
-     */
-    val bridgeTokenAccount: Pubkey
-        get() = Pubkey.fromBase58(bridgeTokenAccountBase58)
-
-    /**
-     * Transforms [mintAccountBase58] to a [Pubkey].
-     * @return The mint account as a [Pubkey]
-     */
-    val mintAccount: Pubkey
-        get() = Pubkey.fromBase58(mintAccountBase58)
-
-    /**
-     * Transforms [mintAuthorityBase58] to a [Pubkey].
-     * @return The mint authority as a [Pubkey]
-     */
-    val mintAuthority: Pubkey
-        get() = Pubkey.fromBase58(mintAuthorityBase58)
 }

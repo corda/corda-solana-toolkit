@@ -3,6 +3,9 @@ package com.r3.corda.lib.solana.bridging.token.flows
 import co.paralleluniverse.fibers.Suspendable
 import com.r3.corda.lib.solana.bridging.token.contracts.FungibleTokenBridgeContract
 import com.r3.corda.lib.solana.bridging.token.states.BridgedFungibleTokenProxy
+import com.r3.corda.lib.solana.bridging.token.states.bridgeTokenAccount
+import com.r3.corda.lib.solana.bridging.token.states.mintAccount
+import com.r3.corda.lib.solana.bridging.token.states.mintAuthority
 import com.r3.corda.lib.solana.core.cordautils.Token2022
 import com.r3.corda.lib.tokens.contracts.states.FungibleToken
 import com.r3.corda.lib.tokens.workflows.utilities.sessionsForParties

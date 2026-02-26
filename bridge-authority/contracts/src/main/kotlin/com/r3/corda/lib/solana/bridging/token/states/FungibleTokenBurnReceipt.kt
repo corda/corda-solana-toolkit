@@ -5,7 +5,6 @@ import net.corda.core.contracts.BelongsToContract
 import net.corda.core.contracts.ContractState
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.solana.Pubkey
 
 /**
  * A state issued to record the burning of fungible tokens on Solana
@@ -43,25 +42,4 @@ data class FungibleTokenBurnReceipt(
             "Corda amount must be equal to Solana amount in the burn receipt."
         }
     }
-
-    /**
-     * Transforms [redemptionTokenAccountBase58] to a [Pubkey].
-     * @return The redemption token account as a [Pubkey]
-     */
-    val redemptionTokenAccount: Pubkey
-        get() = Pubkey.fromBase58(redemptionTokenAccountBase58)
-
-    /**
-     * Transforms [redemptionWalletAccountBase58] to a [Pubkey].
-     * @return The redemption wallet account as a [Pubkey]
-     */
-    val redemptionWalletAccount: Pubkey
-        get() = Pubkey.fromBase58(redemptionWalletAccountBase58)
-
-    /**
-     * Transforms [mintAccountBase58] to a [Pubkey].
-     * @return The mint account as a [Pubkey]
-     */
-    val mintAccount: Pubkey
-        get() = Pubkey.fromBase58(mintAccountBase58)
 }
