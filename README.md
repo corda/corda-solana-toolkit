@@ -52,11 +52,11 @@ Task :currentVersion
 
 Project version: 0.1.9-SNAPSHOT
 ```
-Remove add ``v`` prefix and remove the `-SNAPSHOT` suffix to create new tag, for example:
+Add ``v`` prefix and remove the `-SNAPSHOT` suffix to create new tag, for example:
 ```
 git tag v0.1.9
 git push origin v0.1.9
 ```
 In a build system navigate to a page for the project and use ``Build With paramaters`` providing a name of a tag (for example `v0.1.9`).
 
-The next SNAPSHOT version will be created automatically.
+The next SNAPSHOT version will be created automatically, when the main branch advances past the tagged commit.
