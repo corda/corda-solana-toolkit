@@ -27,7 +27,6 @@ import net.corda.testing.node.TestCordapp
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.assertNotNull
 import org.junit.jupiter.api.io.TempDir
@@ -227,15 +226,15 @@ abstract class MockNetworkTest {
                 it.holder !in listOf(alice.party, bob.party, bridgeAuthority.party) // Locking identity holds tokens
             }
             if (expectedLockedAmount == BigDecimal.ZERO) {
-                assertTrue(
-                    lockedFungibleTokens.isEmpty(),
-                    "Expected no ${tokenType.tokenIdentifier} tokens locked, but some were found"
-                )
+                assertThat(lockedFungibleTokens)
+                    .describedAs(
+                        "Expected no ${tokenType.tokenIdentifier} tokens locked, but some were found"
+                    )
+                    .isEmpty()
             } else {
-                assertTrue(
-                    lockedFungibleTokens.isNotEmpty(),
-                    "Expected some ${tokenType.tokenIdentifier} tokens locked, but none were found"
-                )
+                assertThat(lockedFungibleTokens)
+                    .describedAs("Expected some ${tokenType.tokenIdentifier} tokens locked, but none were found")
+                    .isNotEmpty
                 val lockedAmount = lockedFungibleTokens.sumTokenStatesOrThrow().toDecimal()
                 assertEquals(
                     expectedLockedAmount,
@@ -271,15 +270,16 @@ abstract class MockNetworkTest {
             )
         }
         val fungibleTokens = bridgeAuthority.node.getAllFungibleTokens(issuingBankParty, tokenType)
-        assertTrue(fungibleTokens.isNotEmpty()) {
-            "There should be at least one ${tokenType.tokenIdentifier} fungible token in Bridge Authority vault"
-        }
+        assertThat(fungibleTokens)
+            .describedAs(
+                "There should be at least one ${tokenType.tokenIdentifier} fungible token in Bridge Authority vault"
+            )
+            .isNotEmpty
         val holder = fungibleTokens.map { it.holder }.toSet().singleOrNull()
         requireNotNull(holder) { "Selected fungible tokens should have the same holder" }
-        assertTrue(
-            holder !in listOf(stakeholderInfo.party, bridgeAuthority.party),
-            "Fungible token holder should be Locking Identity, but was $holder"
-        )
+        assertThat(holder).describedAs("Fungible token holder should be Locking Identity, but was $holder")
+            .isNotIn(stakeholderInfo.party, bridgeAuthority.party)
+
         val tokenAccount = requireNotNull(stakeholderInfo.mintToAta[mint]) { "Token account must not be null" }
         val accountInfo = validator.accounts().getAccountInfo(tokenAccount)
         assertAtaAccount(accountInfo, mint, stakeholderInfo.signer.publicKey())

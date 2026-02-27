@@ -39,7 +39,6 @@ import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.User
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -311,17 +310,19 @@ abstract class DriverTest {
         }
         val fungibleTokens = bridgeAuthority
             .getAllFungibleTokens(issuer.identity, participantAndStock.cordaTokenType)
-        assertTrue(
-            fungibleTokens.isNotEmpty(),
-            "There should be at least one ${participantAndStock.stockName}" +
-                " fungible token in Bridge Authority vault"
-        )
+        assertThat(fungibleTokens)
+            .describedAs(
+                "There should be at least one ${participantAndStock.stockName}" +
+                    " fungible token in Bridge Authority vault"
+            )
+            .isNotEmpty
+
         val holder = fungibleTokens.map { it.holder }.toSet().singleOrNull()
         requireNotNull(holder) { "Selected fungible tokens should have the same holder" }
-        assertTrue(
-            holder !in listOf(participantAndStock.participant.identity, bridgeAuthority.identity),
-            "Fungible token holder should be Locking Identity, but was $holder"
-        )
+        assertThat(holder)
+            .describedAs("Fungible token holder should be Locking Identity.")
+            .isNotIn(participantAndStock.participant.identity, bridgeAuthority.identity)
+
         val accountInfo = validator.accounts().getAccountInfo(participantAndStock.tokenAccount)
         assertAtaAccount(
             accountInfo,
@@ -353,23 +354,18 @@ abstract class DriverTest {
         )
         // We need to wait for the websocket listener to process the newly received event
         eventually(duration = 10.seconds) {
-            val sum = participantAndStock.tokenBalance(issuer.identity)
-            assertEquals(
-                expectedCordaBalance.stripTrailingZeros(),
-                sum.stripTrailingZeros(),
-                "${participantAndStock.participant.nameAsString} received redeemed " +
-                    "${participantAndStock.stockName} shares back",
-            )
+            assertThat(participantAndStock.tokenBalance(issuer.identity))
+                .describedAs(
+                    "${participantAndStock.participant.nameAsString} received redeemed " +
+                        "${participantAndStock.stockName} shares back"
+                ).isEqualByComparingTo(expectedCordaBalance)
         }
         eventually(duration = 10.seconds) {
-            val balance = validator.client().getTokenBalance(participantAndStock.redemptionTokenAccount)
-            assertEquals(
-                expectedSolanaRedemptionBalance.stripTrailingZeros(),
-                balance.stripTrailingZeros(),
-            ) {
-                "Redemption token account has $expectedSolanaRedemptionBalance instead $quantity after transfer" +
-                    " - party ${participantAndStock.participant.nameAsString}"
-            }
+            assertThat(validator.client().getTokenBalance(participantAndStock.redemptionTokenAccount))
+                .describedAs(
+                    "Redemption token account has $expectedSolanaRedemptionBalance instead $quantity after transfer" +
+                        " - party ${participantAndStock.participant.nameAsString}"
+                ).isEqualByComparingTo(expectedSolanaRedemptionBalance)
         }
     }
 
