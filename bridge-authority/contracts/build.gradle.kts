@@ -41,7 +41,7 @@ java {
 
 publishing {
     publications {
-        create<MavenPublication>(project.name) {
+        getByName<MavenPublication>("mainPublication") {
             artifactId = "bridge-authority-contracts"
             from(components["cordapp"])
         }
