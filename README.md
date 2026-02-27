@@ -1,12 +1,19 @@
 # Corda Solana Toolkit
+[![Maven](https://img.shields.io/maven-metadata/v?metadataUrl=https://download.corda.net/maven/corda-dependencies/com/r3/corda/lib/solana/corda-solana-core/maven-metadata.xml&label=Maven)]()
 
 The Gradle modules in this repo are split into two main groups:
 
 * Java utility library for Solana
 * Corda to Solana Bridge Authority
 
-All the modules have the same Maven group of `com.r3.corda.lib.solana` and are available from
-`https://download.corda.net/maven/corda-dependencies`.
+To use them specify `com.r3.corda.lib.solana` for the Maven group and add the following Maven repo:
+```kotlin
+repositories {
+    maven {
+        url = uri("https://download.corda.net/maven/corda-dependencies")
+    }
+}
+```
 
 ## Java Solana Library
 
