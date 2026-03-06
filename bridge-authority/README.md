@@ -7,5 +7,5 @@ asset to be bridged to the bridge authority which takes care of minting the reve
 also listens for redemption requests and automatically burns the tokens before returning the Corda asset back to the
 original owner.
 
-See this [sample](https://github.com/corda/samples-kotlin/tree/release/ent/4.14/Solana/bridging-token) which uses this
+See this [sample](https://github.com/corda/samples-kotlin/tree/release/ent/4.14/Solana/bridge-authority) which uses this
 against an existing CorDapp.
