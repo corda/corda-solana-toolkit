@@ -20,14 +20,14 @@ repositories {
 
 This is composed of three separate modules `corda-solana-core`, `corda-solana-cordapp-utils`, and `corda-solana-testing`.
 
-### `corda-solana-core`
+### [`corda-solana-core`](corda-solana-core)
 
 Collection of Corda-compatible Solana utilities built upon [Sava](https://github.com/corda/sava). This includes
 [`FileSigner`](corda-solana-core/src/main/kotlin/com/r3/corda/lib/solana/core/FileSigner.kt) for supporting the Solana filesystem
 wallet and [`SolanaClient`](corda-solana-core/src/main/kotlin/com/r3/corda/lib/solana/core/SolanaClient.kt) which is an RPC
 client that honours rate limits and uses the websocket API for efficient waiting of transaction confirmation.
 
-### `corda-solana-testing`
+### [`corda-solana-testing`](corda-solana-testing)
 
 Contains a wrapper around the
 [`solana-test-validator`](corda-solana-testing/src/main/java/com/r3/corda/lib/solana/testing/SolanaTestValidator.java) which
@@ -35,11 +35,11 @@ makes it easy to configure and spin up a validator from Java/Kotlin code. There 
 [`SolanaTestClass`](corda-solana-testing/src/main/kotlin/com/r3/corda/lib/solana/testing/SolanaTestClass.kt) which wraps this
 inside a JUnit extension making it trivial to write Solana-based tests.
 
-### `corda-solana-cordapp-utils`
+### [`corda-solana-cordapp-utils`](corda-solana-cordapp-utils)
 
 Collection of Solana utilities for CorDapps.
 
-## Bridge Authority
+## [Bridge Authority](bridge-authority)
 
 This consists of the CorDapp bundle `bridge-authority:contracts` and `bridge-authority:workflows` which is a proposed
 solution for the bridging (and redemption) of Corda assets into Solana tokens. It centers around a "bridge
