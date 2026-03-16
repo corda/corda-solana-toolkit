@@ -36,7 +36,7 @@ Both modules must be deployed together on the bridge authority node.
 | Role                 | Description                                                                                                 |
 |----------------------|-------------------------------------------------------------------------------------------------------------|
 | **Bridge Authority** | The Corda node running these CorDapps; orchestrates all bridging and redemption operations                  |
-| **Locking Identity** | A confidential identity used by the bridge authority as the escrow holder for locked `FungibleToken` states |
+| **Escrow Identity**  | A confidential identity used by the bridge authority to hold escrowed `FungibleToken` states                |
 | **Participant**      | Any Corda party holding `FungibleToken`s; interacts with the bridge using standard Tokens SDK flows         |
 | **Solana Notary**    | A Corda notary that can validate and execute Solana instructions atomically with Corda transaction finality |
 | **General Notary**   | The existing standard Corda notary used for all non-Solana transactions                                     |
@@ -61,14 +61,14 @@ be relaxed in a future version to support either token programs.
 ### Amount Handling
 
 Corda and Solana may represent the same token with different decimal precisions (e.g. 3 decimal places on Corda, 4 on
-Solana). The bridge handles this transparently: both the proxy and burn receipt contract states carry two amounts — one
+Solana). The bridge handles this transparently: both the bridging and burn receipt contract states carry two amounts — one
 at Corda precision and one at Solana precision — which must be numerically equal. During bridging, the Corda amount is
 rescaled to the Solana mint's decimals. During redemption, the Solana amount is truncated to Corda's precision. Any
 fractional remainder below Corda's precision is left in the redemption account.
 
 ---
 
-## How Bridging Works (Corda → Solana)
+## Bridging (Corda → Solana)
 
 The participant transfers their `FungibleToken` to the bridge authority using the standard Corda Tokens SDK:
 
@@ -85,32 +85,29 @@ bridging flow. No further action is needed from the participant.
 
 ### Phase 1: Lock
 
-The bridge authority moves the `FungibleToken` from its own identity to the locking identity (a confidential identity
-acting as escrow). In the same transaction, a `BridgedFungibleTokenProxy` state is created carrying the Solana minting
+The bridge authority moves the `FungibleToken` from its own identity to the escrow identity (a confidential identity
+dedicated to holding escrowed tokens). In the same transaction, a bridging state is created carrying the Solana minting
 metadata (mint account, mint authority, destination ATA, and the token amounts at both Corda and Solana precision).
 
 This transaction uses the general notary and contains no Solana instructions.
 
 ### Phase 2: Notary Move
 
-The proxy state's notary is changed from the general notary to the Solana notary via `MoveNotaryFlow`. This is necessary
-because only the Solana notary can validate and execute Solana instructions.
+The bridging state's notary is changed from the general notary to the Solana notary via `MoveNotaryFlow`. This is
+necessary because only the Solana notary can validate and execute Solana instructions.
 
-> **Why a proxy state?** The Tokens SDK `FungibleToken` contract does not support notary changes.
-> `BridgedFungibleTokenProxy` is a separate state that can move freely between notaries.
+> **Why a separate bridging state?** The Tokens SDK `FungibleToken` contract does not support notary changes. A separate
+> bridging state is used so that it can move freely between notaries.
 
 ### Phase 3: Mint
 
-The proxy is consumed in a transaction notarized by the Solana notary. The transaction includes a `Token2022.mintTo`
-instruction that the Solana notary verifies against the proxy's fields and then executes on Solana — atomically with
-Corda finality.
-
-If the mint transaction fails due to a notary conflict (the proxy was already consumed by a previous run), the flow logs
-a warning and terminates. All other errors are sent to the Corda flow hospital.
+The bridging state is consumed in a transaction notarized by the Solana notary. The transaction includes a
+`Token2022.mintTo` instruction that the Solana notary verifies against the bridging state's fields and then executes on
+Solana — atomically with Corda finality.
 
 ---
 
-## How Redemption Works (Solana → Corda)
+## Redemption (Solana → Corda)
 
 The participant transfers their SPL tokens on Solana to the redemption ATA provided by the bridge operator. This is a
 standard Solana token transfer — no Corda involvement.
@@ -134,7 +131,7 @@ The burn receipt's notary is changed from the Solana notary to the general notar
 
 ### Step 4: Unlock
 
-The burn receipt is consumed alongside the escrowed `FungibleToken` states (held by the locking identity). The tokens
+The burn receipt is consumed alongside the escrowed `FungibleToken` states (held by the escrow identity). The tokens
 are moved back to the bridge authority. The contract verifies that the unlocked amount matches the burn receipt.
 
 ### Step 5: Deliver
@@ -213,9 +210,9 @@ bridgeAuthorityWalletFile = "/opt/bridge/keypair.json"
 - **Evolvable tokens**: For `FungibleToken` states backed by a `TokenPointer`, the `mintsWithAuthorities` key must be
   the string form of the `LinearState`'s UUID. For simple `TokenType`, use `tokenIdentifier` (e.g. `"MSFT"`).
 
-- **Locking identity**: The locking identity UUID is derived deterministically — it is not configurable. On first startup
+- **Escrow identity**: The escrow identity UUID is derived deterministically — it is not configurable. On first startup
   the bridge authority generates a new confidential identity key pair under this UUID. On subsequent startups it reuses
-  the existing key pair. If the node's key store is lost, tokens locked under the old identity cannot be unlocked.
+  the existing key pair. If the node's key store is lost, escrowed tokens cannot be unlocked.
 
 - **`bridgeAuthorityWalletFile`**: The public key in this file must match the `mintAuthority` value for every entry in
   `mintsWithAuthorities`. The wallet must also hold sufficient SOL to pay Solana transaction fees.
@@ -243,19 +240,19 @@ validates state shapes and amounts, but defers Solana-specific checks to the Sol
 
 ## Design Notes
 
-### Why `BridgedFungibleTokenProxy` exists
+### Why a separate bridging state
 
 The Tokens SDK `FungibleToken` contract does not support notary changes. The Solana notary must be the notary for any
-transaction that executes a Solana instruction. The proxy state works around this by carrying the token amounts and
-minting metadata in a separate `ContractState` that can be freely moved between notaries.
+transaction that executes a Solana instruction. A separate bridging state works around this by carrying the token amounts
+and minting metadata in a state that can be freely moved between notaries.
 
-### Why a locking identity
+### Why an escrow identity
 
 Using the bridge authority's own key as the escrow holder would make it impossible to distinguish escrowed tokens from
-tokens the bridge authority owns outright. A confidential identity (the locking identity) acts as the escrow address.
+tokens the bridge authority owns outright. A confidential identity (the escrow identity) acts as the escrow address.
 The bridge authority controls this key, but it is opaque to other network participants.
 
-The locking identity UUID is derived deterministically from a fixed constant — no configuration is required. On first
+The escrow identity UUID is derived deterministically from a fixed constant — no configuration is required. On first
 startup, a new key pair is generated under this UUID. On subsequent startups, the existing key pair is reused.
 
 ### Why polling supplements WebSocket subscriptions
