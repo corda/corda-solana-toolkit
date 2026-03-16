@@ -228,13 +228,11 @@ The `bridge-authority-contracts` module is designed to run on **pre-4.14** Corda
 states governed by these contracts (e.g. during transaction verification) do not need to be on Corda 4.14.
 
 To achieve this, the contracts module avoids types introduced in Corda 4.14 (such as `Pubkey`). Solana public keys are
-stored as base58-encoded `String` fields in the contract states. Extension properties in a separate utilities file
-convert these strings to `Pubkey` objects on demand, but only the workflows module (which runs exclusively on the bridge
-authority's 4.14 node) uses these extensions.
+stored as base58-encoded `String` fields in the contract states.
 
 Solana instruction verification in the contracts is also guarded by a runtime classpath check (`isSolanaSupported`). On a
 pre-4.14 node where the Solana classes are not present, instruction verification is skipped — the contract still
-validates state shapes and amounts, but defers Solana-specific checks to the Solana notary.
+validates state shapes and amounts, but defers Solana-specific checks to the bridge authority.
 
 ---
 
@@ -255,7 +253,3 @@ The bridge authority controls this key, but it is opaque to other network partic
 The escrow identity UUID is derived deterministically from a fixed constant — no configuration is required. On first
 startup, a new key pair is generated under this UUID. On subsequent startups, the existing key pair is reused.
 
-### Why polling supplements WebSocket subscriptions
-
-Solana WebSocket subscriptions can be silently dropped on network interruptions. A backup polling loop ensures no
-redemption event is missed.
