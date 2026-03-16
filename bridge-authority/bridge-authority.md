@@ -83,60 +83,34 @@ proxy.startFlow(
 `BridgingService` on the bridge authority detects the incoming token via vault observation and automatically starts the
 bridging flow. No further action is needed from the participant.
 
-### Phase 1: Lock
+### Phase 1: Escrow
 
-The bridge authority moves the `FungibleToken` from its own identity to the escrow identity (a confidential identity
-dedicated to holding escrowed tokens). In the same transaction, a bridging state is created carrying the Solana minting
-metadata (mint account, mint authority, destination ATA, and the token amounts at both Corda and Solana precision).
-
-This transaction uses the general notary and contains no Solana instructions.
+The Solana mint must happen in a transaction notarized by the Solana notary. However, the Tokens SDK `FungibleToken`
+contract does not support notary changes — the state carries a reference to its `TokenType` which ties it to the
+original notary. To work around this, the bridge authority escrows the original `FungibleToken` under the escrow
+identity and creates a separate bridging state. This bridging state carries the Solana minting metadata (mint account,
+mint authority, destination ATA, and the token amounts) but has no `TokenType` dependency, allowing it to move freely
+between notaries.
 
 ### Phase 2: Notary Move
 
-The bridging state's notary is changed from the general notary to the Solana notary via `MoveNotaryFlow`. This is
-necessary because only the Solana notary can validate and execute Solana instructions.
-
-> **Why a separate bridging state?** The Tokens SDK `FungibleToken` contract does not support notary changes. A separate
-> bridging state is used so that it can move freely between notaries.
+The bridging state's notary is changed from the general notary to the Solana notary via `MoveNotaryFlow`.
 
 ### Phase 3: Mint
 
 The bridging state is consumed in a transaction notarized by the Solana notary. The transaction includes a
-`Token2022.mintTo` instruction that the Solana notary verifies against the bridging state's fields and then executes on
-Solana — atomically with Corda finality.
+`Token2022.mintTo` instruction that the Solana notary verifies against the bridging state and then executes on Solana —
+atomically with Corda finality.
 
 ---
 
 ## Redemption (Solana → Corda)
 
-The participant transfers their SPL tokens on Solana to the redemption ATA provided by the bridge operator. This is a
-standard Solana token transfer — no Corda involvement.
-
-### Step 1: Detection
-
-`BridgingService` monitors configured redemption wallets using two mechanisms:
-- **WebSocket subscription** for real-time account change notifications.
-- **Periodic polling** (default: every 10 seconds) as a backup in case a WebSocket event is missed.
-
-When a non-zero balance is detected, the service starts the redemption flow.
-
-### Step 2: Burn
-
-The bridge authority creates a transaction with a `Token2022.burn` instruction, notarized by the Solana notary. This
-burns the SPL tokens on Solana and produces a `FungibleTokenBurnReceipt` on the Corda ledger.
-
-### Step 3: Notary Move
-
-The burn receipt's notary is changed from the Solana notary to the general notary.
-
-### Step 4: Unlock
-
-The burn receipt is consumed alongside the escrowed `FungibleToken` states (held by the escrow identity). The tokens
-are moved back to the bridge authority. The contract verifies that the unlocked amount matches the burn receipt.
-
-### Step 5: Deliver
-
-The bridge authority transfers the tokens to the participant using standard Tokens SDK `MoveFungibleTokens`.
+Redemption is the reverse of bridging. The participant transfers their SPL tokens on Solana to the redemption account
+provided by the bridge operator. The bridge authority monitors all configured redemption accounts via WebSocket
+subscriptions backed by periodic polling. When a non-zero balance is detected, the bridge authority burns the SPL tokens
+on Solana (via the Solana notary), unlocks the corresponding escrowed `FungibleToken` states on Corda, and delivers them
+to the participant mapped to that redemption account in configuration.
 
 ---
 
@@ -237,12 +211,6 @@ validates state shapes and amounts, but defers Solana-specific checks to the bri
 ---
 
 ## Design Notes
-
-### Why a separate bridging state
-
-The Tokens SDK `FungibleToken` contract does not support notary changes. The Solana notary must be the notary for any
-transaction that executes a Solana instruction. A separate bridging state works around this by carrying the token amounts
-and minting metadata in a state that can be freely moved between notaries.
 
 ### Why an escrow identity
 
