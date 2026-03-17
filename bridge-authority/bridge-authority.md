@@ -194,6 +194,14 @@ bridgeAuthorityWalletFile = "/opt/bridge/keypair.json"
 - **Redemption accounts**: For each participant and each token type, create a Token-2022 ATA owned by the corresponding
   `redemptionWalletAccount`. Provide the ATA address to the participant as their "redemption address".
 
+- **Solana notary — `trustedCordaSigners`**: Corda notaries are typically non-validating and will execute any Solana
+  instruction in a transaction they notarize, without verifying it against the Corda state transition. The bridge
+  authority contracts do enforce this consistency, but only on the submitting node. To prevent other network
+  participants from submitting arbitrary Solana instructions through the notary, `trustedCordaSigners` must be
+  configured on the Solana notary with the bridge authority's X.500 name. See the
+  [Solana notary configuration reference](https://docs.r3.com/en/platform/corda/4.14/enterprise/node/setup/corda-configuration-fields.html#solana)
+  for details.
+
 ---
 
 ## Backwards Compatibility
