@@ -140,30 +140,29 @@ The bridge authority reads its configuration from its CorDapp config file:
 {
     # The Solana wallet address (not ATA) of each Corda participant who will want to bridge. The token account (ATA)
     # is automatically dervied for each token type and is where the tokens will be minted to.
+    #
+    # *The mint authority keypair file for each token mint must be custodied to the Solana notary.*
     "participants" : {
         "O=Alice Corp, L=Madrid, C=ES" : "FYPK13XxJKrTLHn15utLmQ5jXVCBSnJQsY21QjNoA8mr",
         "O=Bob Plc, L=Rome, C=IT" : "3tiq47rYYfRTd9ykvMpz6hgN7R8vnYcrdCngdjk93JRH"
     },
 
-    # For each Corda token type that can be bridged,
+    # The Solana token mints for each Corda token type that can be bridged. The key is tokenIdentifier for simple
+    # TokenType, or the UUID string for evolvable tokens (TokenPointer).
     "tokens" : {
-        "AAPL" : {
-            "mintAuthority" : "7qCT2LVPabqXAXGsDj9QA3dbY9ipGtEg24si3RdjDEB1",
-            "tokenMint" : "8nxAfmCghD21MqxcNocxaNLPrmdkD54QYgB31wvsNbHX"
-        },
-        "MSFT" : {
-            "mintAuthority" : "7qCT2LVPabqXAXGsDj9QA3dbY9ipGtEg24si3RdjDEB1",
-            "tokenMint" : "CRUvwFea8BSL6B4CHfZxMTsnredtnvEANYsca7QN9mE4"
-        }
+        "AAPL" : "BrVt1nQFNp8Earh3UZyMf8zA2YtW1iCV8t67atM9JAbY",
+        "MSFT" : "AJq271cwC4zsAHhpmek9Czcibv6tpwmCbapd7pzv2xUG"
     },
 
+    # TODO explain these are redemption wallet addresses and that tokens sent to the relevant ATA triggers redemption flow to the configured Corda X500
     #
+    # *The keypair file for each of these accounts must be custodied to the Solana notary.*
     "redemptionWalletAccountToHolder" : {
         "5b9YpAQM6TaD4KmEoUzZpa5dXiFCJ2nGoVqNA6RK2a1T" : "O=Alice Corp, L=Madrid, C=ES",
         "Ho5BBqMsqv8ZjLjVQeuB5p1im1JRngyfsmDpWdjQ4m8t" : "O=Bob Plc, L=Rome, C=IT"
     },
 
-    #
+    # TODO used by bridge authroity for tasks/transactions it needs to do. currently this is creating missing ATAs.
     "bridgeAuthorityWalletFile" : "bridge-authority-keypair.json",
 
     # The X500 name of the Solana notary
@@ -175,63 +174,17 @@ The bridge authority reads its configuration from its CorDapp config file:
     # The RPC and websocket URLs for interacting with the blockchain. Here the devnet URLs are given.
     "solanaRpcUrl" : "https://api.devnet.solana.com",
     "solanaWebsocketUrl" : "wss://api.devnet.solana.com"
-}
 
+    # (Optional) Solana redemption account polling interval in seconds.
+    # Default: 10. Used as a backup to WebSocket event subscriptions.
+    # redemptionCheckIntervalSeconds = 10
+}
 ```
 
-```hocon
-# Provide the Solana wallet address (not ATA) of each Corda participant who will bridge. The token account (ATA) is
-automatically derived for each token type.
-participants {
-    "O=Alice, L=London, C=GB" = "4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM"
-    "O=Bob, L=New York, C=US" = "HN7cABqLq46Es1jh92dQQisAq662SmxELLLsHHe4YWrH"
-}
+TODO Example `solana` config for the solana notary, higllighting that the custodied keys dir contains keypair files
+for the mint authorities and the redemption wallets, and the trusted signer config set to the bridge authority.
 
-////// PICK UP FROM HERE!!!!!
-
-
-# Mapping from Corda token type identifier → Solana mint configuration.
-# Key: tokenIdentifier for simple TokenType, or UUID string for evolvable tokens (TokenPointer).
-mintsWithAuthorities {
-    "MSFT" {
-        tokenMint     = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
-        mintAuthority = "4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM"
-    }
-    "AAPL" {
-        tokenMint     = "So11111111111111111111111111111111111111112"
-        mintAuthority = "4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM"
-    }
-}
-
-# Mapping from Solana redemption wallet public key (base58) → Corda party X500 name.
-# Direction is reversed from `participants`: Solana wallet → Corda party.
-# When a balance appears on an ATA owned by this wallet, redemption is triggered for that party.
-redemptionWalletAccountToHolder {
-    "7EcDhSYGxXyscszYEp35KHN8vvw3svAuLKTzXwCFLtV" = "O=Alice, L=London, C=GB"
-    "HN7cABqLq46Es1jh92dQQisAq662SmxELLLsHHe4YWrH" = "O=Bob, L=New York, C=US"
-}
-
-# X500 name of the Solana-capable notary.
-solanaNotaryName = "O=Solana Notary Service, L=London, C=GB"
-
-# X500 name of the standard Corda notary.
-generalNotaryName = "O=Notary Service, L=Zurich, C=CH"
-
-# Solana JSON-RPC HTTP endpoint.
-solanaRpcUrl = "http://localhost:8899"
-
-# Solana JSON-RPC WebSocket endpoint.
-solanaWebsocketUrl = "ws://localhost:8900"
-
-# Path to the Solana filesystem wallet JSON (array of 64 bytes).
-# This key is used to sign Solana transactions and must be the mintAuthority for all
-# configured mints. Generate with: solana-keygen new --outfile /path/to/keypair.json
-bridgeAuthorityWalletFile = "/opt/bridge/keypair.json"
-
-# (Optional) Solana redemption account polling interval in seconds.
-# Default: 10. Used as a backup to WebSocket event subscriptions.
-# redemptionCheckIntervalSeconds = 10
-```
+TODO adjust the notes below accordingly.
 
 ### Notes
 
@@ -241,9 +194,6 @@ bridgeAuthorityWalletFile = "/opt/bridge/keypair.json"
 
 - **Evolvable tokens**: For `FungibleToken` states backed by a `TokenPointer`, the `mintsWithAuthorities` key must be
   the string form of the `LinearState`'s UUID. For simple `TokenType`, use `tokenIdentifier` (e.g. `"MSFT"`).
-
-- **`bridgeAuthorityWalletFile`**: The public key in this file must match the `mintAuthority` value for every entry in
-  `mintsWithAuthorities`. The wallet must also hold sufficient SOL to pay Solana transaction fees.
 
 - **Redemption accounts**: For each participant and each token type, create a Token-2022 ATA owned by the corresponding
   `redemptionWalletAccount`. Provide the ATA address to the participant as their "redemption address".

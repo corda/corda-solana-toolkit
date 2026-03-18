@@ -157,6 +157,7 @@ abstract class DriverTest {
     }
 
     private fun solanaNotaryConfig(notaryKey: FileSigner): Map<String, Any> {
+        // Due to limitations to the Driver DSL we're not able to set the trustedCordaSigners to the bridge authority
         return mapOf(
             "notary" to mapOf(
                 "validating" to false,
