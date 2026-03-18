@@ -70,7 +70,7 @@ precision is left in the redemption account.
 
 ## Bridging (Corda → Solana)
 
-// TODO This transfer should be phase 1
+### Phase 1: Transfer
 
 The participant transfers their `FungibleToken` to the bridge authority using the standard Corda Tokens SDK:
 
@@ -83,9 +83,9 @@ proxy.startFlow(
 ```
 
 `BridgingService` on the bridge authority detects the incoming token via vault observation and automatically starts the
-bridging flow. No further action is needed from the participant.
+remaining phases. No further action is needed from the participant.
 
-### Phase 1: Escrow
+### Phase 2: Escrow
 
 The Solana mint must happen in a transaction notarized by the Solana notary. However, the Tokens SDK `FungibleToken`
 contract does not support notary changes — the state carries a reference to its `TokenType` which ties it to the
@@ -94,19 +94,19 @@ identity and creates a separate bridging state. This bridging state carries the 
 mint authority, destination ATA, and the token amounts) but has no `TokenType` dependency, allowing it to move freely
 between notaries.
 
-### Phase 2: Notary Move
+### Phase 3: Notary Move
 
 The bridging state's notary is changed from the general notary to the Solana notary via `MoveNotaryFlow`.
 
-### Phase 3: Mint
+### Phase 4: Mint
 
 The bridging state is consumed in a transaction notarized by the Solana notary. The transaction includes a
 `Token2022.mintTo` instruction that the Solana notary verifies against the bridging state and then executes on Solana —
-atomically with Corda finality.
+atomically with Corda finality. Only after this phase completes has the token been fully bridged.
 
-// TODO add that it's only after this completes has the Corda state/token been bridged. Whilst the entire process
-isn't atomic, it is eventually consistent (or whatever the correct term is) bc of recoverability features either
-builtin into Corda or via bridge authority.
+The bridging process as a whole is not atomic — it spans multiple Corda transactions across two notaries. However, it
+is designed to be eventually consistent: Corda's flow checkpointing ensures that if the bridge authority restarts at any
+point, the in-flight flow resumes from where it left off.
 
 ---
 
@@ -114,15 +114,16 @@ builtin into Corda or via bridge authority.
 
 Redemption is the reverse of bridging. The participant transfers their SPL tokens on Solana to the redemption account
 provided by the bridge operator. The bridge authority monitors all configured redemption accounts via websocket
-updates (and backed by periodic polling). When a non-zero balance is detected, the bridge authority burns the SPL tokens
-on Solana (via the Solana notary), unlocks the corresponding escrowed `FungibleToken` states on Corda, and delivers them
-to the participant mapped to that redemption account in configuration.
+updates (backed by periodic polling). When a non-zero balance is detected the redemption flow begins automatically.
 
-// TODO the wording in the above paragraph implies the tokens are burnt and and then unlocks the escrowed states,
-etc. it gives the impression that it's disconnected and possible to fail and leave burnt but unredeemed states. I
-believe the burning is done atomically with the "un-escrowing" to the bridge authority identity? so even if the
-original particpant only gets it after the burn, there's no chance of failure here bc ... (can't remember why
-exactly). With these changes, it probably makes for this Redemption section to be more than one paragraph.
+The Solana burn is executed via the Solana notary, which atomically burns the SPL tokens and finalises a burn receipt
+state on Corda. This receipt serves as on-ledger proof that the tokens have been destroyed on Solana. In a subsequent
+transaction, the bridge authority presents the burn receipt to unlock the corresponding escrowed `FungibleToken` states
+and delivers them to the participant mapped to that redemption account in configuration.
+
+Because the burn receipt is immutable once finalised, there is no risk of tokens being burnt without a corresponding
+unlock — the receipt guarantees the escrowed tokens will eventually be released. As with bridging, Corda's flow
+checkpointing ensures the remaining steps complete even if the bridge authority restarts mid-flow.
 
 ---
 
@@ -154,15 +155,18 @@ The bridge authority reads its configuration from its CorDapp config file:
         "MSFT" : "AJq271cwC4zsAHhpmek9Czcibv6tpwmCbapd7pzv2xUG"
     },
 
-    # TODO explain these are redemption wallet addresses and that tokens sent to the relevant ATA triggers redemption flow to the configured Corda X500
+    # Mapping from Solana redemption wallet address (not ATA) → Corda party X500 name. When SPL tokens are
+    # transferred to the ATA derived from one of these wallets, the bridge authority triggers redemption and delivers
+    # the unlocked Corda tokens to the mapped party.
     #
-    # *The keypair file for each of these accounts must be custodied to the Solana notary.*
+    # *The keypair file for each of these wallets must be custodied to the Solana notary.*
     "redemptionWalletAccountToHolder" : {
         "5b9YpAQM6TaD4KmEoUzZpa5dXiFCJ2nGoVqNA6RK2a1T" : "O=Alice Corp, L=Madrid, C=ES",
         "Ho5BBqMsqv8ZjLjVQeuB5p1im1JRngyfsmDpWdjQ4m8t" : "O=Bob Plc, L=Rome, C=IT"
     },
 
-    # TODO used by bridge authroity for tasks/transactions it needs to do. currently this is creating missing ATAs.
+    # Path to the bridge authority's own Solana keypair file. Used for signing Solana
+    # transactions initiated by the bridge authority, such as creating missing ATAs.
     "bridgeAuthorityWalletFile" : "bridge-authority-keypair.json",
 
     # The X500 name of the Solana notary
@@ -181,10 +185,31 @@ The bridge authority reads its configuration from its CorDapp config file:
 }
 ```
 
-TODO Example `solana` config for the solana notary, higllighting that the custodied keys dir contains keypair files
-for the mint authorities and the redemption wallets, and the trusted signer config set to the bridge authority.
+### Solana Notary Configuration
 
-TODO adjust the notes below accordingly.
+The Solana notary requires its own configuration under `notary.solana` in the node config. It must custody the keypair
+files for the mint authorities and the redemption wallets — place these in the `custodiedKeysDir` directory.
+
+```hocon
+notary {
+    validating = false
+    solana {
+        rpcUrl = "https://api.devnet.solana.com"
+        websocketUrl = "wss://api.devnet.solana.com"
+        notaryKeypairFile = "/opt/notary/solana-notary-keypair.json"
+        custodiedKeysDir = "/opt/notary/custodied-keys"
+        trustedCordaSigners = ["O=Bridge Authority, L=London, C=GB"]
+    }
+}
+```
+
+The `custodiedKeysDir` directory should contain the keypair files for:
+- The **mint authority** for each token mint (so the notary can execute `mintTo` instructions)
+- Each **redemption wallet** (so the notary can execute `burn` instructions on behalf of the redemption accounts)
+
+See the
+[Solana notary configuration reference](https://docs.r3.com/en/platform/corda/4.14/enterprise/node/setup/corda-configuration-fields.html#solana)
+for the full set of fields.
 
 ### Notes
 
@@ -192,43 +217,11 @@ TODO adjust the notes below accordingly.
   to the Solana wallet that *receives* bridged tokens. `redemptionWalletAccountToHolder` maps a Solana redemption wallet
   (controlled by the bridge) to the Corda party that receives unlocked tokens.
 
-- **Evolvable tokens**: For `FungibleToken` states backed by a `TokenPointer`, the `mintsWithAuthorities` key must be
-  the string form of the `LinearState`'s UUID. For simple `TokenType`, use `tokenIdentifier` (e.g. `"MSFT"`).
+- **Evolvable tokens**: For `FungibleToken` states backed by a `TokenPointer`, the `tokens` key must be the string
+  form of the `LinearState`'s UUID. For simple `TokenType`, use `tokenIdentifier` (e.g. `"MSFT"`).
 
 - **Redemption accounts**: For each participant and each token type, create a Token-2022 ATA owned by the corresponding
   `redemptionWalletAccount`. Provide the ATA address to the participant as their "redemption address".
 
-- **Solana notary — `trustedCordaSigners`**: Corda notaries are typically non-validating and will execute any Solana
-  instruction in a transaction they notarize, without verifying it against the Corda state transition. The bridge
-  authority contracts do enforce this consistency, but only on the submitting node. To prevent other network
-  participants from submitting arbitrary Solana instructions through the notary, `trustedCordaSigners` must be
-  configured on the Solana notary with the bridge authority's X.500 name. See the
-  [Solana notary configuration reference](https://docs.r3.com/en/platform/corda/4.14/enterprise/node/setup/corda-configuration-fields.html#solana)
-  for details.
-
----
-
-## Backwards Compatibility
-
-The `bridge-authority-contracts` module is designed to run on **pre-4.14** Corda nodes. Participant nodes that receive
-states governed by these contracts (e.g. during transaction verification) do not need to be on Corda 4.14.
-
-To achieve this, the contracts module avoids types introduced in Corda 4.14 (such as `Pubkey`). Solana public keys are
-stored as base58-encoded `String` fields in the contract states.
-
-Solana instruction verification in the contracts is also guarded by a runtime classpath check (`isSolanaSupported`). On a
-pre-4.14 node where the Solana classes are not present, instruction verification is skipped — the contract still
-validates state shapes and amounts, but defers Solana-specific checks to the bridge authority.
-
----
-
-## Design Notes
-
-### Why an escrow identity
-
-Using the bridge authority's own key as the escrow holder would make it impossible to distinguish escrowed tokens from
-tokens the bridge authority owns outright. A confidential identity (the escrow identity) acts as the escrow address.
-The bridge authority controls this key, but it is opaque to other network participants.
-
-The escrow identity UUID is derived deterministically from a fixed constant — no configuration is required. On first
-startup, a new key pair is generated under this UUID. On subsequent startups, the existing key pair is reused.
+- **`trustedCordaSigners`**: Must be configured on the Solana notary to restrict which Corda parties can submit Solana
+  instructions. See the [Solana Notary Configuration](#solana-notary-configuration) section above.
