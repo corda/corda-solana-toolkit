@@ -15,7 +15,6 @@ import java.nio.file.Path
 data class BridgeAuthorityInfo(
     val node: StartedMockNode,
     val party: Party,
-    val mintWallet: FileSigner,
     val redemptionWallets: Map<Party, Signer>,
     private val redemptionTokenAccounts: Map<Party, List<AssociatedTokenAccountInfo>>,
 ) {
@@ -40,8 +39,8 @@ data class BridgeAuthorityInfo(
                     signer
                 }
             )
-            val mintWallet = FileSigner.random(keyDir)
-            testValidator.accounts().airdropSol(mintWallet.publicKey(), 10)
+            val bridgeAuthoritySigner = FileSigner.random(keyDir)
+            testValidator.accounts().airdropSol(bridgeAuthoritySigner.publicKey(), 10)
             val baConfig = mapOf(
                 "participants" to parties.associate { it.party.name.toString() to it.signer.publicKey().toBase58() },
                 "redemptionWalletAccountToHolder" to redemptionWallets
@@ -58,7 +57,7 @@ data class BridgeAuthorityInfo(
                 "generalNotaryName" to generalNotaryName.toString(),
                 "solanaRpcUrl" to "${testValidator.rpcUrl()}",
                 "solanaWebsocketUrl" to "${testValidator.websocketUrl()}",
-                "bridgeAuthorityWalletFile" to mintWallet.file.toString(),
+                "bridgeAuthorityWalletFile" to bridgeAuthoritySigner.file.toString(),
                 "redemptionCheckIntervalSeconds" to redemptionCheckIntervalSeconds,
             )
             val node = network.createNode(
@@ -73,7 +72,6 @@ data class BridgeAuthorityInfo(
             return BridgeAuthorityInfo(
                 node = node,
                 party = node.info.legalIdentities.first(),
-                mintWallet = mintWallet,
                 redemptionWallets = redemptionWallets,
                 redemptionTokenAccounts = parties.associate { info ->
                     info.party to tokenDescriptorToMint.map { (_, mint) ->
