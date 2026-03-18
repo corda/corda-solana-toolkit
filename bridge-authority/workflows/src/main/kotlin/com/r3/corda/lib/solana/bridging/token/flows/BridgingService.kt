@@ -160,10 +160,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
             tokenAccount.address().toPubkey()
         )
         logger.debug { "Redemption event: $redemptionCoordinates, amount ${tokenAccount.amount}" }
-        val solanaAmount = TokenAmount(
-            tokenAccount.amount,
-            getMint(tokenAccount.mint).decimals
-        )
+        val solanaAmount = TokenAmount(tokenAccount.amount, getMint(tokenAccount.mint).decimals)
 
         appServiceHub.startFlow(
             RedeemFungibleTokenFlow(

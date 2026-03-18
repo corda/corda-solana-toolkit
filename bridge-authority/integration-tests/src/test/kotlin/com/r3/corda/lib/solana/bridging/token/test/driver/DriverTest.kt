@@ -376,7 +376,7 @@ abstract class DriverTest {
 
     private fun DriverDSL.startNode(
         participant: CordaParticipant,
-        additionalCordapps: Set<TestCordapp> = emptySet()
+        additionalCordapps: Set<TestCordapp> = emptySet(),
     ): CordaFuture<*> {
         val user = User("user1", "test", permissions = setOf("ALL"))
         return startNode(

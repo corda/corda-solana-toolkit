@@ -208,7 +208,7 @@ The `custodiedKeysDir` directory should contain the keypair files for:
 - Each **redemption wallet** (so the notary can execute `burn` instructions on behalf of the redemption accounts)
 
 See the
-[Solana notary configuration reference](https://docs.r3.com/en/platform/corda/4.14/enterprise/node/setup/corda-configuration-fields.html#solana)
+[Solana notary configuration reference](https://docs.r3.com/en/platform/corda/4.14/enterprise/node/setup/corda-configuration-fields.html#notary)
 for the full set of fields.
 
 ### Notes
