@@ -25,7 +25,6 @@ data class BridgeAuthorityInfo(
             keyDir: Path,
             parties: List<CordaNodeAndSolanaAccounts>,
             tokenDescriptorToMint: Map<TokenTypeDescriptor, PublicKey>,
-            mintAuthority: PublicKey,
             testValidator: SolanaTestValidator,
             redemptionCheckIntervalSeconds: Int,
         ): BridgeAuthorityInfo {
@@ -46,13 +45,7 @@ data class BridgeAuthorityInfo(
                 "redemptionWalletAccountToHolder" to redemptionWallets
                     .map { it.value.publicKey().toBase58() to it.key.name.toString() }
                     .toMap(),
-                "mintsWithAuthorities" to tokenDescriptorToMint
-                    .map {
-                        it.key.tokenTypeIdentifier to mapOf(
-                            "tokenMint" to it.value.toBase58(),
-                            "mintAuthority" to mintAuthority.toBase58(),
-                        )
-                    }.toMap(),
+                "tokens" to tokenDescriptorToMint.mapKeys { it.key.tokenTypeIdentifier },
                 "solanaNotaryName" to solanaNotaryName.toString(),
                 "generalNotaryName" to generalNotaryName.toString(),
                 "solanaRpcUrl" to "${testValidator.rpcUrl()}",

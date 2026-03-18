@@ -143,17 +143,9 @@ abstract class DriverTest {
                     redemptionWalletForAlice.publicKey().toBase58() to alice.nameAsString,
                     redemptionWalletForBob.publicKey().toBase58() to bob.nameAsString,
                 ),
-                "mintsWithAuthorities" to mapOf(
-                    msftDescriptor.tokenTypeIdentifier to
-                        mapOf(
-                            "tokenMint" to msftTokenMint.toBase58(),
-                            "mintAuthority" to mintAuthoritySigner.publicKey().toBase58()
-                        ),
-                    appleDescriptor.tokenTypeIdentifier to
-                        mapOf(
-                            "tokenMint" to appleTokenMint.toBase58(),
-                            "mintAuthority" to mintAuthoritySigner.publicKey().toBase58()
-                        )
+                "tokens" to mapOf(
+                    msftDescriptor.tokenTypeIdentifier to msftTokenMint.toBase58(),
+                    appleDescriptor.tokenTypeIdentifier to appleTokenMint.toBase58(),
                 ),
                 "solanaNotaryName" to solanaNotaryName.toString(),
                 "generalNotaryName" to generalNotaryName.toString(),
@@ -180,7 +172,7 @@ abstract class DriverTest {
     }
 
     @BeforeEach
-    fun issueCordaTokens() {
+    fun issueTokens() {
         msftTokenMint =
             validator.tokens().createToken(mintAuthoritySigner, TOKEN_2022, decimals = SOLANA_TOKEN_DECIMALS)
         appleTokenMint =

@@ -123,7 +123,6 @@ abstract class MockNetworkTest {
                 msftDescriptor to msftTokenMint,
                 aaplDescriptor to aaplTokenMint,
             ),
-            mintAuthoritySigner.publicKey(),
             validator,
             redemptionCheckIntervalSeconds
         )

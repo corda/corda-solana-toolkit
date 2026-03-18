@@ -146,7 +146,7 @@ The bridge authority reads its configuration from its CorDapp config file:
     },
 
     # For each Corda token type that can be bridged,
-    "mintsWithAuthorities" : {
+    "tokens" : {
         "AAPL" : {
             "mintAuthority" : "7qCT2LVPabqXAXGsDj9QA3dbY9ipGtEg24si3RdjDEB1",
             "tokenMint" : "8nxAfmCghD21MqxcNocxaNLPrmdkD54QYgB31wvsNbHX"
