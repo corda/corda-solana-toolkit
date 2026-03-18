@@ -225,3 +225,20 @@ for the full set of fields.
 
 - **`trustedCordaSigners`**: Must be configured on the Solana notary to restrict which Corda parties can submit Solana
   instructions. See the [Solana Notary Configuration](#solana-notary-configuration) section above.
+
+---
+
+## Design Notes
+
+### Fungible pooling
+
+Because the escrowed tokens are fungible, redemption does not return the exact same token instances that were originally
+bridged. Instead, the escrowed tokens form a pooled inventory held by the bridge authority. Any holder of the bridged
+SPL tokens on Solana can redeem them — even if they were not the original bridger. For example, if Alice bridges tokens
+and then transfers the SPL tokens to Bob on Solana, Bob can redeem them on Corda.
+
+### Bridge authority as token issuer
+
+Corda participants trust the bridge authority to follow the authorised bridging and redemption flows. In practice, the
+bridge authority is likely to be operated by the same entity that issues the Corda tokens, since the issuer already has
+a trust relationship with the token holders.
