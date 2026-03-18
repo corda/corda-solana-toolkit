@@ -45,7 +45,10 @@ data class BridgeAuthorityInfo(
                 "redemptionWalletAccountToHolder" to redemptionWallets
                     .map { it.value.publicKey().toBase58() to it.key.name.toString() }
                     .toMap(),
-                "tokens" to tokenDescriptorToMint.mapKeys { it.key.tokenTypeIdentifier },
+                "tokens" to tokenDescriptorToMint.entries.associateBy(
+                    { it.key.tokenTypeIdentifier },
+                    { it.value.toBase58() }
+                ),
                 "solanaNotaryName" to solanaNotaryName.toString(),
                 "generalNotaryName" to generalNotaryName.toString(),
                 "solanaRpcUrl" to "${testValidator.rpcUrl()}",

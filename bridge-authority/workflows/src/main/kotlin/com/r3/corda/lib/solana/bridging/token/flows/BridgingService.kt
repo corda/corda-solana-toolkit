@@ -46,9 +46,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
     )
     private val tokenManagement = TokenManagement(solanaClient)
     private val accountManagement = AccountManagement(solanaClient)
-    private val tokenTypeIdToMint = HashMap<String, Mint>()
-    private val tokenMintToTypeId = HashMap<PublicKey, String>()
-    private val mintDecimalsCache = ConcurrentHashMap<PublicKey, Int>()
+    private val mintCache = ConcurrentHashMap<PublicKey, Mint>()
 
     init {
         appServiceHub.registerUnloadHandler { onStop() }
@@ -64,17 +62,9 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
     private fun onStartup(event: ServiceLifecycleEvent) {
         if (event != ServiceLifecycleEvent.STATE_MACHINE_STARTED) return
         solanaClient.start()
-        getMints()
         checkAndListenForBridging()
         checkAllBalancesForRedemption()
         listenForRedemptions()
-    }
-
-    private fun getMints() {
-        configHandler.tokens.mapValuesTo(tokenTypeIdToMint) {
-            solanaClient.call(SolanaRpcClient::getAccountInfo, it.value.toPublicKey(), Mint.FACTORY).data
-        }
-        tokenTypeIdToMint.entries.associateByTo(tokenMintToTypeId, { it.value.address }, { it.key })
     }
 
     fun getBridgingCoordinates(token: StateAndRef<FungibleToken>, originalHolder: Party): BridgingCoordinates {
@@ -104,9 +94,10 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
     }
 
     private fun getTokenMint(tokenTypeId: String): Mint {
-        return checkNotNull(tokenTypeIdToMint[tokenTypeId]) {
+        val mintAddress = checkNotNull(configHandler.tokens[tokenTypeId]?.toPublicKey()) {
             "Corda token type $tokenTypeId has not been configured with a Solana token mint"
         }
+        return getMint(mintAddress)
     }
 
     private fun checkAndListenForBridging() {
@@ -153,7 +144,8 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         if (tokenAccount.amount == 0L) {
             return
         }
-        val tokenId = checkNotNull(tokenMintToTypeId[tokenAccount.mint]) {
+        val tokenId = configHandler.tokens.entries.find { it.value.toPublicKey() == tokenAccount.mint }?.key
+        checkNotNull(tokenId) {
             "No token configured for mint ${tokenAccount.mint}"
         }
         val cordaOwnerName = checkNotNull(configHandler.redemptionWalletAccountToHolder[walletAccount]) {
@@ -170,7 +162,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         logger.debug { "Redemption event: $redemptionCoordinates, amount ${tokenAccount.amount}" }
         val solanaAmount = TokenAmount(
             tokenAccount.amount,
-            getAccountMintDecimals(tokenAccount.mint)
+            getMint(tokenAccount.mint).decimals
         )
 
         appServiceHub.startFlow(
@@ -243,11 +235,9 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         return holders.single()
     }
 
-    fun getAccountMintDecimals(mintAccount: PublicKey): Int {
-        return mintDecimalsCache.computeIfAbsent(mintAccount) {
-            val accountInfo = solanaClient.call(SolanaRpcClient::getAccountInfo, it)
-            val mint = Mint.read(accountInfo.pubKey(), accountInfo.data)
-            mint.decimals
+    fun getMint(mintAddress: PublicKey): Mint {
+        return mintCache.computeIfAbsent(mintAddress) {
+            solanaClient.call(SolanaRpcClient::getAccountInfo, it, Mint.FACTORY).data
         }
     }
 }
