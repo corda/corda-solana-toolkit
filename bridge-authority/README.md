@@ -193,8 +193,7 @@ The bridge authority reads its configuration from its CorDapp config file:
 
 ### Solana Notary Configuration
 
-The Solana notary requires its own configuration under `notary.solana` in the node config. It must custody the keypair
-files for the mint authorities and the redemption wallets — place these in the `custodiedKeysDir` directory.
+The Solana notary requires its own configuration under `notary.solana` in the node config.
 
 ```hocon
 notary {
@@ -210,8 +209,14 @@ notary {
 ```
 
 The `custodiedKeysDir` directory should contain the keypair files for:
-- The **mint authority** for each token mint (so the notary can execute `mintTo` instructions)
-- Each **redemption wallet** (so the notary can execute `burn` instructions on behalf of the redemption accounts)
+- The **mint authority** for each token mint, so the notary can execute `mintTo` instructions
+- Each **redemption wallet**, so the notary can execute `burn` instructions on behalf of the redemption accounts
+
+`trustedCordaSigners` must be set to the bridge authority's X.500 name. Most notaries run in non-validating mode for
+privacy, which means they do not verify Corda contract logic — they only check for double-spends. Without
+`trustedCordaSigners`, any network participant could submit a transaction containing arbitrary Solana instructions to
+the notary and it would execute them. With this setting we ensure only Solana instructions which are valid for the
+bridging or redemption flow are executed.
 
 See the
 [Solana notary configuration reference](https://docs.r3.com/en/platform/corda/4.14/enterprise/node/setup/corda-configuration-fields.html#notary)
@@ -228,9 +233,6 @@ for the full set of fields.
 
 - **Redemption accounts**: For each participant and each token type, create a Token-2022 ATA owned by the corresponding
   `redemptionWalletAccount`. Provide the ATA address to the participant as their "redemption address".
-
-- **`trustedCordaSigners`**: Must be configured on the Solana notary to restrict which Corda parties can submit Solana
-  instructions. See the [Solana Notary Configuration](#solana-notary-configuration) section above.
 
 ---
 
