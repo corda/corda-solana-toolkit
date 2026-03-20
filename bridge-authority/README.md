@@ -41,21 +41,27 @@ Both modules must be deployed together on the bridge authority node.
 | **Escrow Identity**  | A confidential identity used by the bridge authority to hold escrowed `FungibleToken` states                |
 | **Participant**      | Any Corda party holding `FungibleToken`s; interacts with the bridge using standard Tokens SDK flows         |
 | **Solana Notary**    | A Corda notary that can validate and execute Solana instructions atomically with Corda transaction finality |
-| **General Notary**   | The existing standard Corda notary used for all non-Solana transactions                                     |
+| **General Notary**   | The existing non-Solana Corda notary used for all non-Solana transactions                                   |
 
-### Solana Accounts
+### Solana Accounts and Custody
 
-The bridge operates with several Solana account types. The distinction between a *wallet account* (the owner/signing
-key) and a *token account* (the Associated Token Account (ATA) that holds the balance) is a Solana-specific concept:
+The bridge involves several Solana accounts. On Solana, a *wallet account* (the signing key) is distinct from a *token
+account* (the Associated Token Account / ATA that holds the balance) — see the Solana
+[docs](https://solana.com/docs/tokens) for details.
 
-- **Mint account**: The token definition on Solana (equivalent to a Corda `TokenType`).
-- **Mint authority**: The key authorized to mint new tokens — controlled by the bridge authority.
-- **Participant wallet** (`mintWalletAccount`): The participant's Solana wallet. The bridge derives the ATA from this and
-  mints bridged tokens into it.
-- **Redemption wallet** (`redemptionWalletAccount`): A Solana wallet controlled by the bridge. Participants transfer SPL
-  tokens to the ATA of this wallet to trigger redemption.
+The Solana notary custodies the keys that are needed to execute Solana instructions atomically with Corda finality:
 
-You can find more information on token accounts in the Solana [docs](https://solana.com/docs/tokens).
+- **Mint authority** — the key authorised to mint new tokens. Custodied to the Solana notary so it can execute `mintTo`
+  instructions during bridging. The bridge authority does not hold this key.
+- **Redemption wallets** — one per participant. Custodied to the Solana notary so it can execute `burn` instructions
+  during redemption. Participants transfer SPL tokens to the ATA derived from the redemption wallet to trigger
+  redemption.
+
+The bridge authority holds its own Solana wallet (`bridgeAuthorityWalletFile`), used for auxiliary operations such as
+creating ATAs on demand. It does not directly sign any mint or burn instructions.
+
+Participant wallets are configured on the bridge authority so it knows where to mint bridged tokens. The bridge derives
+each participant's ATA from their wallet address and the token mint.
 
 ### Amount Handling
 
@@ -140,7 +146,7 @@ The bridge authority reads its configuration from its CorDapp config file:
 ```hocon
 {
     # The Solana wallet address (not ATA) of each Corda participant who will want to bridge. The token account (ATA)
-    # is automatically dervied for each token type and is where the tokens will be minted to.
+    # is automatically derived for each token type and is where the tokens will be minted to.
     #
     # *The mint authority keypair file for each token mint must be custodied to the Solana notary.*
     "participants" : {
