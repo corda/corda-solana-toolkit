@@ -141,53 +141,45 @@ The bridge authority reads its configuration from its CorDapp config file:
 <node-dir>/cordapps/config/bridge-authority-workflows-<version>.conf
 ```
 
-### Example
+### Bridge Authority Config
+
+| Key                               | Type                      | Description                                                                                                                                                                                                                                                                                                        |
+|-----------------------------------|---------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `participants`                    | X.500 → base58 address    | Mapping from Corda party to Solana wallet address. This is the participant's wallet address and not token account or ATA. The ATA is derived automatically for each token type on-demand.                                                                                                                          |
+| `tokens`                          | token ID → base58 address | Mapping from Corda token identifier to Solana mint address. The key is `tokenIdentifier` for simple `TokenType` (e.g. `"MSFT"`), or the UUID string for evolvable tokens backed by a `TokenPointer`. **The mint authority keypair file for each mint must be custodied to the Solana notary.**                     |
+| `redemptionWalletAccountToHolder` | base58 address → X.500    | Mapping from Solana redemption wallet address to Corda party. When SPL tokens are transferred to one of these wallets, the bridge authority triggers redemption and delivers the unlocked Corda tokens to the mapped party. **The keypair file for each of these wallets must be custodied to the Solana notary.** |
+| `bridgeAuthorityWalletFile`       | file                      | Path to the bridge authority's own [keypair file](https://docs.anza.xyz/cli/wallets/file-system). Used for auxiliary Solana transactions such as creating missing ATAs.                                                                                                                                            |
+| `solanaNotaryName`                | X.500                     | X.500 name of the new Solana notary.                                                                                                                                                                                                                                                                               |
+| `generalNotaryName`               | X.500                     | X.500 name of the existing non-Solana Corda notary.                                                                                                                                                                                                                                                                |
+| `solanaRpcUrl`                    | URL                       | Solana JSON-RPC HTTP endpoint.                                                                                                                                                                                                                                                                                     |
+| `solanaWebsocketUrl`              | URL                       | Solana JSON-RPC WebSocket endpoint.                                                                                                                                                                                                                                                                                |
+| `redemptionCheckIntervalSeconds`  | seconds                   | *(Optional, default: 10)* Polling interval for redemption account balances. Used as a backup to websocket subscriptions.                                                                                                                                                                                           |
+
+> [!NOTE]
+> Token mints must be created on Solana beforehand — the bridge authority does not currently create them automatically
+> for new token types.
+
+**Example:**
 
 ```hocon
 {
-    # The Solana wallet address (not ATA) of each Corda participant who will want to bridge. The token account (ATA)
-    # is automatically derived for each token type and is where the tokens will be minted to.
-    #
-    # *The mint authority keypair file for each token mint must be custodied to the Solana notary.*
     "participants" : {
         "O=Alice Corp, L=Madrid, C=ES" : "FYPK13XxJKrTLHn15utLmQ5jXVCBSnJQsY21QjNoA8mr",
         "O=Bob Plc, L=Rome, C=IT" : "3tiq47rYYfRTd9ykvMpz6hgN7R8vnYcrdCngdjk93JRH"
     },
-
-    # The Solana token mints for each Corda token type that can be bridged. The key is tokenIdentifier for simple
-    # TokenType, or the UUID string for evolvable tokens (TokenPointer).
     "tokens" : {
         "AAPL" : "BrVt1nQFNp8Earh3UZyMf8zA2YtW1iCV8t67atM9JAbY",
         "MSFT" : "AJq271cwC4zsAHhpmek9Czcibv6tpwmCbapd7pzv2xUG"
     },
-
-    # Mapping from Solana redemption wallet address (not ATA) → Corda party X500 name. When SPL tokens are
-    # transferred to the ATA derived from one of these wallets, the bridge authority triggers redemption and delivers
-    # the unlocked Corda tokens to the mapped party.
-    #
-    # *The keypair file for each of these wallets must be custodied to the Solana notary.*
     "redemptionWalletAccountToHolder" : {
         "5b9YpAQM6TaD4KmEoUzZpa5dXiFCJ2nGoVqNA6RK2a1T" : "O=Alice Corp, L=Madrid, C=ES",
         "Ho5BBqMsqv8ZjLjVQeuB5p1im1JRngyfsmDpWdjQ4m8t" : "O=Bob Plc, L=Rome, C=IT"
     },
-
-    # Path to the bridge authority's own Solana keypair file. Used for signing Solana
-    # transactions initiated by the bridge authority, such as creating missing ATAs.
     "bridgeAuthorityWalletFile" : "bridge-authority-keypair.json",
-
-    # The X500 name of the Solana notary
     "solanaNotaryName" : "O=Solana Notary Service, L=London, C=GB",
-
-    # The X500 name of the existing non-Solana notary
     "generalNotaryName" : "O=Notary Service, L=Zurich, C=CH",
-
-    # The RPC and websocket URLs for interacting with the blockchain. Here the devnet URLs are given.
     "solanaRpcUrl" : "https://api.devnet.solana.com",
     "solanaWebsocketUrl" : "wss://api.devnet.solana.com"
-
-    # (Optional) Solana redemption account polling interval in seconds.
-    # Default: 10. Used as a backup to WebSocket event subscriptions.
-    # redemptionCheckIntervalSeconds = 10
 }
 ```
 
@@ -221,18 +213,6 @@ bridging or redemption flow are executed.
 See the
 [Solana notary configuration reference](https://docs.r3.com/en/platform/corda/4.14/enterprise/node/setup/corda-configuration-fields.html#notary)
 for the full set of fields.
-
-### Notes
-
-- **`participants` vs `redemptionWalletAccountToHolder`** map in opposite directions. `participants` maps a Corda party
-  to the Solana wallet that *receives* bridged tokens. `redemptionWalletAccountToHolder` maps a Solana redemption wallet
-  (controlled by the bridge) to the Corda party that receives unlocked tokens.
-
-- **Evolvable tokens**: For `FungibleToken` states backed by a `TokenPointer`, the `tokens` key must be the string
-  form of the `LinearState`'s UUID. For simple `TokenType`, use `tokenIdentifier` (e.g. `"MSFT"`).
-
-- **Redemption accounts**: For each participant and each token type, create a Token-2022 ATA owned by the corresponding
-  `redemptionWalletAccount`. Provide the ATA address to the participant as their "redemption address".
 
 ---
 
