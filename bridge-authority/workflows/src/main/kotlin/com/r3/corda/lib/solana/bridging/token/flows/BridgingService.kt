@@ -23,7 +23,6 @@ import software.sava.core.accounts.PublicKey
 import software.sava.core.accounts.token.Mint
 import software.sava.core.accounts.token.TokenAccount
 import software.sava.rpc.json.http.client.SolanaRpcClient
-import java.net.URI
 import java.util.concurrent.CompletionException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ForkJoinPool.commonPool
@@ -36,8 +35,8 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
 
     private val configHandler = ConfigHandler(appServiceHub)
     private val solanaClient = SolanaClient(
-        URI(configHandler.solanaRpcUrl),
-        URI(configHandler.solanaWebsocketUrl),
+        configHandler.solanaRpcUrl,
+        configHandler.solanaWebsocketUrl,
         globalCommitmentLevel
     )
     private val tokenAccountListener = TokenAccountListener(
@@ -47,7 +46,7 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
     )
     private val tokenManagement = TokenManagement(solanaClient)
     private val accountManagement = AccountManagement(solanaClient)
-    private val mintDecimalsCache = ConcurrentHashMap<PublicKey, Int>()
+    private val mintCache = ConcurrentHashMap<PublicKey, Mint>()
 
     init {
         appServiceHub.registerUnloadHandler { onStop() }
@@ -60,15 +59,45 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         solanaClient.close()
     }
 
-    fun getBridgingCoordinates(token: StateAndRef<FungibleToken>, originalHolder: Party) =
-        configHandler.getBridgingCoordinates(token, originalHolder)
-
     private fun onStartup(event: ServiceLifecycleEvent) {
         if (event != ServiceLifecycleEvent.STATE_MACHINE_STARTED) return
         solanaClient.start()
         checkAndListenForBridging()
         checkAllBalancesForRedemption()
         listenForRedemptions()
+    }
+
+    fun getBridgingCoordinates(token: StateAndRef<FungibleToken>, originalHolder: Party): BridgingCoordinates {
+        val tokenTypeId = token.state.data.amount.token.tokenType.tokenIdentifier
+        val mint = getTokenMint(tokenTypeId)
+        val mintWalletAccount = checkNotNull(configHandler.participants[originalHolder.nameOrNull()]) {
+            "No Solana account mapping found for Corda original holder ${originalHolder.nameOrNull()}"
+        }
+        return BridgingCoordinates(
+            mint.address.toPubkey(),
+            mint.mintAuthority.toPubkey(),
+            mintWalletAccount
+        )
+    }
+
+    fun getRedemptionCoordinates(
+        tokenTypeId: String,
+        redemptionWalletAccount: Pubkey,
+        redemptionTokenAccount: Pubkey,
+    ): RedemptionCoordinates {
+        return RedemptionCoordinates(
+            getTokenMint(tokenTypeId).address.toPubkey(),
+            redemptionWalletAccount,
+            redemptionTokenAccount,
+            tokenTypeId
+        )
+    }
+
+    private fun getTokenMint(tokenTypeId: String): Mint {
+        val mintAddress = checkNotNull(configHandler.tokens[tokenTypeId]?.toPublicKey()) {
+            "Corda token type $tokenTypeId has not been configured with a Solana token mint"
+        }
+        return getMint(mintAddress)
     }
 
     private fun checkAndListenForBridging() {
@@ -115,7 +144,8 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         if (tokenAccount.amount == 0L) {
             return
         }
-        val tokenId = checkNotNull(configHandler.getTokenIdentifierByMint(tokenAccount.mint.toPubkey())) {
+        val tokenId = configHandler.tokens.entries.find { it.value.toPublicKey() == tokenAccount.mint }?.key
+        checkNotNull(tokenId) {
             "No token configured for mint ${tokenAccount.mint}"
         }
         val cordaOwnerName = checkNotNull(configHandler.redemptionWalletAccountToHolder[walletAccount]) {
@@ -124,16 +154,13 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         val cordaOwner = checkNotNull(appServiceHub.networkMapCache.getPeerByLegalName(cordaOwnerName)) {
             "No Corda owner found for Solana redemption account $tokenAccount"
         }
-        val redemptionCoordinates = configHandler.getRedemptionCoordinates(
+        val redemptionCoordinates = getRedemptionCoordinates(
             tokenId,
             walletAccount,
             tokenAccount.address().toPubkey()
         )
         logger.debug { "Redemption event: $redemptionCoordinates, amount ${tokenAccount.amount}" }
-        val solanaAmount = TokenAmount(
-            tokenAccount.amount,
-            getAccountMintDecimals(tokenAccount.mint)
-        )
+        val solanaAmount = TokenAmount(tokenAccount.amount, getMint(tokenAccount.mint).decimals)
 
         appServiceHub.startFlow(
             RedeemFungibleTokenFlow(
@@ -205,11 +232,9 @@ class BridgingService(private val appServiceHub: AppServiceHub) : SingletonSeria
         return holders.single()
     }
 
-    fun getAccountMintDecimals(mintAccount: PublicKey): Int {
-        return mintDecimalsCache.computeIfAbsent(mintAccount) {
-            val accountInfo = solanaClient.call(SolanaRpcClient::getAccountInfo, it)
-            val mint = Mint.read(accountInfo.pubKey(), accountInfo.data)
-            mint.decimals
+    fun getMint(mintAddress: PublicKey): Mint {
+        return mintCache.computeIfAbsent(mintAddress) {
+            solanaClient.call(SolanaRpcClient::getAccountInfo, it, Mint.FACTORY).data
         }
     }
 }

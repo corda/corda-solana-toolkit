@@ -15,9 +15,12 @@ import com.r3.corda.lib.tokens.contracts.types.TokenType
 import com.r3.corda.lib.tokens.contracts.utilities.sumTokenStatesOrThrow
 import com.r3.corda.lib.tokens.workflows.flows.rpc.MoveFungibleTokens
 import com.r3.corda.lib.tokens.workflows.utilities.tokenAmountCriteria
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.Amount
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.concurrent.map
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
 import net.corda.core.node.NetworkParameters
@@ -82,7 +85,7 @@ abstract class DriverTest {
         private val issuer = CordaParticipant(DUMMY_BANK_A_NAME)
 
         @TempDir
-        lateinit var custodiedKeysDir: Path
+        lateinit var notaryCustodiedKeysDir: Path
 
         private lateinit var validator: SolanaTestValidator
         private lateinit var bridgeAuthorityWallet: FileSigner
@@ -94,10 +97,10 @@ abstract class DriverTest {
         @BeforeAll
         fun init(validator: SolanaTestValidator) {
             this.validator = validator
-            mintAuthoritySigner = FileSigner.random(custodiedKeysDir)
-            bridgeAuthorityWallet = FileSigner.random(custodiedKeysDir)
-            redemptionWalletForAlice = FileSigner.random(custodiedKeysDir)
-            redemptionWalletForBob = FileSigner.random(custodiedKeysDir)
+            mintAuthoritySigner = FileSigner.random(notaryCustodiedKeysDir)
+            bridgeAuthorityWallet = FileSigner.random(notaryCustodiedKeysDir)
+            redemptionWalletForAlice = FileSigner.random(notaryCustodiedKeysDir)
+            redemptionWalletForBob = FileSigner.random(notaryCustodiedKeysDir)
 
             setOf(
                 mintAuthoritySigner,
@@ -140,17 +143,9 @@ abstract class DriverTest {
                     redemptionWalletForAlice.publicKey().toBase58() to alice.nameAsString,
                     redemptionWalletForBob.publicKey().toBase58() to bob.nameAsString,
                 ),
-                "mintsWithAuthorities" to mapOf(
-                    msftDescriptor.tokenTypeIdentifier to
-                        mapOf(
-                            "tokenMint" to msftTokenMint.toBase58(),
-                            "mintAuthority" to mintAuthoritySigner.publicKey().toBase58()
-                        ),
-                    appleDescriptor.tokenTypeIdentifier to
-                        mapOf(
-                            "tokenMint" to appleTokenMint.toBase58(),
-                            "mintAuthority" to mintAuthoritySigner.publicKey().toBase58()
-                        )
+                "tokens" to mapOf(
+                    msftDescriptor.tokenTypeIdentifier to msftTokenMint.toBase58(),
+                    appleDescriptor.tokenTypeIdentifier to appleTokenMint.toBase58(),
                 ),
                 "solanaNotaryName" to solanaNotaryName.toString(),
                 "generalNotaryName" to generalNotaryName.toString(),
@@ -162,6 +157,7 @@ abstract class DriverTest {
     }
 
     private fun solanaNotaryConfig(notaryKey: FileSigner): Map<String, Any> {
+        // Due to limitations to the Driver DSL we're not able to set the trustedCordaSigners to the bridge authority
         return mapOf(
             "notary" to mapOf(
                 "validating" to false,
@@ -170,14 +166,14 @@ abstract class DriverTest {
                     "rpcUrl" to "${validator.rpcUrl()}",
                     "websocketUrl" to "${validator.websocketUrl()}",
                     "notaryKeypairFile" to "${notaryKey.file}",
-                    "custodiedKeysDir" to "$custodiedKeysDir",
+                    "custodiedKeysDir" to "$notaryCustodiedKeysDir",
                 )
             )
         )
     }
 
     @BeforeEach
-    fun issueCordaTokens() {
+    fun issueTokens() {
         msftTokenMint =
             validator.tokens().createToken(mintAuthoritySigner, TOKEN_2022, decimals = SOLANA_TOKEN_DECIMALS)
         appleTokenMint =
@@ -213,8 +209,8 @@ abstract class DriverTest {
             )
         ) {
             // setup continuation:
-            setOf(issuer, alice, bob).forEach { startNode(it) }
-            startNode(bridgeAuthority, bridgingFlowsCordapp, bridgingContractsCordapp)
+            setOf(issuer, alice, bob).map { startNode(it) }.transpose().get()
+            startNode(bridgeAuthority, setOf(bridgingFlowsCordapp, bridgingContractsCordapp)).get()
 
             // setup continuation; issue tokens and then move them to Alice and Bob:
             issuer.issue(msftDescriptor, ISSUING_QUANTITY * BigDecimal(2), generalNotaryName).also { tokenType ->
@@ -378,13 +374,17 @@ abstract class DriverTest {
         notaryName: CordaX500Name,
     ): TokenType
 
-    fun DriverDSL.startNode(participant: CordaParticipant, vararg additionalCordapps: TestCordapp) {
+    private fun DriverDSL.startNode(
+        participant: CordaParticipant,
+        additionalCordapps: Set<TestCordapp> = emptySet(),
+    ): CordaFuture<*> {
         val user = User("user1", "test", permissions = setOf("ALL"))
-        val node = startNode(
+        return startNode(
             NodeParameters(providedName = participant.name, rpcUsers = listOf(user))
-                .withAdditionalCordapps(additionalCordapps.toSet())
-        ).getOrThrow()
-        participant.node = node
+                .withAdditionalCordapps(additionalCordapps)
+        ).map {
+            participant.node = it
+        }
     }
 }
 

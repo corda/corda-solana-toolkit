@@ -85,7 +85,7 @@ abstract class MockNetworkTest {
     }
 
     @TempDir
-    lateinit var custodiedKeysDir: Path
+    lateinit var notaryCustodiedKeysDir: Path
 
     protected lateinit var validator: SolanaTestValidator
 
@@ -117,13 +117,12 @@ abstract class MockNetworkTest {
         bridgeAuthority = BridgeAuthorityInfo.createAndInitialise(
             network,
             bridgeAuthorityIdentity,
-            custodiedKeysDir,
+            notaryCustodiedKeysDir,
             listOf(alice, bob),
             mapOf(
                 msftDescriptor to msftTokenMint,
                 aaplDescriptor to aaplTokenMint,
             ),
-            mintAuthoritySigner.publicKey(),
             validator,
             redemptionCheckIntervalSeconds
         )
@@ -147,7 +146,7 @@ abstract class MockNetworkTest {
             .start()
             .waitForReadiness()
         solanaNotaryKey = FileSigner.random(tempDir)
-        mintAuthoritySigner = FileSigner.random(custodiedKeysDir)
+        mintAuthoritySigner = FileSigner.random(notaryCustodiedKeysDir)
 
         with(NotaryEnvironment(validator.client())) {
             initializeProgram()
@@ -203,7 +202,7 @@ abstract class MockNetworkTest {
             rpcUrl = "${validator.rpcUrl()}"
             websocketUrl = "${validator.websocketUrl()}"
             notaryKeypairFile = "${solanaNotaryKey.file}"
-            custodiedKeysDir = "$custodiedKeysDir"
+            custodiedKeysDir = "$notaryCustodiedKeysDir"
         }
         """.trimIndent()
 

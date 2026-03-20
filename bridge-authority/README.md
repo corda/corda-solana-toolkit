@@ -1,11 +1,232 @@
-# Solana Bridge Authority
+# Bridge Authority: Corda ↔ Solana Token Bridge
 
-These are the CorDapps for a "bridge authority" node which can be introduced into a Corda network that already uses the
-[Corda Tokens SDK](https://github.com/corda/token-sdk) and which wishes to bridge their Corda assets onto Solana. The
-existing network CorDapp does not need to be modified to do this. Instead, Corda participants simply "send" their
-asset to be bridged to the bridge authority which takes care of minting the revelant Token-2022 token on Solana. It
-also listens for redemption requests and automatically burns the tokens before returning the Corda asset back to the
-original owner.
+## Overview
 
-See this [sample](https://github.com/corda/samples-kotlin/tree/release/ent/4.14/Solana/bridge-authority) which uses this
-against an existing CorDapp.
+The bridge authority is a **Corda node** that bridges [Corda Tokens SDK](https://github.com/corda/token-sdk)
+`FungibleToken` states to equivalent [Token-2022](https://spl.solana.com/token-2022) SPL tokens on Solana, and back
+again.
+
+- **Bridging** (Corda → Solana): A Corda participant transfers their `FungibleToken` to the bridge authority. The
+  bridge authority automatically locks the tokens in escrow and mints an equivalent amount of SPL tokens on Solana into
+  the participant's Solana wallet.
+- **Redemption** (Solana → Corda): The participant transfers their SPL tokens to a designated Solana redemption account.
+  The bridge authority detects the balance, burns the SPL tokens, and releases the escrowed Corda tokens back to the
+  participant.
+
+The bridge authority is designed as a drop-in addition to an existing Corda network: no existing CorDapps need
+modification and participant nodes do not need to upgrade to Corda 4.14. They interact with the bridge using
+standard Tokens SDK flows (`MoveFungibleTokens`).
+
+See the [sample](https://github.com/corda/samples-kotlin/tree/release/ent/4.14/Solana/bridge-authority) for an
+end-to-end example using these CorDapps against an existing network.
+
+### Modules
+
+| Module                       | Purpose                                                            |
+|------------------------------|--------------------------------------------------------------------|
+| `bridge-authority-contracts` | Corda contract states and transaction verification logic           |
+| `bridge-authority-workflows` | Corda flows, `BridgingService` (auto-detection), and configuration |
+
+Both modules must be deployed together on the bridge authority node.
+
+---
+
+## Key Concepts
+
+### Roles
+
+| Role                 | Description                                                                                                 |
+|----------------------|-------------------------------------------------------------------------------------------------------------|
+| **Bridge Authority** | The Corda node running these CorDapps; orchestrates all bridging and redemption operations                  |
+| **Escrow Identity**  | A confidential identity used by the bridge authority to hold escrowed `FungibleToken` states                |
+| **Participant**      | Any Corda party holding `FungibleToken`s; interacts with the bridge using standard Tokens SDK flows         |
+| **Solana Notary**    | A Corda notary that can validate and execute Solana instructions atomically with Corda transaction finality |
+| **General Notary**   | The existing non-Solana Corda notary used for all non-Solana transactions                                   |
+
+### Solana Accounts and Custody
+
+The bridge involves several Solana accounts. On Solana, a *wallet account* (the signing key) is distinct from a *token
+account* (the Associated Token Account / ATA that holds the balance) — see the Solana
+[docs](https://solana.com/docs/tokens) for details.
+
+The Solana notary custodies the keys that are needed to execute Solana instructions atomically with Corda finality:
+
+- **Mint authority** — the key authorised to mint new tokens. Custodied to the Solana notary so it can execute `mintTo`
+  instructions during bridging. The bridge authority does not hold this key.
+- **Redemption wallets** — one per participant. Custodied to the Solana notary so it can execute `burn` instructions
+  during redemption. Participants transfer SPL tokens to the ATA derived from the redemption wallet to trigger
+  redemption.
+
+The bridge authority holds its own Solana wallet (`bridgeAuthorityWalletFile`), used for auxiliary operations such as
+creating ATAs on demand. It does not directly sign any mint or burn instructions.
+
+Participant wallets are configured on the bridge authority so it knows where to mint bridged tokens. The bridge derives
+each participant's ATA from their wallet address and the token mint.
+
+### Amount Handling
+
+Corda and Solana may represent the same token with different decimal precisions. For example, the Corda `TokenType`
+might have 3 decimal places, but the equivalent Solana token mint has 4. The bridge handles this transparently: both
+the bridging and burn receipt contract states carry two amounts — one at Corda precision and one at Solana precision
+— which must be numerically equal. During bridging, the Corda amount is rescaled to the Solana mint's decimals.
+During redemption, the Solana amount is truncated to Corda's precision. Any fractional remainder below Corda's
+precision is left in the redemption account.
+
+---
+
+## Bridging (Corda → Solana)
+
+### Phase 1: Transfer
+
+The participant transfers their `FungibleToken` to the bridge authority using the standard Corda Tokens SDK:
+
+```kotlin
+// On the participant's node — no special CorDapp required
+proxy.startFlow(
+    ::MoveFungibleTokens,
+    PartyAndAmount(bridgeAuthorityParty, Amount(quantity, tokenType))
+)
+```
+
+`BridgingService` on the bridge authority detects the incoming token via vault observation and automatically starts the
+remaining phases. No further action is needed from the participant.
+
+### Phase 2: Escrow
+
+The Solana mint must happen in a transaction notarized by the Solana notary. However, the Tokens SDK `FungibleToken`
+contract does not support notary changes — the state carries a reference to its `TokenType` which ties it to the
+original notary. To work around this, the bridge authority escrows the original `FungibleToken` under the escrow
+identity and creates a separate bridging state. This bridging state carries the Solana minting metadata (mint account,
+mint authority, destination ATA, and the token amounts) but has no `TokenType` dependency, allowing it to move freely
+between notaries.
+
+### Phase 3: Notary Move
+
+The bridging state's notary is changed from the general notary to the Solana notary via `MoveNotaryFlow`.
+
+### Phase 4: Mint
+
+The bridging state is consumed in a transaction notarized by the Solana notary. The transaction includes a
+`Token2022.mintTo` instruction that the Solana notary verifies against the bridging state and then executes on Solana —
+atomically with Corda finality. Only after this phase completes has the token been fully bridged.
+
+The bridging process as a whole is not atomic — it spans multiple Corda transactions across two notaries. However, it
+is designed to be eventually consistent: Corda's flow checkpointing ensures that if the bridge authority restarts at any
+point, the in-flight flow resumes from where it left off.
+
+---
+
+## Redemption (Solana → Corda)
+
+Redemption is the reverse of bridging. The participant transfers their SPL tokens on Solana to the redemption account
+provided by the bridge operator. The bridge authority monitors all configured redemption accounts via websocket
+updates (backed by periodic polling). When a non-zero balance is detected the redemption flow begins automatically.
+
+The Solana burn is executed via the Solana notary, which atomically burns the SPL tokens and finalises a burn receipt
+state on Corda. This receipt serves as on-ledger proof that the tokens have been destroyed on Solana. In a subsequent
+transaction, the bridge authority presents the burn receipt to unlock the corresponding escrowed `FungibleToken` states
+and delivers them to the participant mapped to that redemption account in configuration.
+
+Because the burn receipt is immutable once finalised, there is no risk of tokens being burnt without a corresponding
+unlock — the receipt guarantees the escrowed tokens will eventually be released. As with bridging, Corda's flow
+checkpointing ensures the remaining steps complete even if the bridge authority restarts mid-flow.
+
+---
+
+## Configuration
+
+The bridge authority reads its configuration from its CorDapp config file:
+
+```
+<node-dir>/cordapps/config/bridge-authority-workflows-<version>.conf
+```
+
+### Bridge Authority Config
+
+| Key                               | Type                      | Description                                                                                                                                                                                                                                                                                                        |
+|-----------------------------------|---------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `participants`                    | X.500 → base58 address    | Mapping from Corda party to Solana wallet address. This is the participant's wallet address and not token account or ATA. The ATA is derived automatically for each token type on-demand.                                                                                                                          |
+| `tokens`                          | token ID → base58 address | Mapping from Corda token identifier to Solana mint address. The key is `tokenIdentifier` for simple `TokenType` (e.g. `"MSFT"`), or the UUID string for evolvable tokens backed by a `TokenPointer`. **The mint authority keypair file for each mint must be custodied to the Solana notary.**                     |
+| `redemptionWalletAccountToHolder` | base58 address → X.500    | Mapping from Solana redemption wallet address to Corda party. When SPL tokens are transferred to one of these wallets, the bridge authority triggers redemption and delivers the unlocked Corda tokens to the mapped party. **The keypair file for each of these wallets must be custodied to the Solana notary.** |
+| `bridgeAuthorityWalletFile`       | file                      | Path to the bridge authority's own [keypair file](https://docs.anza.xyz/cli/wallets/file-system). Used for auxiliary Solana transactions such as creating missing ATAs.                                                                                                                                            |
+| `solanaNotaryName`                | X.500                     | X.500 name of the new Solana notary.                                                                                                                                                                                                                                                                               |
+| `generalNotaryName`               | X.500                     | X.500 name of the existing non-Solana Corda notary.                                                                                                                                                                                                                                                                |
+| `solanaRpcUrl`                    | URL                       | Solana JSON-RPC HTTP endpoint.                                                                                                                                                                                                                                                                                     |
+| `solanaWebsocketUrl`              | URL                       | Solana JSON-RPC WebSocket endpoint.                                                                                                                                                                                                                                                                                |
+| `redemptionCheckIntervalSeconds`  | seconds                   | *(Optional, default: 10)* Polling interval for redemption account balances. Used as a backup to websocket subscriptions.                                                                                                                                                                                           |
+
+> [!NOTE]
+> Token mints must be created on Solana beforehand — the bridge authority does not currently create them automatically
+> for new token types.
+
+**Example:**
+
+```hocon
+{
+    "participants" : {
+        "O=Alice Corp, L=Madrid, C=ES" : "FYPK13XxJKrTLHn15utLmQ5jXVCBSnJQsY21QjNoA8mr",
+        "O=Bob Plc, L=Rome, C=IT" : "3tiq47rYYfRTd9ykvMpz6hgN7R8vnYcrdCngdjk93JRH"
+    },
+    "tokens" : {
+        "AAPL" : "BrVt1nQFNp8Earh3UZyMf8zA2YtW1iCV8t67atM9JAbY",
+        "MSFT" : "AJq271cwC4zsAHhpmek9Czcibv6tpwmCbapd7pzv2xUG"
+    },
+    "redemptionWalletAccountToHolder" : {
+        "5b9YpAQM6TaD4KmEoUzZpa5dXiFCJ2nGoVqNA6RK2a1T" : "O=Alice Corp, L=Madrid, C=ES",
+        "Ho5BBqMsqv8ZjLjVQeuB5p1im1JRngyfsmDpWdjQ4m8t" : "O=Bob Plc, L=Rome, C=IT"
+    },
+    "bridgeAuthorityWalletFile" : "bridge-authority-keypair.json",
+    "solanaNotaryName" : "O=Solana Notary Service, L=London, C=GB",
+    "generalNotaryName" : "O=Notary Service, L=Zurich, C=CH",
+    "solanaRpcUrl" : "https://api.devnet.solana.com",
+    "solanaWebsocketUrl" : "wss://api.devnet.solana.com"
+}
+```
+
+### Solana Notary Configuration
+
+The Solana notary requires its own configuration under `notary.solana` in the node config.
+
+```hocon
+notary {
+    validating = false
+    solana {
+        rpcUrl = "https://api.devnet.solana.com"
+        websocketUrl = "wss://api.devnet.solana.com"
+        notaryKeypairFile = "/opt/notary/solana-notary-keypair.json"
+        custodiedKeysDir = "/opt/notary/custodied-keys"
+        trustedCordaSigners = ["O=Bridge Authority, L=London, C=GB"]
+    }
+}
+```
+
+The `custodiedKeysDir` directory should contain the keypair files for:
+- The **mint authority** for each token mint, so the notary can execute `mintTo` instructions
+- Each **redemption wallet**, so the notary can execute `burn` instructions on behalf of the redemption accounts
+
+`trustedCordaSigners` must be set to the bridge authority's X.500 name. Most notaries run in non-validating mode for
+privacy, which means they do not verify Corda contract logic — they only check for double-spends. Without
+`trustedCordaSigners`, any network participant could submit a transaction containing arbitrary Solana instructions to
+the notary and it would execute them. With this setting we ensure only Solana instructions which are valid for the
+bridging or redemption flow are executed.
+
+See the
+[Solana notary configuration reference](https://docs.r3.com/en/platform/corda/4.14/enterprise/node/setup/corda-configuration-fields.html#notary)
+for the full set of fields.
+
+---
+
+## Design Notes
+
+### Fungible pooling
+
+Because the escrowed tokens are fungible, redemption does not return the exact same token instances that were originally
+bridged. Instead, the escrowed tokens form a pooled inventory held by the bridge authority. Any holder of the bridged
+SPL tokens on Solana can redeem them — even if they were not the original bridger. For example, if Alice bridges tokens
+and then transfers the SPL tokens to Bob on Solana, Bob can redeem them on Corda.
+
+### Bridge authority as token issuer
+
+Corda participants trust the bridge authority to follow the authorised bridging and redemption flows. In practice, the
+bridge authority is likely to be operated by the same entity that issues the Corda tokens, since the issuer already has
+a trust relationship with the token holders.
