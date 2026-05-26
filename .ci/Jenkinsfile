@@ -64,6 +64,7 @@ pipeline {
                     stages {
                         stage('Build') {
                             steps {
+                                sh './gradlew -q currentVersion'
                                 sh './gradlew --no-daemon --stacktrace --info clean build'
                             }
                         }
@@ -81,6 +82,7 @@ pipeline {
                         stage('Build') {
                             steps {
                                 dir('bridge-authority') {
+                                    sh './gradlew -q currentVersion'
                                     sh './gradlew --no-daemon --stacktrace --info clean build'
                                 }
                             }
@@ -101,6 +103,11 @@ pipeline {
                 changeRequest()
             }
             steps {
+                // snykDeltaScan names its per-module output tmp/snyk-output-<module>.json. For nested
+                // modules like bridge-authority/contracts the path contains a slash, so the redirect
+                // targets a tmp/snyk-output-bridge-authority/ directory the shared step never creates.
+                // Pre-create it so the tee succeeds.
+                sh 'mkdir -p tmp/snyk-output-bridge-authority'
                 snykDeltaScan(env.SNYK_API_TOKEN, env.SNYK_ORG_ID)
             }
         }
