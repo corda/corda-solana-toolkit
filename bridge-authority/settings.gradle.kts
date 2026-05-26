@@ -1,14 +1,17 @@
-rootProject.name = "corda-solana-toolkit"
-
-plugins {
-    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
-}
+rootProject.name = "bridge-authority"
 
 include(
-    "corda-solana-core",
-    "corda-solana-cordapp-utils",
-    "corda-solana-testing",
+    "contracts",
+    "workflows",
+    "integration-tests",
 )
+
+pluginManagement {
+    repositories {
+        gradlePluginPortal() // For jetbrains.kotlin.jvm plugin used by Cordapp plugin
+        maven { url = uri("https://download.corda.net/maven/corda-releases") } // For Cordapp plugin
+    }
+}
 
 @Suppress("UnstableApiUsage")
 dependencyResolutionManagement {

@@ -4,28 +4,20 @@ import static com.r3.build.BuildControl.killAllExistingBuildsForJob
 import com.r3.build.agents.KubernetesAgent
 import com.r3.build.enums.KubernetesCluster
 import com.r3.build.enums.BuildEnvironment
-import com.r3.build.enums.BuildOperatingSystem
-import com.r3.build.utils.GitUtils
 
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
 KubernetesAgent k8s = new KubernetesAgent(
-    BuildEnvironment.AMD64_LINUX_JAVA17_CORDA4,
+    BuildEnvironment.AMD64_LINUX_RUST_SOLANA,
     KubernetesCluster.JenkinsAgents,
-    1
-).withDocker(
-     1,
-     false,
-     true
- )
+    1,
+    // Pin the docker image: this is the one with the newer JDK the toolkit toolchain needs.
+    'engineering-docker-dev.software.r3.com/build-solana@sha256:fbed600046d5ed866aadf2d381d117cf2dacc45867d891d3828d2eba24c8afad'
+).withDocker()
 
-String COMMON_GRADLE_PARAMS = [
-        '--no-daemon',
-        '--stacktrace',
-        '--info'
-].join(' ')
-
-GitUtils gitUtils = new GitUtils(this)
+// Both primary-branch builds and tag builds publish: tags carry release artifacts, the primary
+// branch publishes SNAPSHOTs. PRs and feature branches build but do not publish.
+boolean shouldPublish = env.BRANCH_IS_PRIMARY == 'true' || env.TAG_NAME != null
 
 pipeline {
     agent {
@@ -40,10 +32,6 @@ pipeline {
             showRawYaml true
             defaultContainer k8s.defaultContainer.name
         }
-    }
-
-    parameters {
-        string(name: 'CHOSEN_BRANCH', defaultValue: 'main', description: 'Branch or commit hash to run the pipeline against.')
     }
 
     options {
@@ -70,33 +58,72 @@ pipeline {
 
     stages {
         stage('Build') {
-            steps {
-                authenticateGradleWrapper()
-                sh './gradlew -q currentVersion'
-                sh 'pkill -9 solana-test-validator || true'
-                sh script: ['./gradlew', COMMON_GRADLE_PARAMS, 'clean', 'build'].join(' ')
+            parallel {
+                stage('Toolkit') {
+                    stages {
+                        stage('Build') {
+                            steps {
+                                authenticateGradleWrapper()
+                                sh './gradlew -q currentVersion'
+                                sh 'pkill -9 solana-test-validator || true'
+                                sh './gradlew --no-daemon --stacktrace --info clean build'
+                            }
+                        }
+                    }
+                    post {
+                        always {
+                            junit testResults: 'corda-solana-*/build/test-results/**/*.xml',
+                                  allowEmptyResults: true
+                        }
+                    }
+                }
+
+                stage('Bridge Authority') {
+                    stages {
+                        stage('Build') {
+                            steps {
+                                dir('bridge-authority') {
+                                    authenticateGradleWrapper()
+                                    sh './gradlew -q currentVersion'
+                                    sh './gradlew --no-daemon --stacktrace --info clean build'
+                                }
+                            }
+                        }
+                    }
+                    post {
+                        always {
+                            junit testResults: 'bridge-authority/**/build/test-results/**/*.xml',
+                                  allowEmptyResults: true
+                        }
+                    }
+                }
             }
         }
+
         stage('Snyk Delta') {
             when {
-               changeRequest()
+                changeRequest()
             }
             steps {
                 snykDeltaScan(env.SNYK_API_TOKEN, env.SNYK_ORG_ID)
             }
         }
+
         stage('Publish') {
             when {
-                allOf {
-                    not { changeRequest() }
-                }
+                expression { shouldPublish }
             }
-            steps {
-                script {
-                    dir('chosen-branch') {
-                        gitUtils.clone(params.CHOSEN_BRANCH, 'https://github.com/corda/corda-solana-toolkit')
-                        authenticateGradleWrapper()
+            parallel {
+                stage('Toolkit') {
+                    steps {
                         sh './gradlew --no-daemon artifactoryPublish'
+                    }
+                }
+                stage('Bridge Authority') {
+                    steps {
+                        dir('bridge-authority') {
+                            sh './gradlew --no-daemon artifactoryPublish'
+                        }
                     }
                 }
             }
@@ -104,12 +131,11 @@ pipeline {
     }
 
     post {
-        always {
-            archiveArtifacts artifacts: '**/*.log', excludes: '**/ledger/**', allowEmptyArchive: true, fingerprint: false
-            junit testResults: '**/build/test-results/**/*.xml', allowEmptyResults: true
-        }
-        cleanup {
-            deleteDir() /* clean up our workspace */
+        unsuccessful {
+            archiveArtifacts artifacts: '**/build/**/*.log,**/build/**/*.xml',
+                             excludes: '**/ledger/**',
+                             allowEmptyArchive: true,
+                             fingerprint: false
         }
     }
 }

@@ -230,3 +230,50 @@ and then transfers the SPL tokens to Bob on Solana, Bob can redeem them on Corda
 Corda participants trust the bridge authority to follow the authorised bridging and redemption flows. In practice, the
 bridge authority is likely to be operated by the same entity that issues the Corda tokens, since the issuer already has
 a trust relationship with the token holders.
+
+---
+
+## Building
+
+Bridge Authority is a standalone Gradle 7.6.6 build, separate from the toolkit at the repo root. Always invoke
+its wrapper from this directory:
+
+```shell
+cd bridge-authority
+./gradlew clean build
+```
+
+Gradle 7.6.6 requires JDK 17. The bundled wrapper does not use a Java toolchain spec, so the JDK on `JAVA_HOME`
+(or `PATH`) must be 17. If your default JDK is newer, point `JAVA_HOME` at a JDK 17 install for this build.
+
+### Dependency on the Java Solana Library
+
+The three modules consume `corda-solana-core`, `corda-solana-cordapp-utils`, and `corda-solana-testing` from
+Maven Central / `corda-dependencies` rather than as Gradle project dependencies. The version is pinned in
+[`gradle/libs.versions.toml`](gradle/libs.versions.toml) under the `corda-solana` key.
+
+### Iterating on toolkit changes
+
+Verifying a toolkit-side change in Bridge Authority requires publishing the toolkit's SNAPSHOT artifacts
+locally, then temporarily switching the pin:
+
+```shell
+# At the repo root: publish toolkit SNAPSHOTs to your local Maven cache
+./gradlew publishToMavenLocal
+
+# In bridge-authority/gradle/libs.versions.toml, temporarily set:
+#   corda-solana = "1.0.2-SNAPSHOT"   (or whatever the toolkit's currentVersion reports)
+# and ensure mavenLocal() is in the dependency repositories (it already is in settings.gradle.kts).
+
+cd bridge-authority
+./gradlew clean build
+```
+
+Revert the pin before pushing.
+
+## Publishing
+
+Pushing a `vX.Y.Z` tag at the repo root triggers both the toolkit and bridge-authority Jenkins pipelines in
+parallel. Each runs its own `./gradlew artifactoryPublish`, depositing artifacts to
+`com.r3.corda.lib.solana` on the shared Corda Maven repository. There is no manual publish step for
+bridge-authority beyond what the tag triggers.
