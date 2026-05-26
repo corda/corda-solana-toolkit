@@ -8,12 +8,14 @@ import com.r3.build.enums.BuildEnvironment
 killAllExistingBuildsForJob(env.JOB_NAME, env.BUILD_NUMBER.toInteger())
 
 KubernetesAgent k8s = new KubernetesAgent(
-    BuildEnvironment.AMD64_LINUX_RUST_SOLANA,
+    BuildEnvironment.AMD64_LINUX_JAVA17_CORDA4,
     KubernetesCluster.JenkinsAgents,
+    1
+).withDocker(
     1,
-    // Pin the docker image: this is the one with the newer JDK the toolkit toolchain needs.
-    'engineering-docker-dev.software.r3.com/build-solana@sha256:fbed600046d5ed866aadf2d381d117cf2dacc45867d891d3828d2eba24c8afad'
-).withDocker()
+    false,
+    true
+)
 
 // Both primary-branch builds and tag builds publish: tags carry release artifacts, the primary
 // branch publishes SNAPSHOTs. PRs and feature branches build but do not publish.
