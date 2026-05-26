@@ -2,6 +2,7 @@ package com.r3.corda.lib.solana.core
 
 import com.r3.corda.lib.solana.core.internal.reconnect
 import io.github.bucket4j.Bucket
+import io.github.bucket4j.local.LocalBucket
 import org.slf4j.LoggerFactory
 import software.sava.core.accounts.Signer
 import software.sava.core.tx.Transaction
@@ -21,7 +22,7 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.time.Duration
 import java.time.Instant
-import java.time.temporal.ChronoUnit
+import java.time.temporal.ChronoUnit.MILLIS
 import java.util.Base64
 import java.util.TreeSet
 import java.util.concurrent.CompletableFuture
@@ -58,17 +59,17 @@ import kotlin.reflect.KFunction5
  * returned then the client will retry after this time, otherwise it will perform its own exponential backoff.
  *
  * [SolanaClient] also keeps a regularly updated cached value of the latest blockhash. This is used by default when
- * serialising and sending transactions, which avoids an extra RPC round-trip when low latency is important or a
+ * serializing and sending transactions, which avoids an extra RPC round-trip when low latency is important or a
  * completely fresh blockhash is not required. If a fresh blockhash is needed this can be overriden with the
  * `freshBlockhash` parameter or calling [getBlockhashInfo] with `true`.
  *
  * @param rpcUrl The RPC URL of the RPC provider.
  * @param websocketUrl The websocket URL of the RPC provider.
  * @param commitment The commitment level to use for all operations.
- * @param defaultRateLimit The default rate limit (in requests per second) to use for each RPC, unless a specific rate
- * limit for an RPC is provided in [specificRateLimits].
- * @param specificRateLimits A map of RPC name to rate limit (in requests per second) which overrides the rate limit
- * for particular RPCs.
+ * @param accountRateLimit Account level rate limit (in requests per second). This can also be the per IP address
+ * rate limit.
+ * @param perRpcRateLimits A map of RPC method name to rate limit (in requests per second). This is typically for
+ * more complex RPCs which have lower limits applied to them.
  * @param userMainExecutor The executor to use for the asynchronous tasks. If one isn't provided then a reasonable
  * default is created.
  */
@@ -78,8 +79,8 @@ constructor(
     val rpcUrl: URI,
     val websocketUrl: URI,
     val commitment: Commitment = Commitment.CONFIRMED,
-    private val defaultRateLimit: Int? = null,
-    private val specificRateLimits: Map<String, Int> = emptyMap(),
+    private val accountRateLimit: Int? = null,
+    private val perRpcRateLimits: Map<String, Int> = emptyMap(),
     private val userMainExecutor: Executor? = null,
 ) : AutoCloseable {
     companion object {
@@ -136,9 +137,9 @@ constructor(
 
     private val mainExecutor = userMainExecutor ?: run {
         // Use the largest RPC rate limit as a reasonable backup value for the pool size
-        val rateLimits = TreeSet(specificRateLimits.values)
-        if (defaultRateLimit != null) {
-            rateLimits += defaultRateLimit
+        val rateLimits = TreeSet(perRpcRateLimits.values)
+        if (accountRateLimit != null) {
+            rateLimits += accountRateLimit
         }
         val threadFactory = NamedThreadFactory("SolanaClient-Main")
         if (rateLimits.isNotEmpty()) {
@@ -151,6 +152,7 @@ constructor(
         }
     }
 
+    private val accountRateLimitBucket = accountRateLimit?.let { createRateLimitBucket(it.toLong()) }
     private val rpcRateLimiters = ConcurrentHashMap<String, RpcRateLimiter>()
 
     /**
@@ -437,7 +439,7 @@ constructor(
     fun getEstimatedBlockHeight(): Long {
         // started checked by getBlockhashInfo
         val blockhashInfo = getBlockhashInfo(forceFetch = false)
-        val elapsedMillis = blockhashInfo.retrievalTime.until(Instant.now(), ChronoUnit.MILLIS).coerceAtLeast(0)
+        val elapsedMillis = blockhashInfo.retrievalTime.until(Instant.now(), MILLIS).coerceAtLeast(0)
         // TODO Use getRecentPerformanceSamples to get a recent average for ms per slot.
         val estimatedElapsedSlots = elapsedMillis / DEFAULT_MS_PER_SLOT
         return blockhashInfo.blockHeight + estimatedElapsedSlots
@@ -788,23 +790,10 @@ constructor(
     }
 
     private inner class RpcRateLimiter(val methodName: String) {
-        private val rateLimitingBucket: Bucket?
+        private val methodRateLimitBucket = perRpcRateLimits[methodName]?.let { createRateLimitBucket(it.toLong()) }
 
         @Volatile
         private var backoffUntil = Instant.now()
-
-        init {
-            val rateLimit = (specificRateLimits[methodName] ?: defaultRateLimit)?.toLong()
-            rateLimitingBucket = rateLimit?.let {
-                Bucket.builder()
-                    .addLimit { bandwidth ->
-                        // Since we don't know the throttling strategy of the RPC provider we take the more
-                        // conservative approach of only refilling at the end of each second as opposed to gradually.
-                        bandwidth.capacity(rateLimit).refillIntervally(rateLimit, Duration.ofSeconds(1))
-                    }
-                    .build()
-            }
-        }
 
         fun <T> retryingCall(method: KFunction<CompletableFuture<T>>, vararg rpcArgs: Any): T {
             return retryingCall(rpcArgs) { method.call(rpc, *rpcArgs) }
@@ -813,9 +802,7 @@ constructor(
         fun <T> retryingCall(rpcArgs: Array<out Any>, methodCall: () -> CompletableFuture<T>): T {
             var nextRetryAfter = DEFAULT_DELAY
             while (true) {
-                if (!waitForAvailability()) {
-                    continue
-                }
+                waitForAvailability()
                 try {
                     return methodCall().getOrThrow()
                 } catch (e: JsonRpcException) {
@@ -841,26 +828,26 @@ constructor(
             }
         }
 
-        private fun waitForAvailability(): Boolean {
-            // If the RPC was previously throttled then first wait it out
-            val backoffUntil = this.backoffUntil
-            val backoffMillis = Instant.now().until(backoffUntil, ChronoUnit.MILLIS)
-            if (backoffMillis > 0) {
-                Thread.sleep(backoffMillis)
-            }
-            // If a rate limit has been specified then wait for a token to become available. This will also prevent a
-            // thundering herd of threads all retrying the same RPC after backoff.
-            val rateLimitingBucket = this.rateLimitingBucket
-            if (rateLimitingBucket != null) {
-                rateLimitingBucket.asBlocking().consume(1)
-                // If the thread had to wait long then it's possible for another HTTP 429 to occur on another RPC call.
-                // So we must check if the backoff delay has been extended.
-                if (backoffUntil != this.backoffUntil) {
-                    rateLimitingBucket.addTokens(1)
-                    return false
+        private fun waitForAvailability() {
+            val accountRateLimitBucket = accountRateLimitBucket
+            val methodRateLimitBucket = methodRateLimitBucket
+            while (true) {
+                // If the RPC was previously throttled then first wait it out
+                val backoffUntil = this.backoffUntil
+                val backoffMillis = Instant.now().until(backoffUntil, MILLIS)
+                if (backoffMillis > 0) {
+                    Thread.sleep(backoffMillis)
                 }
+                accountRateLimitBucket?.asBlocking()?.consume(1)
+                methodRateLimitBucket?.asBlocking()?.consume(1)
+                // If the thread had to wait long then it's possible for another HTTP 429 to occur on another RPC
+                // call. So we must check if the backoff delay has been extended.
+                if (backoffUntil == this.backoffUntil) {
+                    return
+                }
+                accountRateLimitBucket?.addTokens(1)
+                methodRateLimitBucket?.addTokens(1)
             }
-            return true
         }
 
         fun <T, P> pollingCall(
@@ -905,6 +892,16 @@ constructor(
         } catch (e: ExecutionException) {
             throw e.cause ?: e
         }
+    }
+
+    private fun createRateLimitBucket(rateLimit: Long): LocalBucket {
+        return Bucket.builder()
+            .addLimit { bandwidth ->
+                // Since we don't know the throttling strategy of the RPC provider we take the more
+                // conservative approach of only refilling at the end of each second as opposed to gradually.
+                bandwidth.capacity(rateLimit).refillIntervally(rateLimit, Duration.ofSeconds(1))
+            }
+            .build()
     }
 
     private class NamedThreadFactory(
