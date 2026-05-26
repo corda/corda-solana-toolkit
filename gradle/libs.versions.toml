@@ -1,17 +1,17 @@
 [versions]
 artifactory = "6.0.2"
 assertj = "3.27.7"
-axion-release = "1.21.0"
-ben-manes = "0.53.0"
-bucket4j = "8.16.0"
-corda-os = "4.14-RC03"
+axion-release = "1.21.1"
+ben-manes = "0.54.0"
+bucket4j = "8.19.0"
+corda-os = "4.14.2"
 detekt = "2.0.0-alpha.1"
-junit = "5.14.3"
+junit = "6.1.0"
 kotlin-corda = "1.9.25" # Use the same minor version of Kotlin as Corda
-kotlin-main = "2.3.10"
+kotlin-main = "2.3.21"
 sava-core = "25.3.1-j17-1"
 sava-programs = "25.0.1-j17-1"
-slf4j = "2.0.17"
+slf4j = "2.0.18"
 
 [libraries]
 assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }

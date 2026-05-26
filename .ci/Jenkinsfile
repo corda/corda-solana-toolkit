@@ -53,7 +53,6 @@ pipeline {
         GRADLE_USER_HOME = "/host_tmp/gradle"
         SNYK_ORG_ID = credentials('r3-solana-snyk-org-id')
         SNYK_API_TOKEN = credentials('r3-solana-snyk-api-token-secret')
-        ARTIFACTORY_BUILD_NAME = "Corda Solana Toolkit / Publish".replaceAll("/", " :: ")
     }
 
     stages {
@@ -63,9 +62,6 @@ pipeline {
                     stages {
                         stage('Build') {
                             steps {
-                                authenticateGradleWrapper()
-                                sh './gradlew -q currentVersion'
-                                sh 'pkill -9 solana-test-validator || true'
                                 sh './gradlew --no-daemon --stacktrace --info clean build'
                             }
                         }
@@ -83,8 +79,6 @@ pipeline {
                         stage('Build') {
                             steps {
                                 dir('bridge-authority') {
-                                    authenticateGradleWrapper()
-                                    sh './gradlew -q currentVersion'
                                     sh './gradlew --no-daemon --stacktrace --info clean build'
                                 }
                             }

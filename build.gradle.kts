@@ -1,3 +1,5 @@
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
 plugins {
     alias(libs.plugins.axion.release)
     alias(libs.plugins.ben.manes.versions)
@@ -13,4 +15,14 @@ scmVersion {
 // versions be set.
 allprojects {
     project.version = rootProject.scmVersion.version
+}
+
+tasks.withType<DependencyUpdatesTask> {
+    fun isNonStable(version: String): Boolean {
+        val stableKeyword = listOf("RELEASE", "FINAL", "GA").any { version.uppercase().contains(it) }
+        return !stableKeyword && !"^[0-9,.v-]+(-r)?$".toRegex().matches(version)
+    }
+    rejectVersionIf {
+        isNonStable(candidate.version)
+    }
 }
