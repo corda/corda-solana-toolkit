@@ -100,7 +100,9 @@ public final class SolanaTestValidator implements AutoCloseable {
         } catch (IOException e) {
             throw new IllegalStateException("solana-test-validator didn't start or has terminated", e);
         }
-        client.start();
+        if (!client.isStarted()) {
+            client.start();
+        }
         return this;
     }
 

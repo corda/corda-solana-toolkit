@@ -184,7 +184,7 @@ constructor(
     }
 
     fun start() {
-        check(started.compareAndSet(false, true))
+        check(started.compareAndSet(false, true)) { "SolanaClient already started" }
         websocket.connect().get()
         // Kickoff the background update of the latest blockhash
         asyncBlockhashInfoCacheUpdate(Duration.ZERO)
