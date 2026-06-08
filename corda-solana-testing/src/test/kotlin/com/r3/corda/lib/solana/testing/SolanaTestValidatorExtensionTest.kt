@@ -12,11 +12,12 @@ import java.nio.file.Path
 
 class SolanaTestValidatorExtensionTest {
     @SolanaTestClass(waitForReadiness = false)
-    class General {
+    class NotWaitForReadiness {
         companion object {
             @TempDir
             lateinit var tempDir: Path
 
+            @Suppress("unused")
             @ConfigureValidator
             @JvmStatic
             fun configureValidator(builder: SolanaTestValidator.Builder) {
@@ -25,13 +26,20 @@ class SolanaTestValidatorExtensionTest {
         }
 
         @Test
-        fun `SolanaClient available`(client: SolanaClient, testValidator: SolanaTestValidator) {
+        fun `SolanaClient available and started`(client: SolanaClient, testValidator: SolanaTestValidator) {
             assertThat(client).isSameAs(testValidator.client())
+            assertThat(client.isStarted).isTrue
+            assertThat(client.getBlockhashInfo(forceFetch = true)).isNotNull
         }
 
         @Test
         fun `@ConfigureValidator annotation`(testValidator: SolanaTestValidator) {
             assertThat(testValidator.ledger()).isEqualTo(tempDir)
+        }
+
+        @Test
+        fun `waitForReadiness later`(testValidator: SolanaTestValidator) {
+            testValidator.waitForReadiness()
         }
     }
 
