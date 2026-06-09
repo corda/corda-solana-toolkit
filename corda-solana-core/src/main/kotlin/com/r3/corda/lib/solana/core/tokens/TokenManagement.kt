@@ -2,10 +2,10 @@ package com.r3.corda.lib.solana.core.tokens
 
 import com.r3.corda.lib.solana.core.SolanaClient
 import com.r3.corda.lib.solana.core.SolanaUtils.randomSigner
+import com.r3.corda.lib.solana.core.tokens.TokenManagement.Companion.getAssociatedTokenAccountAddress
 import software.sava.core.accounts.PublicKey
 import software.sava.core.accounts.Signer
 import software.sava.core.accounts.SolanaAccounts
-import software.sava.core.accounts.meta.AccountMeta
 import software.sava.core.accounts.token.Mint
 import software.sava.core.accounts.token.TokenAccount
 import software.sava.core.tx.Instruction
@@ -66,7 +66,7 @@ class TokenManagement(val client: SolanaClient) {
                     listOf(
                         it.createAccount(tokenMint.publicKey(), Mint.BYTES.toLong(), tokenProgram),
                         initializeMint2(
-                            tokenProgram.toInvoked(),
+                            tokenProgram.invokedAccount(),
                             tokenMint.publicKey(),
                             decimals,
                             mintAuthority,
@@ -104,7 +104,12 @@ class TokenManagement(val client: SolanaClient) {
                 it.createTransaction(
                     listOf(
                         it.createAccount(tokenAccount.publicKey(), TokenAccount.BYTES.toLong(), tokenProgram),
-                        initializeAccount3(tokenProgram.toInvoked(), tokenAccount.publicKey(), tokenMint, accountOwner)
+                        initializeAccount3(
+                            tokenProgram.invokedAccount(),
+                            tokenAccount.publicKey(),
+                            tokenMint,
+                            accountOwner
+                        )
                     )
                 )
             },
@@ -128,25 +133,34 @@ class TokenManagement(val client: SolanaClient) {
         tokenMint: PublicKey,
         accountOwner: PublicKey = payer.publicKey(),
     ): PublicKey {
-        val tokenProgram = getTokenProgram(tokenMint)
-        val tokenAccount = getAssociatedTokenAccountAddress(tokenMint, accountOwner, tokenProgram)
         client.sendAndConfirm(
-            {
-                it.createTransaction(
-                    AssociatedTokenProgram.createATAForProgram(
-                        true,
-                        SolanaAccounts.MAIN_NET,
-                        payer.publicKey(),
-                        tokenAccount,
-                        accountOwner,
-                        tokenMint,
-                        tokenProgram.programId
-                    )
-                )
-            },
+            { it.createTransaction(createAtaInstruction(payer.publicKey(), tokenMint, accountOwner)) },
             payer
         )
-        return tokenAccount
+        return getAssociatedTokenAccountAddress(tokenMint, accountOwner, getTokenProgram(tokenMint))
+    }
+
+    /**
+     * Returns an idempotent create-ATA instruction for the given token mint and account owner. Use
+     * [getAssociatedTokenAccountAddress] to get the deterministic address of the token account.
+     *
+     * @param payer Account paying for the instruction.
+     * @param tokenMint The token definition this account will be able to hold.
+     * @param accountOwner The owner of the new token account, defaults to the payer.
+     */
+    @JvmOverloads
+    fun createAtaInstruction(payer: PublicKey, tokenMint: PublicKey, accountOwner: PublicKey = payer): Instruction {
+        val tokenProgram = getTokenProgram(tokenMint)
+        val tokenAccount = getAssociatedTokenAccountAddress(tokenMint, accountOwner, tokenProgram)
+        return AssociatedTokenProgram.createATAForProgram(
+            true,
+            SolanaAccounts.MAIN_NET,
+            payer,
+            tokenAccount,
+            accountOwner,
+            tokenMint,
+            tokenProgram.programId
+        )
     }
 
     /**
@@ -172,7 +186,7 @@ class TokenManagement(val client: SolanaClient) {
             {
                 it.createTransaction(
                     mintTo(
-                        tokenProgram.toInvoked(),
+                        tokenProgram.invokedAccount(),
                         tokenMint,
                         tokenAccount,
                         mintAuthority.publicKey(),
@@ -207,7 +221,7 @@ class TokenManagement(val client: SolanaClient) {
             {
                 it.createTransaction(
                     burn(
-                        tokenProgram.toInvoked(),
+                        tokenProgram.invokedAccount(),
                         tokenMint,
                         tokenAccount,
                         owner.publicKey(),
@@ -243,7 +257,7 @@ class TokenManagement(val client: SolanaClient) {
             {
                 it.createTransaction(
                     transfer(
-                        tokenProgram.toInvoked(),
+                        tokenProgram.invokedAccount(),
                         source,
                         destination,
                         amount,
@@ -255,8 +269,6 @@ class TokenManagement(val client: SolanaClient) {
             listOf(owner)
         )
     }
-
-    private fun TokenProgram.toInvoked() = AccountMeta.createInvoked(programId)
 
     /**
      * Returns the [TokenProgram] the given account (token mint or token account) belongs to.

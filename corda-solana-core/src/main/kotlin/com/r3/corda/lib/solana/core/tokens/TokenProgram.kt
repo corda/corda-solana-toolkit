@@ -2,6 +2,7 @@ package com.r3.corda.lib.solana.core.tokens
 
 import software.sava.core.accounts.PublicKey
 import software.sava.core.accounts.SolanaAccounts
+import software.sava.core.accounts.meta.AccountMeta
 
 /**
  * Enum for the two Solana token programs.
@@ -10,6 +11,8 @@ enum class TokenProgram(val programId: PublicKey) {
     TOKEN(SolanaAccounts.MAIN_NET.tokenProgram()),
     TOKEN_2022(SolanaAccounts.MAIN_NET.token2022Program()),
     ;
+
+    fun invokedAccount(): AccountMeta = AccountMeta.createInvoked(programId)
 
     companion object {
         /**

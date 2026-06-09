@@ -1,5 +1,6 @@
 package com.r3.corda.lib.solana.core
 
+import com.r3.corda.lib.solana.core.tokens.TokenManagement
 import com.r3.corda.lib.solana.core.tokens.TokenProgram
 import com.r3.corda.lib.solana.testing.SolanaTestClass
 import com.r3.corda.lib.solana.testing.SolanaTestValidator
@@ -25,6 +26,7 @@ class TokenManagementTest {
         private val owner2 = SolanaUtils.randomSigner()
 
         private lateinit var testValidator: SolanaTestValidator
+        private lateinit var tokenManagement: TokenManagement
 
         @BeforeAll
         @JvmStatic
@@ -33,33 +35,34 @@ class TokenManagementTest {
             testValidator.accounts().airdropSol(owner1.publicKey(), 10)
             testValidator.accounts().airdropSol(owner2.publicKey(), 10)
             this.testValidator = testValidator
+            tokenManagement = testValidator.tokens()
         }
     }
 
     @ParameterizedTest
     @EnumSource
     fun `mint and burn tokens`(tokenProgram: TokenProgram) {
-        val tokenMint = testValidator.tokens().createToken(mintAuthority, tokenProgram)
-        val tokenAccount = testValidator.tokens().createTokenAccount(owner1, tokenMint)
-        testValidator.tokens().mintTo(tokenAccount, tokenMint, mintAuthority, 100_000)
+        val tokenMint = tokenManagement.createToken(mintAuthority, tokenProgram)
+        val tokenAccount = tokenManagement.createTokenAccount(owner1, tokenMint)
+        tokenManagement.mintTo(tokenAccount, tokenMint, mintAuthority, 100_000)
 
         assertThat(getTokenBalance(tokenAccount)).isEqualTo(100_000)
 
-        testValidator.tokens().burn(owner1, tokenMint, tokenAccount, 50_000)
+        tokenManagement.burn(owner1, tokenMint, tokenAccount, 50_000)
         assertThat(getTokenBalance(tokenAccount)).isEqualTo(50_000)
     }
 
     @ParameterizedTest
     @EnumSource
     fun `move tokens`(tokenProgram: TokenProgram) {
-        val tokenMint = testValidator.tokens().createToken(mintAuthority, tokenProgram)
-        val tokenAccount1 = testValidator.tokens().createTokenAccount(owner1, tokenMint)
-        val tokenAccount2 = testValidator.tokens().createTokenAccount(owner2, tokenMint)
+        val tokenMint = tokenManagement.createToken(mintAuthority, tokenProgram)
+        val tokenAccount1 = tokenManagement.createTokenAccount(owner1, tokenMint)
+        val tokenAccount2 = tokenManagement.createTokenAccount(owner2, tokenMint)
 
-        testValidator.tokens().mintTo(tokenAccount1, tokenMint, mintAuthority, 100_000)
+        tokenManagement.mintTo(tokenAccount1, tokenMint, mintAuthority, 100_000)
         assertThat(getTokenBalance(tokenAccount1)).isEqualTo(100_000)
 
-        testValidator.tokens().transfer(owner1, tokenAccount1, tokenAccount2, 50_000)
+        tokenManagement.transfer(owner1, tokenAccount1, tokenAccount2, 50_000)
         assertThat(getTokenBalance(tokenAccount1)).isEqualTo(50_000)
         assertThat(getTokenBalance(tokenAccount2)).isEqualTo(50_000)
     }
@@ -67,16 +70,16 @@ class TokenManagementTest {
     @ParameterizedTest
     @EnumSource
     fun `move tokens to ATA`(tokenProgram: TokenProgram) {
-        val tokenMint = testValidator.tokens().createToken(mintAuthority, tokenProgram)
-        val owner1Account = testValidator.tokens().createTokenAccount(owner1, tokenMint)
+        val tokenMint = tokenManagement.createToken(mintAuthority, tokenProgram)
+        val owner1Account = tokenManagement.createTokenAccount(owner1, tokenMint)
 
-        testValidator.tokens().mintTo(owner1Account, tokenMint, mintAuthority, 100_000)
+        tokenManagement.mintTo(owner1Account, tokenMint, mintAuthority, 100_000)
         assertThat(getTokenBalance(owner1Account)).isEqualTo(100_000)
 
-        val owner2Ata = testValidator.tokens().createAssociatedTokenAccount(owner2, tokenMint)
+        val owner2Ata = tokenManagement.createAssociatedTokenAccount(owner2, tokenMint)
         assertThat(getTokenBalance(owner2Ata)).isZero
 
-        testValidator.tokens().transfer(owner1, owner1Account, owner2Ata, 60_000)
+        tokenManagement.transfer(owner1, owner1Account, owner2Ata, 60_000)
         assertThat(getTokenBalance(owner1Account)).isEqualTo(40_000)
         assertThat(getTokenBalance(owner2Ata)).isEqualTo(60_000)
     }
@@ -84,10 +87,10 @@ class TokenManagementTest {
     @ParameterizedTest
     @EnumSource
     fun `creating ATA is idempotent`(tokenProgram: TokenProgram) {
-        val tokenMint = testValidator.tokens().createToken(mintAuthority, tokenProgram)
-        val ata1 = testValidator.tokens().createAssociatedTokenAccount(owner1, tokenMint)
+        val tokenMint = tokenManagement.createToken(mintAuthority, tokenProgram)
+        val ata1 = tokenManagement.createAssociatedTokenAccount(owner1, tokenMint)
         testValidator.client().getBlockhashInfo(forceFetch = true)
-        val ata2 = testValidator.tokens().createAssociatedTokenAccount(owner1, tokenMint)
+        val ata2 = tokenManagement.createAssociatedTokenAccount(owner1, tokenMint)
         assertThat(ata1).isEqualTo(ata2)
     }
 
@@ -113,7 +116,7 @@ class TokenManagementTest {
             mintAuthority,
             listOf(tokenMint)
         )
-        assertThat(testValidator.tokens().getTokenProgram(tokenMint.publicKey())).isEqualTo(tokenProgram)
+        assertThat(tokenManagement.getTokenProgram(tokenMint.publicKey())).isEqualTo(tokenProgram)
     }
 
     @Test
@@ -121,7 +124,7 @@ class TokenManagementTest {
         val account = SolanaUtils.randomSigner().publicKey()
         testValidator.accounts().airdropSol(account, 10)
         assertThatIllegalArgumentException().isThrownBy {
-            testValidator.tokens().getTokenProgram(account)
+            tokenManagement.getTokenProgram(account)
         }
     }
 

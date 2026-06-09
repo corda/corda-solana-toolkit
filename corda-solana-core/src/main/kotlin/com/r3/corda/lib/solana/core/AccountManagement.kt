@@ -33,6 +33,15 @@ class AccountManagement(val client: SolanaClient) {
     }
 
     /**
+     * Fund a random new account with the given amount of SOL.
+     */
+    fun fundNewAccount(sol: Long): Signer {
+        val signer = SolanaUtils.randomSigner()
+        airdropSol(signer.publicKey(), sol)
+        return signer
+    }
+
+    /**
      * Airdrop the given amount of SOL to the account.
      */
     fun airdropSol(account: PublicKey, amount: BigDecimal) {

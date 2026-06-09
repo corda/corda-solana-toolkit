@@ -19,7 +19,11 @@ pluginManagement {
 @Suppress("UnstableApiUsage")
 dependencyResolutionManagement {
     repositories {
-        mavenLocal()
+        mavenLocal {
+            content {
+                includeVersionByRegex(".*", ".*", ".*-SNAPSHOT")
+            }
+        }
         mavenCentral()
         maven { r3Artifactory("corda-lib") }
         maven { r3Artifactory("corda-dependencies") }
