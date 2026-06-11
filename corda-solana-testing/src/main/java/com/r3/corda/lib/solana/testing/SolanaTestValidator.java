@@ -111,10 +111,10 @@ public final class SolanaTestValidator implements AutoCloseable {
         return this;
     }
 
-    /// Reads the validator's output until it reports a finalized slot (startup succeeded) or the
-    /// stream closes (the process exited, which on a fresh launch almost always means a port-bind
-    /// failure). Output consumed here is not re-read by [#waitForReadiness()], which picks up where
-    /// this leaves off.
+    // Reads the validator's output until it reports a finalized slot (startup succeeded) or the
+    // stream closes (the process exited, which on a fresh launch almost always means a port-bind
+    // failure). Output consumed here is not re-read by [#waitForReadiness()], which picks up where
+    // this leaves off.
     private boolean confirmStarted() {
         var processOutput = process.inputReader();
         try {
@@ -203,10 +203,12 @@ public final class SolanaTestValidator implements AutoCloseable {
             return this;
         }
 
-        /// Assigns every validator port from a randomly chosen block of contiguous ports (RPC,
-        /// websocket, faucet, gossip, and the dynamic port range), so concurrent validators on the
-        /// same host are very unlikely to overlap. Ports set explicitly on the builder keep their
-        /// value, and if a block is taken anyway [#start()] retries on a fresh one.
+        /**
+         * Assigns every validator port from a randomly chosen block of contiguous ports (RPC,
+         * websocket, faucet, gossip, and the dynamic port range), so concurrent validators on the
+         * same host are very unlikely to overlap. Ports set explicitly on the builder keep their
+         * value, and if a block is taken anyway {@link #start()} retries on a fresh one.
+         */
         public Builder dynamicPorts() {
             dynamicPorts = true;
             return this;
