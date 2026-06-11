@@ -6,6 +6,10 @@ plugins {
 }
 
 scmVersion {
+    // The .git directory lives in the toolkit repo root
+    repository {
+        directory.set(rootProject.rootDir.parentFile.absolutePath)
+    }
     tag {
         prefix.set("v")
     }
@@ -19,7 +23,7 @@ allprojects {
 
 tasks.withType<DependencyUpdatesTask> {
     fun isNonStable(version: String): Boolean {
-        val stableKeyword = listOf("RELEASE", "FINAL", "GA").any { version.uppercase().contains(it) }
+        val stableKeyword = listOf("RELEASE", "FINAL", "GA").any { version.toUpperCase().contains(it) }
         return !stableKeyword && !"^[0-9,.v-]+(-r)?$".toRegex().matches(version)
     }
     rejectVersionIf {

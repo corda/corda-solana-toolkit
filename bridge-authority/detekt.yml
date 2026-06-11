@@ -1,0 +1,28 @@
+ktlint:
+    TrailingCommaOnCallSite:
+        active: false
+    MultilineExpressionWrapping:
+        active: false
+    ClassSignature:
+        active: false
+    FunctionSignature:
+        active: false
+    FunctionExpressionBody:
+        active: false
+    ChainMethodContinuation:
+        active: false
+style:
+    ThrowsCount:
+        active: false
+    MagicNumber:
+        active: false
+    ReturnCount:
+        max: 5
+exceptions:
+    SwallowedException:
+        active: false
+    TooGenericExceptionCaught:
+        active: false
+complexity:
+    TooManyFunctions:
+        active: false

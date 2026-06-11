@@ -6,12 +6,12 @@ plugins {
 }
 
 dependencies {
-    implementation(project(":corda-solana-core"))
-    implementation(project(":corda-solana-cordapp-utils"))
+    implementation(libs.corda.solana.core)
+    implementation(libs.corda.solana.cordapp.utils)
 
     cordaProvided(libs.corda.core)
 
-    cordapp(project(":bridge-authority:contracts"))
+    cordapp(project(":contracts"))
     cordapp(libs.tokens.contracts)
     cordapp(libs.tokens.workflows)
 

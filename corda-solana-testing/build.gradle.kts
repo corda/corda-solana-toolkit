@@ -1,5 +1,5 @@
 plugins {
-    id("default-kotlin")
+    id("corda-kotlin")
     id("r3-artifactory")
 }
 

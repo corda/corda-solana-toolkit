@@ -5,7 +5,7 @@ plugins {
 }
 
 dependencies {
-    implementation(project(":corda-solana-cordapp-utils"))
+    implementation(libs.corda.solana.cordapp.utils)
 
     cordaProvided(libs.corda.core)
 
@@ -14,7 +14,6 @@ dependencies {
     testImplementation(libs.corda.ent.node.driver)
     testImplementation(libs.corda.ent.core.test.utils)
     testImplementation(libs.corda.ent.test.utils)
-    testImplementation(libs.mockito.core)
 
     // When using SNAPSHOT node-driver, make sure we are using the same build of the Enterprise Corda node
     testRuntimeOnly(libs.corda.ent.node.api)

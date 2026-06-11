@@ -2,12 +2,19 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 ![Maven](https://img.shields.io/maven-metadata/v?metadataUrl=https://download.corda.net/maven/corda-dependencies/com/r3/corda/lib/solana/corda-solana-core/maven-metadata.xml&label=Maven)
 
-The Gradle modules in this repo are split into two main groups:
+The repo contains two independent Gradle builds, each with its own wrapper:
 
-* Java utility library for Solana
-* Corda to Solana Bridge Authority
+* **Java Solana Library** at the repo root (`./gradlew`) — runs on the latest Gradle and targets JDK 17
+  bytecode.
+* **[Bridge Authority](bridge-authority)** under `bridge-authority/` (`bridge-authority/gradlew`) — pinned to
+  Gradle 7.6.6 because of the Corda 4.x cordapp and quasar plugins. Consumes the Java Solana Library as a
+  published Maven artifact rather than via a Gradle project dependency. See its
+  [README](bridge-authority/README.md) for build and release instructions.
 
-To use them specify `com.r3.corda.lib.solana` for the Maven group and add the following Maven repo:
+Both publish to `com.r3.corda.lib.solana` and share the same axion-release tag stream — the latest tag
+applies to both builds.
+
+To consume the published artifacts, add the Corda dependencies Maven repo:
 ```kotlin
 repositories {
     maven {
@@ -41,11 +48,11 @@ Collection of Solana utilities for CorDapps.
 
 ## [Bridge Authority](bridge-authority)
 
-This consists of the CorDapp bundle `bridge-authority:contracts` and `bridge-authority:workflows` which is a proposed
-solution for the bridging (and redemption) of Corda assets into Solana tokens. It centers around a "bridge
-authority" node which can be introduced into a Corda network that already uses the
-[Corda Tokens SDK](https://github.com/corda/token-sdk). More information about how it works and how to use it can be
-found [here](bridge-authority/README.md).
+A proposed solution for bridging (and redeeming) Corda assets to and from Solana tokens. Centers around a
+"bridge authority" node introduced into a Corda network that already uses the
+[Corda Tokens SDK](https://github.com/corda/token-sdk). Ships as the CorDapp bundle `bridge-authority-contracts`
+and `bridge-authority-workflows`. Lives in its own Gradle build under
+[`bridge-authority/`](bridge-authority/README.md), with build and design docs there.
 
 ## Publishing a release
 
@@ -74,6 +81,15 @@ This is because the current commit is now on a version tag.
 
 The next SNAPSHOT version (`0.1.10-SNAPSHOT` going with our example) will occur automatically when the main branch
 advances past this tag.
+
+Pushing the tag triggers both Jenkins pipelines (toolkit and bridge-authority) in parallel, each publishing its
+own artifacts under the same version. The release is considered complete once both succeed.
+
+### Bumping the bridge-authority dependency pin
+
+Bridge Authority depends on the Java Solana Library through published Maven coordinates pinned in
+`bridge-authority/gradle/libs.versions.toml`. After cutting a toolkit release, bump that
+value to the new release so subsequent bridge-authority changes pick it up.
 
 ## License
 
