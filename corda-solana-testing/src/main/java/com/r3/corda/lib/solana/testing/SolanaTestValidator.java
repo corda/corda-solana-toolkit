@@ -8,11 +8,16 @@ import org.slf4j.LoggerFactory;
 import software.sava.core.accounts.PublicKey;
 
 import java.io.IOException;
+import java.net.DatagramSocket;
 import java.net.ServerSocket;
 import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
@@ -106,6 +111,26 @@ public final class SolanaTestValidator implements AutoCloseable {
         return this;
     }
 
+    /// Reads the validator's output until it reports a finalized slot (startup succeeded) or the
+    /// stream closes (the process exited, which on a fresh launch almost always means a port-bind
+    /// failure). Output consumed here is not re-read by [#waitForReadiness()], which picks up where
+    /// this leaves off.
+    private boolean confirmStarted() {
+        var processOutput = process.inputReader();
+        try {
+            String line;
+            while ((line = processOutput.readLine()) != null) {
+                logger.debug("solana-test-validator: {}", line);
+                if (finalizedSlotPattern.matcher(line).find()) {
+                    return true;
+                }
+            }
+        } catch (IOException e) {
+            return false;
+        }
+        return false;
+    }
+
     @Override
     public void close() {
         client.close();
@@ -135,6 +160,18 @@ public final class SolanaTestValidator implements AutoCloseable {
         private static final int DEFAULT_RPC_PORT = 8899;
         private static final String DEFAULT_LEDGER_DIR_NAME = "test-ledger";
         private static final int MAX_PORT_ATTEMPTS = 100;
+        private static final int MAX_START_ATTEMPTS = 5;
+
+        // Each validator's ports form a 40-port block in [10000, 32000), clear of agave's default
+        // range of (8000-10000):
+        // https://github.com/anza-xyz/agave/blob/v3.1.14/net-utils/src/lib.rs#L60 (--help wrongly says 1024-65535)
+        // We assume 40 is enough because for its tests it uses a 25-port slice:
+        // https://github.com/anza-xyz/agave/blob/v3.1.14/net-utils/src/sockets.rs#L47-L59
+        static final int PORT_BLOCK_WIDTH = 40;
+        // 10000-32000 stays above agave's default range and below the ephemeral range (32768+).
+        static final int PORT_BLOCK_MIN = 10000;
+        static final int PORT_BLOCK_MAX = 32000;
+        private static final int PORT_BLOCK_COUNT = (PORT_BLOCK_MAX - PORT_BLOCK_MIN) / PORT_BLOCK_WIDTH;
 
         private boolean reset;
         private Integer rpcPort;
@@ -166,6 +203,10 @@ public final class SolanaTestValidator implements AutoCloseable {
             return this;
         }
 
+        /// Assigns every validator port from a randomly chosen block of contiguous ports (RPC,
+        /// websocket, faucet, gossip, and the dynamic port range), so concurrent validators on the
+        /// same host are very unlikely to overlap. Ports set explicitly on the builder keep their
+        /// value, and if a block is taken anyway [#start()] retries on a fresh one.
         public Builder dynamicPorts() {
             dynamicPorts = true;
             return this;
@@ -186,16 +227,55 @@ public final class SolanaTestValidator implements AutoCloseable {
          * @throws IllegalStateException The test validator couldn't be started.
          */
         public SolanaTestValidator start() {
-            var portsTaken = new HashSet<Integer>();
-            var rpcPort = availableRpcAndWebsocketPorts(portsTaken);
-            var gossipPort = availablePort(this.gossipPort, portsTaken);
-            var faucetPort = availablePort(this.faucetPort, portsTaken);
+            if (!dynamicPorts) {
+                return launch();
+            }
+            // findAvailablePortBlock probes before launching, but probing only narrows the odds:
+            // the probe sockets close before the validator binds, and another process on the host
+            // can grab a port in that window. When that happens the validator exits during startup,
+            // so launch on a fresh block and try again.
+            for (int attempt = 1; attempt <= MAX_START_ATTEMPTS; attempt++) {
+                var validator = launch();
+                if (validator.confirmStarted()) {
+                    return validator;
+                }
+                logger.warn(
+                    "solana-test-validator exited during startup (attempt {}/{}), likely a port "
+                        + "collision; retrying on a new port block",
+                    attempt, MAX_START_ATTEMPTS);
+                validator.close();
+            }
+            throw new IllegalStateException(
+                "solana-test-validator failed to start after " + MAX_START_ATTEMPTS + " attempts");
+        }
+
+        private SolanaTestValidator launch() {
+            var rpcPort = this.rpcPort;
+            var gossipPort = this.gossipPort;
+            var faucetPort = this.faucetPort;
+            Integer blockBase = null;
+            if (dynamicPorts) {
+                blockBase = findAvailablePortBlock();
+                if (rpcPort == null) {
+                    rpcPort = blockBase;
+                }
+                if (faucetPort == null) {
+                    faucetPort = blockBase + 2;
+                }
+                if (gossipPort == null) {
+                    gossipPort = blockBase + 3;
+                }
+            }
 
             final var command = new ArrayList<String>();
             command.add("solana-test-validator");
             addPortArg("rpc", rpcPort, command);
             addPortArg("gossip", gossipPort, command);
             addPortArg("faucet", faucetPort, command);
+            if (blockBase != null) {
+                command.add("--dynamic-port-range");
+                command.add((blockBase + 3) + "-" + (blockBase + PORT_BLOCK_WIDTH - 1));
+            }
             if (reset) {
                 command.add("--reset");
             }
@@ -208,7 +288,9 @@ public final class SolanaTestValidator implements AutoCloseable {
                 command.add(programId.toBase58());
                 command.add(file.toAbsolutePath().toString());
             });
-            var processBuilder = new ProcessBuilder(command);
+            // Merge stderr into stdout so the single reader drains both: a bind failure (printed to
+            // stderr) can't block on a full pipe, and confirmStarted sees the process exit.
+            var processBuilder = new ProcessBuilder(command).redirectErrorStream(true);
             if (ledger != null) {
                 processBuilder.directory(ledger.getParent().toFile());
             }
@@ -227,50 +309,33 @@ public final class SolanaTestValidator implements AutoCloseable {
             );
         }
 
-        private Integer availablePort(Integer specifiedPort, Set<Integer> portsTaken) {
-            if (dynamicPorts && specifiedPort == null) {
-                for (int i = 0; i < MAX_PORT_ATTEMPTS; i++) {
-                    var port = availablePort();
-                    if (portsTaken.add(port)) {
-                        return port;
-                    }
+        private static int findAvailablePortBlock() {
+            for (int i = 0; i < MAX_PORT_ATTEMPTS; i++) {
+                var base = PORT_BLOCK_MIN + ThreadLocalRandom.current().nextInt(PORT_BLOCK_COUNT) * PORT_BLOCK_WIDTH;
+                if (isBlockAvailable(base)) {
+                    return base;
                 }
-                throw new IllegalStateException("Unable to find an available port");
-            } else {
-                return specifiedPort;
             }
+            throw new IllegalStateException("Unable to find an available port block");
         }
 
-        private static int availablePort() {
-            try (var server = new ServerSocket(0)) {
-                return server.getLocalPort();
-            } catch (IOException e) {
-                throw new IllegalStateException("Unable to get an available port", e);
+        private static boolean isBlockAvailable(int base) {
+            for (int port = base; port < base + PORT_BLOCK_WIDTH; port++) {
+                if (!isPortAvailable(port)) {
+                    return false;
+                }
             }
+            return true;
         }
 
+        @SuppressWarnings("unused")
         private static boolean isPortAvailable(int port) {
-            try (var ignored = new ServerSocket(port)) {
+            // The validator binds most of its node sockets over UDP, so a TCP-only probe misses
+            // a live validator's tvu/tpu ports; check both protocols.
+            try (var tcp = new ServerSocket(port); var udp = new DatagramSocket(port)) {
                 return true;
             } catch (IOException e) {
                 return false;
-            }
-        }
-
-        private Integer availableRpcAndWebsocketPorts(Set<Integer> portsTaken) {
-            if (dynamicPorts && rpcPort == null) {
-                for (int i = 0; i < MAX_PORT_ATTEMPTS; i++) {
-                    var rpcPort = availablePort();
-                    var websocketPort = rpcPort + 1;
-                    if (isPortAvailable(websocketPort)) {
-                        portsTaken.add(rpcPort);
-                        portsTaken.add(websocketPort);
-                        return rpcPort;
-                    }
-                }
-                throw new IllegalStateException("Unable to find available ports");
-            } else {
-                return rpcPort;
             }
         }
 
