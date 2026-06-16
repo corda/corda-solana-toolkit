@@ -282,7 +282,10 @@ constructor(
                 commitment,
                 transaction.asBase64(),
                 skipPreflight,
-                -1
+                // maxRetries caps node rebroadcasts, but the node drops the transaction at blockhash expiry
+                // first (~150 slots, ~30-40 retries at the 2s rebroadcast rate), so any large value means
+                // "rebroadcast for the whole validity window". MAX_VALUE expresses that without a magic number.
+                Int.MAX_VALUE,
             )
             check(signature == transaction.signature) // Sanity check
         } catch (e: JsonRpcException) {
