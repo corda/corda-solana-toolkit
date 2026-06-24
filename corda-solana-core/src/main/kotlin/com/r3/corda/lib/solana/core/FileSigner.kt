@@ -54,6 +54,21 @@ class FileSigner private constructor(val file: Path, private val signer: Signer)
             val privateKey = Signer.generatePrivateKeyBytes()
             val signer = Signer.createFromPrivateKey(privateKey)
             val file = dir / "${signer.publicKey()}.json"
+            return write(file, privateKey, signer)
+        }
+
+        /**
+         * Write a private key into the given file and return the [FileSigner] for it. This will overwrite the file if
+         * it already exists.
+         */
+        @JvmStatic
+        @Throws(IOException::class)
+        fun write(file: Path, privateKey: ByteArray): FileSigner {
+            require(privateKey.size == Signer.KEY_LENGTH)
+            return write(file, privateKey, Signer.createFromPrivateKey(privateKey))
+        }
+
+        private fun write(file: Path, privateKey: ByteArray, signer: Signer): FileSigner {
             file.writeText(
                 buildString(256) {
                     append('[')
