@@ -3,6 +3,7 @@ package com.r3.corda.lib.solana.core
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import software.sava.core.accounts.Signer
 import java.lang.ProcessBuilder.Redirect.INHERIT
 import java.nio.file.Path
 import java.util.regex.Pattern
@@ -26,6 +27,16 @@ class FileSignerTest {
         val expectedAddress = exec("solana address -k ${randomSigner.file}")
         assertThat(randomSigner.publicKey().toBase58()).isEqualTo(expectedAddress)
         assertThat(FileSigner.read(randomSigner.file).publicKey()).isEqualTo(randomSigner.publicKey())
+    }
+
+    @Test
+    fun write(@TempDir tempDir: Path) {
+        val privateKey = Signer.generatePrivateKeyBytes()
+        val file = tempDir / "signer.json"
+        val fileSigner = FileSigner.write(file, privateKey)
+        val expectedAddress = exec("solana address -k ${fileSigner.file}")
+        assertThat(fileSigner.publicKey().toBase58()).isEqualTo(expectedAddress)
+        assertThat(FileSigner.read(fileSigner.file).publicKey()).isEqualTo(fileSigner.publicKey())
     }
 
     private fun exec(args: String, workingDirectory: Path? = null): String {
