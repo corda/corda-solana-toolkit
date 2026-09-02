@@ -15,8 +15,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
@@ -180,6 +182,7 @@ public final class SolanaTestValidator implements AutoCloseable {
         private boolean dynamicPorts;
         private Path ledger;
         private final Map<PublicKey, Path> bpfPrograms = new HashMap<>();
+        private final Set<PublicKey> deactivatedFeatures = new LinkedHashSet<>();
 
         private Builder() { }
 
@@ -221,6 +224,18 @@ public final class SolanaTestValidator implements AutoCloseable {
 
         public Builder bpfProgram(PublicKey programId, Path programFile) {
             bpfPrograms.put(programId, programFile);
+            return this;
+        }
+
+        /**
+         * Leaves a feature gate off in the validator's genesis. Repeated calls accumulate.
+         * <p>
+         * The validator otherwise activates every feature its own build knows, which puts it ahead
+         * of the clusters on any gate they have not activated yet. Deactivating such a gate here is
+         * what makes a test run against the behavior devnet and mainnet actually have.
+         */
+        public Builder deactivateFeature(PublicKey featureId) {
+            deactivatedFeatures.add(featureId);
             return this;
         }
 
@@ -289,6 +304,10 @@ public final class SolanaTestValidator implements AutoCloseable {
                 command.add("--bpf-program");
                 command.add(programId.toBase58());
                 command.add(file.toAbsolutePath().toString());
+            });
+            deactivatedFeatures.forEach(featureId -> {
+                command.add("--deactivate-feature");
+                command.add(featureId.toBase58());
             });
             // Merge stderr into stdout so the single reader drains both: a bind failure (printed to
             // stderr) can't block on a full pipe, and confirmStarted sees the process exit.
